@@ -1,0 +1,23 @@
+{
+  "name": "threejs-tutorial",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/dat.gui": "^0.7.13",
+    "@types/three": "^0.166.0",
+    "dat.gui": "^0.7.9",
+    "three": "^0.166.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.3.1"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^9.1.0",
+    "socket.io-client": "^4.7.5"
+  }
+}

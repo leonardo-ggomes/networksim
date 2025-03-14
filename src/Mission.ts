@@ -1,0 +1,115 @@
+import { Box3, DoubleSide, Mesh, MeshBasicMaterial, Object3D, RingGeometry, Scene, Vector3 } from "three";
+import GUI from "three/examples/jsm/libs/lil-gui.module.min.js";
+import Items from "./Items";
+import elementos from "./Actions";
+import { infoPlayer } from "./InfoPlayer";
+
+
+export default class Mission {
+
+    local: Vector3
+    missionPoint: Mesh
+    title: string
+    isCollided = false
+    listeners: [string, EventListener][] = [];
+    eventEmitter: EventTarget;
+    reward: number
+    isComplete: boolean
+
+    constructor(title: string, position: Vector3, scene: Scene, event: EventTarget, reward: number) {
+        
+        this.isComplete = false
+        this.eventEmitter = event     
+        this.reward = reward   
+        this.title = title
+        this.local = position
+        this.local.y = 0.2
+
+        this.missionPoint = this.createMissionPoint(this.local, 0xff0000)
+        scene.add(this.missionPoint)
+
+        // const gui = new GUI()
+        // const playerFolder = gui.addFolder("Mission Point")
+
+
+        // playerFolder.add(this.missionPoint.position,"x", -100, 100)
+        // playerFolder.add(this.missionPoint.position,"y", 0, 10)
+        // playerFolder.add(this.missionPoint.position,"z", -100, 100)
+    }
+
+    /**
+     * 
+     * @param scene 
+     * @param position 
+     * @param color 
+     * @description O parâmetro {color} é do tipo hexadecimal. Ex: 0xff0000
+     */
+    private createMissionPoint(position: Vector3, color: any): Mesh {
+
+        const ringGeometry = new RingGeometry(1.2, 1.5, 32);
+        const ringMaterial = new MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.3,
+            side: DoubleSide,
+            visible: true
+        });
+
+
+        let ring = new Mesh(ringGeometry, ringMaterial);
+
+
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.x = position.x
+        ring.position.z = position.z
+        ring.position.y = position.y;
+
+        return ring;
+    }
+
+    removeMissionPoint(object: Mesh, scene: Scene) {
+        scene.remove(object);
+    }
+
+    checkMissionZone(player: Vector3, ring: Vector3, radius: number) {
+    
+        if(!this.isComplete){
+            const playerPos = player;
+            const ringPos = ring;
+        
+            // Calcula a distância entre o jogador e o centro do anel
+            const distance = playerPos.distanceTo(ringPos);
+        
+            // Verifica se o jogador está dentro do raio do anel
+            this.isCollided = distance < radius;
+            elementos.setIsCollided(this.isCollided)
+        }
+        else{
+            elementos.setIsCollided(false)
+        }
+    }
+
+    addGameListener(event: string, callback: EventListener, isOnce: boolean) {
+        this.eventEmitter.addEventListener(event, callback, {once: isOnce});
+        this.listeners.push([event, callback]);
+    }
+
+    removeEvent(eventName: string, callback: EventListener) {
+        this.eventEmitter.removeEventListener(eventName, callback);
+    }
+    
+    clearAllListeners() {
+        this.listeners.forEach(([event, callback]) => this.eventEmitter.removeEventListener(event, callback));
+        this.listeners.length = 0;
+    }
+
+    rewardPlayer(){
+        infoPlayer.money += this.reward
+    }
+
+
+    finished(){
+        this.isComplete = true
+    }
+    
+}

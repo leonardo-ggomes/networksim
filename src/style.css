@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+*{
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+  margin: 0;
+}
+
+
+#status-server{
+  position: absolute;
+  top: 55px;
+  left: 5px;
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  color: white;
+}
+
+#mini_map{
+  height: 200px;
+  width: 300px;
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  background-color: red;
+}
+
+
+
+/* Personaliza a barra de rolagem para navegadores baseados em WebKit */
+::-webkit-scrollbar {
+  width: 8px; /* Deixa o scroll estreito */
+  border-radius: 10px; /* Bordas arredondadas */
+}
+
+/* Cor de fundo da barra de rolagem */
+::-webkit-scrollbar-track {
+  background: rgb(90, 89, 89); /* Cinza claro */
+}
+
+/* Cor e estilo do "polegar" do scroll */
+::-webkit-scrollbar-thumb {
+  background: #b0b0b0; /* Cinza intermediário */
+  border-radius: 3px; /* Arredondado */
+}
+
+/* Adiciona um efeito ao passar o mouse */
+::-webkit-scrollbar-thumb:hover {
+  background: #909090; /* Escurece um pouco */
+}
+
+
