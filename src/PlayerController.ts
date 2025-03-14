@@ -10,6 +10,8 @@ import {
   CapsuleGeometry,
   Box3,
   Raycaster,
+  PointLight,
+  PointLightHelper,
 } from "three";
 import FollowCamera from "./FollowCamera";
 import PlayerModel from "./PlayerModel";
@@ -30,11 +32,15 @@ export default class PlayerController {
   activedClip?: AnimationAction;
   items: Items;
   octree: Octree;
+
   isSitting = false;
-  prevPlayerPosition = new Vector3();
-  prevPlayerQuaternion = new Quaternion();
+  IsTurnOnFlashlight = false;
   isCollided = false
   isFloor = true
+
+  prevPlayerPosition = new Vector3();
+  prevPlayerQuaternion = new Quaternion();
+
   velocityY = 0
   gravity = -9.81
   raycaster = new Raycaster()
@@ -46,6 +52,9 @@ export default class PlayerController {
   capsuleRadius = 0.3; // raio da cápsula
   socket: SocketManager
   clipName = "Idle"
+
+  //Criando a lanterna
+  lanternLight = new PointLight(0xFFD700, 0, 10)
 
   //Ações
   actions: any = {}
@@ -86,6 +95,11 @@ export default class PlayerController {
     this.playerCapsule.position.set(0, this.capsuleHeight / 2, 0); // Ajustando a altura da cápsula
     this.playerModel.add(this.playerCapsule); // Adiciona a cápsula como parte do modelo do jogador
    
+
+    //lanterna
+    this.playerModel.add(this.lanternLight); // Adicionando a luz ao modelo do jogador
+    this.setFlashlight()
+
     //Escutando o teclado
     document.addEventListener("keydown", this.onKeydown);
     document.addEventListener("keyup", this.onKeydown);
@@ -99,8 +113,8 @@ export default class PlayerController {
   };
 
   callAction(){
-    if(this.keyBoard["KeyT"]){
 
+    if(this.keyBoard["KeyT"]){
       if(!this.actions['terminal']){
         elementos.showTerminal()
         this.actions['terminal'] = true
@@ -108,11 +122,18 @@ export default class PlayerController {
       else{
         elementos.hideTerminal()
         this.actions['terminal'] = false
-      }
-      
+      }      
     }
-  }
+    else if(this.keyBoard["KeyL"]){ //Liga a laterna
+      this.IsTurnOnFlashlight = !this.IsTurnOnFlashlight
+      if (this.IsTurnOnFlashlight) {
+        this.lanternLight.intensity = 4; // Liga a luz
+      } else {
+        this.lanternLight.intensity = 0; // Desliga a luz
+      }
+    }
 
+  }
 
   setAction(action: AnimationAction) {
     if (action != this.activedClip) {
@@ -252,7 +273,14 @@ export default class PlayerController {
    return a + (b - a) * t
   }
 
-  
+  setFlashlight(){
+    this.lanternLight.position.set(
+      this.playerModel.position.x,  // Posição X do jogador
+      this.playerModel.position.y + 2,  // Um pouco acima da cabeça do jogador (ajuste a altura conforme necessário)
+      this.playerModel.position.z + 3 // Posição Z do jogador
+    )
+  }
+ 
   update(delta: number) {
     if (!this.isSitting) {
 
@@ -280,8 +308,11 @@ export default class PlayerController {
     if (!this.isSitting) {
 
       if (this.keyBoard["KeyW"] && !this.keyBoard["ShiftLeft"]) {
-        this.setAction(this.playerModel.animationsAction["Walk"]);
-        this.clipName = "Walk"
+
+        let animationName = !this.IsTurnOnFlashlight ? "Walk" : "Crouch"
+        this.setAction(this.playerModel.animationsAction[animationName]);
+
+        this.clipName = animationName
         this.playerModel.quaternion.slerpQuaternions(
           this.playerModel.quaternion,
           this.quaternion,
@@ -395,6 +426,7 @@ export default class PlayerController {
       }
     }
 
+  
     this.followCamera.updateCamera(this.playerModel);
     
     this.socket.io.emit('updatePosition', {
