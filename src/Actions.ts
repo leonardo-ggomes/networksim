@@ -5,9 +5,9 @@ export const eventEmitter = new EventTarget();
 
 const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
 const contentFiles: any[] = []
-const filesInMission = ["\n  -- log.txt     15 bytes"];
-const dirInMission = ["\n  -- missao     <DIR>"];
-const filesRoot = ["\n  -- carteira.txt    3 bytes"];
+const filesInMission = ["\n   log.txt"];
+const dirInMission = ["\n   missao"];
+const filesRoot = ["\n   carteira.txt"];
 
 //Processes
 const processes = [
@@ -22,7 +22,8 @@ const processes = [
 let isCollided = false;
 let missionContent = "";
 
-let currentPrefix = "C:\\"; // Prefixo dinâmico do terminal
+let currentPrefix = "player@lnx:~$ "; // Prefixo dinâmico do terminal
+let currentDir = "";
 
 // Funções globais
 let elementos = {
@@ -102,8 +103,8 @@ function addNewCommandLine(terminal: HTMLDivElement) {
 
     // Prefixo
     const prefix = document.createElement("span");
-    prefix.textContent = `${currentPrefix}> `;
-    prefix.style.color = "white";
+    prefix.textContent = `${currentPrefix} ${currentDir}`;
+    prefix.style.color = "#bafc03";
     commandLine.appendChild(prefix);
 
     // Campo de entrada editável
@@ -120,6 +121,7 @@ function addNewCommandLine(terminal: HTMLDivElement) {
     terminal.appendChild(commandLine);
     terminal.scrollTop = terminal.scrollHeight;
     input.focus();
+   
 
     input.addEventListener("keydown", (event) => {
         event.stopPropagation();
@@ -145,46 +147,47 @@ function addNewCommandLine(terminal: HTMLDivElement) {
 // Dicionário de comandos do terminal
 const commands: Record<string, (args: string[]) => string> = {
     "ping": (args) => `  Ping: disparando ${args[0] || "127.0.0.1"}: bytes=32 time<1ms TTL=128>`,
+    "pwd": () => `  ${currentDir ? currentDir : "/"}`,
     "ipconfig": () => `  Ethernet adapter:\n IPv4 Address: 192.168.1.100\n Subnet Mask: 255.255.255.0\n Default Gateway: 192.168.1.1`,
     "help": () => `  Comandos disponíveis: 
             \n ping [host] → Simula o comando ping, testando a conexão com um host.
             \n ipconfig → Exibe informações de rede, como IP, máscara de sub-rede e gateway.
             \n help → Lista os comandos disponíveis no terminal.
-            \n clear → Limpa o terminal.
+            \n cls → Limpa o terminal.
             \n cd → Entra em uma missão, se estiver em um local válido.
-            \n type [arquivo] → Exibe o conteúdo de um arquivo dentro da missão.
-            \n dir → Lista os arquivos disponíveis no diretório atual.
+            \n cat [arquivo] → Exibe o conteúdo de um arquivo dentro da missão.
+            \n ls → Lista os arquivos disponíveis no diretório atual.
             \n tasklist → Lista todos os processos.
             \n taskkill /PID [PID] /F → Elimina um processo`,
-    "clear": () => "",
+    "cls": () => "",
     "cd": (args) => {
 
         if (isCollided && args[0] !== "..") {
             if(args[0] == "missao"){
-                currentPrefix = "C:\\Missao";
-                return "Entrando na missão...\nC:\\Missao>";
+                currentDir = "/Missao ";
+                return "Entrando da missão...";
             }
             else{
                 return "Caminho não encontrado.";
             }
         }
 
-        if(args[0] == ".." && currentPrefix == "C:\\Missao"){
-            currentPrefix = "C:\\";
-            return "Saindo da missão...\nC:\\>";
+        if(args[0] == ".." && currentDir == "/Missao "){
+            currentDir = "";
+            return "Saindo da missão...";
         }
         else if(args[0] == ".."){
-            return currentPrefix
+            return `${currentPrefix} ${currentDir}`
         }
 
         return "Erro: Você não está em um local de missão.";
     },
-    "type": (args) => {
+    "cat": (args) => {
         
-        if (args[0] === "log.txt" && isCollided &&  currentPrefix == "C:\\Missao") {
+        if (args[0] === "log.txt" && isCollided &&  currentDir == "/Missao ") {
             return missionContent ? formatMultiline(missionContent) : "Arquivo vazio.";
         }
-        else if(args[0] === "carteira.txt" && currentPrefix == "C:\\"){
+        else if(args[0] === "carteira.txt" && currentDir == ""){
             return `Saldo em dinheiro: ${currency.format(infoPlayer.money)}`
         }
 
@@ -194,9 +197,9 @@ const commands: Record<string, (args: string[]) => string> = {
 
         return `Erro: O arquivo "${args[0]}" não existe.`;
     },
-    "dir": () => {
-        const files = isCollided ? currentPrefix == "C:\\Missao" ? filesInMission : dirInMission : filesRoot;
-        return `Arquivos em ${currentPrefix}:\n${files.map(file => ` ${file}`).join("\n")}`;
+    "ls": () => {
+        const files = isCollided ? currentDir == "/Missao " ? filesInMission : dirInMission : filesRoot;
+        return `\n${files.map(file => ` ${file}`).join("\n")}`;
     },
     "tasklist": () => {
         return ` Nome do Processo         PID      Memória  
@@ -219,7 +222,7 @@ const commands: Record<string, (args: string[]) => string> = {
         eventEmitter.dispatchEvent(new CustomEvent("remove_pid", { detail: { processes, isCollided }  }));
         return `Processo ${pid} encerrado com sucesso.`;
     },
-    "code": (args) => {
+    "nano": (args) => {
         if(args.length > 0){
             const foundFile = contentFiles.filter(f => f.name == args[0])[0]
             
@@ -234,7 +237,7 @@ const commands: Record<string, (args: string[]) => string> = {
 
             
                     eventEmitter.dispatchEvent(new CustomEvent("new_code", { detail: {
-                        code: comando,
+                        nano: comando,
                         line: args[1],
                         isCollided: isCollided
                     }}));
@@ -243,8 +246,8 @@ const commands: Record<string, (args: string[]) => string> = {
                 }
 
                 return `
-                    code [aquivo] [linha] (código aqui)
-                    Use > Exemplo: code demo.js 5 (var y = 0; //Seu código)
+                    nano [aquivo] [linha] (código aqui)
+                    Use > Exemplo: nano demo.js 5 (var y = 0; //Seu código)
                  `
             }
             else{
@@ -272,7 +275,7 @@ function executeCommand(command: string, terminal: HTMLDivElement) {
 
     if (!cmd) return;
 
-    if (cmd === "clear") {
+    if (cmd === "cls") {
         terminal.innerHTML = "";
         addNewCommandLine(terminal);
         return;
@@ -293,7 +296,7 @@ function appendToTerminal(text: string, terminal: HTMLDivElement) {
     terminal.scrollTop = terminal.scrollHeight;
 }
 
-// Formatar quebras de linha no "type"
+// Formatar quebras de linha no "cat"
 function formatMultiline(text: string) {
     return text.split("\n").map(line => ` ${line}`).join("\n");
 }
