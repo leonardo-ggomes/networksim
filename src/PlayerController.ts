@@ -111,13 +111,14 @@ export default class PlayerController {
 
   onKeydown = (e: KeyboardEvent) => {
     this.keyBoard[e.code] = e.type === 'keydown';
-    this.callAction()
+    this.callAction(e)
   };
 
-  callAction(){
+  callAction(event: KeyboardEvent){
 
     if(this.keyBoard["KeyT"]){
       if(!this.actions['terminal']){
+        event.preventDefault();
         elementos.showTerminal()
         this.actions['terminal'] = true
       }

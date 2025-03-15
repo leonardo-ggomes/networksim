@@ -173,11 +173,12 @@ export default class Experience{
 
         //Adiciona o processo suspeito
         let process ={
-            name: "anomimo.exe",
+            name: "anomimo",
             pid: 7777,
-            memory: 849.90
+            memory: 849.90,
+            cpu: 47
         } 
-        elementos.setProcesses(process.name, process.pid, process.memory)
+        elementos.setProcesses(process.name, process.pid, process.memory, process.cpu)
 
         //Verifica se o processo foi removido
         mission1.addGameListener('remove_pid', (event) => {
@@ -195,7 +196,7 @@ export default class Experience{
            }
            else if(removido === -1){
             //Adiciona o processo suspeito novamente se apagar fora da missão
-            elementos.setProcesses(process.name, process.pid, process.memory)
+            elementos.setProcesses(process.name, process.pid, process.memory, process.cpu)
            }
                     
         }, false)

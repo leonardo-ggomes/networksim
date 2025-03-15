@@ -11,11 +11,11 @@ const filesRoot = ["\n   carteira.txt"];
 
 //Processes
 const processes = [
-    { name: "explorer.exe", pid: 1234, memory: "45.6 MB" },
-    { name: "chrome.exe", pid: 5678, memory: "150.2 MB" },
-    { name: "notepad.exe", pid: 9012, memory: "3.4 MB" },
-    { name: "svchost.exe", pid: 3456, memory: "20.8 MB" },
-    { name: "cmd.exe", pid: 1111, memory: "5.7 MB" }
+    { name: "apache", pid: 1234, memory: 145.6, cpu: 21 },
+    { name: "bash", pid: 5678, memory: 50.2, cpu: 0.2 },
+    { name: "mariadb", pid: 9012, memory: 293.4, cpu: 17 },
+    { name: "svchost", pid: 3456, memory: 20.8, cpu: 0.3 },
+    { name: "netns", pid: 1111, memory: 15.7, cpu: 3.7 }
 ];
 
 // Variáveis de estado
@@ -34,18 +34,19 @@ let elementos = {
     },
     setIsCollided: (state: boolean) => { isCollided = state; },
     setCurrentMission: (currentMission: string) => { missionContent = currentMission; },
-    setProcesses: (name: string, pid: number, memoryInMB: number) => {
+    setProcesses: (name: string, pid: number, memoryInMB: number, cpu: number) => {
         processes.push({
             name: name,
             pid: pid,
-            memory: `${memoryInMB} MB`
+            memory: memoryInMB,
+            cpu: cpu
         })
     },
     setFilesInMission: (name: string, content: string) => {
         filesInMission.push(name)
-        contentFiles.push({name, content})
+        contentFiles.push({ name, content })
     },
-    showMsg: (msg: string) =>{
+    showMsg: (msg: string) => {
         showMissionFinished(msg)
     }
 };
@@ -53,7 +54,7 @@ let elementos = {
 // Criar o terminal
 function createTerminal() {
     let terminal = document.getElementById("terminal") as HTMLDivElement;
-    
+
 
     if (!terminal) {
         let framescreen = document.createElement("div");
@@ -65,7 +66,7 @@ function createTerminal() {
         framescreen.style.backgroundSize = "cover";
         framescreen.style.width = "500px";
         framescreen.style.height = "300px";
-  
+
 
         terminal = document.createElement("div");
         terminal.id = "terminal";
@@ -87,7 +88,7 @@ function createTerminal() {
         terminal.style.justifyContent = "flex-start";
         // terminal.style.borderRadius = "4px";
 
-        
+
         framescreen.appendChild(terminal)
         document.body.appendChild(framescreen);
     }
@@ -121,7 +122,7 @@ function addNewCommandLine(terminal: HTMLDivElement) {
     terminal.appendChild(commandLine);
     terminal.scrollTop = terminal.scrollHeight;
     input.focus();
-   
+
 
     input.addEventListener("keydown", (event) => {
         event.stopPropagation();
@@ -146,101 +147,109 @@ function addNewCommandLine(terminal: HTMLDivElement) {
 }
 // Dicionário de comandos do terminal
 const commands: Record<string, (args: string[]) => string> = {
-    "ping": (args) => `  Ping: disparando ${args[0] || "127.0.0.1"}: bytes=32 time<1ms TTL=128>`,
+    "ping": (args) => `  PING ${args[0] || "127.0.0.1"}: 56 data bytes\n64 bytes from ${args[0] || "127.0.0.1"}: icmp_seq=1 ttl=64 time=0.5 ms`,
+
     "pwd": () => `  ${currentDir ? currentDir : "/"}`,
-    "ipconfig": () => `  Ethernet adapter:\n IPv4 Address: 192.168.1.100\n Subnet Mask: 255.255.255.0\n Default Gateway: 192.168.1.1`,
+
+    "ifconfig": () => `  eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n gateway 192.168.1.1`,
+
     "help": () => `  Comandos disponíveis: 
             \n ping [host] → Simula o comando ping, testando a conexão com um host.
-            \n ipconfig → Exibe informações de rede, como IP, máscara de sub-rede e gateway.
+            \n ifconfig → Exibe informações de rede, como IP, máscara de sub-rede e gateway.
             \n help → Lista os comandos disponíveis no terminal.
-            \n cls → Limpa o terminal.
-            \n cd → Entra em uma missão, se estiver em um local válido.
-            \n cat [arquivo] → Exibe o conteúdo de um arquivo dentro da missão.
+            \n clear → Limpa o terminal.
+            \n cd [diretório] → Entra em um diretório válido.
+            \n cat [arquivo] → Exibe o conteúdo de um arquivo.
             \n ls → Lista os arquivos disponíveis no diretório atual.
-            \n tasklist → Lista todos os processos.
-            \n taskkill /PID [PID] /F → Elimina um processo`,
-    "cls": () => "",
-    "cd": (args) => {
+            \n ps aux → Lista todos os processos.
+            \n kill -9 [PID] → Elimina um processo forçadamente.`,
 
+    "clear": () => "",
+
+    "cd": (args) => {
         if (isCollided && args[0] !== "..") {
-            if(args[0] == "missao"){
+            if (args[0] == "missao") {
                 currentDir = "/Missao ";
                 return "Entrando da missão...";
             }
-            else{
+            else {
                 return "Caminho não encontrado.";
             }
         }
 
-        if(args[0] == ".." && currentDir == "/Missao "){
+        if (args[0] == ".." && currentDir == "/Missao ") {
             currentDir = "";
             return "Saindo da missão...";
         }
-        else if(args[0] == ".."){
-            return `${currentPrefix} ${currentDir}`
+        else if (args[0] == "..") {
+            return `${currentDir}`
         }
 
-        return "Erro: Você não está em um local de missão.";
+        return "Erro: Diretório não encontrado.";
     },
+
     "cat": (args) => {
-        
-        if (args[0] === "log.txt" && isCollided &&  currentDir == "/Missao ") {
+        if (args[0] === "log.txt" && isCollided && currentDir == "/Missao ") {
             return missionContent ? formatMultiline(missionContent) : "Arquivo vazio.";
         }
-        else if(args[0] === "carteira.txt" && currentDir == ""){
+        else if (args[0] === "carteira.txt" && currentDir == "") {
             return `Saldo em dinheiro: ${currency.format(infoPlayer.money)}`
         }
 
-        if(args.length == 0){
+        if (args.length == 0) {
             return `Erro: Comando inválido.`;
         }
 
         return `Erro: O arquivo "${args[0]}" não existe.`;
     },
+
     "ls": () => {
         const files = isCollided ? currentDir == "/Missao " ? filesInMission : dirInMission : filesRoot;
         return `\n${files.map(file => ` ${file}`).join("\n")}`;
     },
-    "tasklist": () => {
-        return ` Nome do Processo         PID      Memória  
-        -------------------------------------------
-            ${processes.map(p => ` ${p.name}     ${p.pid}    ${p.memory}`).join("\n")}`;
+
+    "ps": () => {
+        return ` USUÁRIO    PID  %CPU  %MEM   COMANDO  
+        ----------------------------------
+        ${processes.map(p => ` user     ${p.pid}   ${p.cpu}   ${p.memory}   ${p.name}`).join("\n")}`;
     },
-    "taskkill": (args) => {
-        if (args.length < 3 || args[0] !== "/PID" || args[2] !== "/F") {
-            return "Erro: Uso correto: taskkill /PID [número] /F";
+
+    "kill": (args) => {
+        if (args.length < 2 || args[0] !== "-9") {
+            return "Erro: Uso correto: kill -9 [número do processo]";
         }
 
-        const pid = parseInt(args[1]);
+        const pid = Number(args[1]);
+        if (isNaN(pid)) return "Erro: O PID deve ser um número válido.";
+
         const index = processes.findIndex(p => p.pid === pid);
+        if (index === -1) return `Erro: Processo com PID ${pid} não encontrado.`;
 
-        if (index === -1) {
-            return `Erro: Processo com PID ${pid} não encontrado.`;
-        }
-
-        processes.splice(index, 1); // Remove o processo da lista
-        eventEmitter.dispatchEvent(new CustomEvent("remove_pid", { detail: { processes, isCollided }  }));
+        processes.splice(index, 1);
+        eventEmitter.dispatchEvent(new CustomEvent("remove_pid", { detail: { processes, isCollided } }));
         return `Processo ${pid} encerrado com sucesso.`;
     },
+
     "nano": (args) => {
-        if(args.length > 0){
+        if (args.length > 0) {
             const foundFile = contentFiles.filter(f => f.name == args[0])[0]
-            
-            if(args[1]){
-                if(args[2]){
+
+            if (args[1]) {
+                if (args[2]) {
 
                     let comando = ""
 
-                    for(let i = 2; i < args.length; i++){
+                    for (let i = 2; i < args.length; i++) {
                         comando += args[i] + " "
                     }
 
-            
-                    eventEmitter.dispatchEvent(new CustomEvent("new_code", { detail: {
-                        nano: comando,
-                        line: args[1],
-                        isCollided: isCollided
-                    }}));
+                    eventEmitter.dispatchEvent(new CustomEvent("new_code", {
+                        detail: {
+                            nano: comando,
+                            line: args[1],
+                            isCollided: isCollided
+                        }
+                    }));
 
                     return comando
                 }
@@ -250,22 +259,17 @@ const commands: Record<string, (args: string[]) => string> = {
                     Use > Exemplo: nano demo.js 5 (var y = 0; //Seu código)
                  `
             }
-            else{
-                if(foundFile){
+            else {
+                if (foundFile) {
                     return foundFile.content
                 }
 
                 return `Não foi encontrado o aquivo ${args[0]}.`
-            }          
-
-            
+            }
         }
 
         return "Falta argumento para esse comando"
     }
-
-
-
 };
 
 // Executar um comando digitado
@@ -275,7 +279,7 @@ function executeCommand(command: string, terminal: HTMLDivElement) {
 
     if (!cmd) return;
 
-    if (cmd === "cls") {
+    if (cmd === "clear") {
         terminal.innerHTML = "";
         addNewCommandLine(terminal);
         return;
