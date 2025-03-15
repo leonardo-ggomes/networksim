@@ -11,9 +11,7 @@ import {
   Box3,
   Raycaster,
   PointLight,
-  PointLightHelper,
-  SpotLight,
-  AxesHelper,
+  SpotLight
 } from "three";
 import FollowCamera from "./FollowCamera";
 import PlayerModel from "./PlayerModel";
@@ -279,12 +277,8 @@ export default class PlayerController {
     this.lanternLight.decay = .5; // Diminuição da intensidade com a distância
     this.lanternLight.distance = 10; // Alcance da luz
     this.lanternLight.castShadow = true; // Ativar sombras
-
     
-    this.lanternLight.add(this.pointLight);
-
-    this.lanternLight.add(new AxesHelper(2))
-    this.lanternLight.target.add(new AxesHelper(1))
+    this.lanternLight.add(this.pointLight); //Vicula o feixe ao ponto de luz
  
     this.lanternLight.position.set(
       this.playerModel.position.x,  // Posição X do jogador
