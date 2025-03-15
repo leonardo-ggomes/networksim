@@ -125,12 +125,7 @@ export default class PlayerController {
       }      
     }
     else if(this.keyBoard["KeyL"]){ //Liga a laterna
-      this.IsTurnOnFlashlight = !this.IsTurnOnFlashlight
-      if (this.IsTurnOnFlashlight) {
-        this.lanternLight.intensity = 4; // Liga a luz
-      } else {
-        this.lanternLight.intensity = 0; // Desliga a luz
-      }
+      this.turnFlashlight(!this.IsTurnOnFlashlight)
     }
 
   }
@@ -280,6 +275,15 @@ export default class PlayerController {
       this.playerModel.position.z + 3 // Posição Z do jogador
     )
   }
+
+  turnFlashlight(isOn: boolean){
+    this.IsTurnOnFlashlight = isOn
+    if (this.IsTurnOnFlashlight) {
+      this.lanternLight.intensity = 4; // Liga a luz 
+    } else {
+      this.lanternLight.intensity = 0; // Desliga a luz          
+    }
+  }
  
   update(delta: number) {
     if (!this.isSitting) {
@@ -325,6 +329,7 @@ export default class PlayerController {
       
       }  
       else if(this.keyBoard["KeyW"] && this.keyBoard["ShiftLeft"]){
+        this.turnFlashlight(false)
         this.setAction(this.playerModel.animationsAction["Running"]);
         this.clipName = "Running"
 
@@ -380,8 +385,11 @@ export default class PlayerController {
         this.setAction(this.playerModel.animationsAction["Waving"]);
         this.clipName = "Waving"
       } else {
-        this.setAction(this.playerModel.animationsAction["Idle"]);
-        this.clipName = "Idle"       
+
+        let animationName = !this.IsTurnOnFlashlight ? "Idle" : "CrouchIdle"
+        this.setAction(this.playerModel.animationsAction[animationName]);
+        this.clipName = animationName     
+
       }
 
       const newPosition = this.playerModel.position
