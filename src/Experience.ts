@@ -48,8 +48,7 @@ export default class Experience{
         this.setRenderer()
         this.setCamera()
         // this.setGround()
-        this.setLight()  
-        this.setPointLight()    
+        this.setLight()    
         this.setAmbientLight()
         this.items = new Items(this.scene)
         this.socket = new SocketManager(this.scene)
@@ -118,18 +117,9 @@ export default class Experience{
         this.scene.add(new Ground())
         //this.scene.add(new GridHelper(100,100))
     }
-
-    setPointLight(){
-        const pointLight = new PointLight(0xffffff,1)
-        pointLight.position.set(0,1,0)
-
-        const plHelper = new PointLightHelper(pointLight)
-        this.scene.add(plHelper)
-        this.scene.add(pointLight)
-    }
-
+  
     setLight(){
-        const directionalLight = new DirectionalLight( 0xffffff, .1 );
+        const directionalLight = new DirectionalLight( 0x000000, .1 );
         directionalLight.position.set( - 5, 25, - 1 );
         directionalLight.castShadow = true;
         directionalLight.shadow.camera.near = 0.01;

@@ -1,4 +1,4 @@
-import { AnimationAction, AnimationMixer, DoubleSide, Group, Mesh, MeshBasicMaterial, Quaternion, RingGeometry, Vector3 } from 'three'
+import { AnimationAction, AnimationMixer, AxesHelper, DoubleSide, Group, Mesh, MeshBasicMaterial, Quaternion, RingGeometry, Vector3 } from 'three'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
@@ -24,7 +24,11 @@ export default class PlayerModel extends Group{
     }
 
     loadModel(){
-        this.gltfLoader.load("models/asian_male_animated.glb", async (model) => {    
+        this.gltfLoader.load("models/asian_male_animated.glb", async (model) => {  
+            
+            const axis = new AxesHelper(1)
+            model.scene.add(axis)
+
             this.add(model.scene)
 
             this.scale.set(1,1,1)

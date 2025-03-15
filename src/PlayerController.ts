@@ -12,6 +12,8 @@ import {
   Raycaster,
   PointLight,
   PointLightHelper,
+  SpotLight,
+  AxesHelper,
 } from "three";
 import FollowCamera from "./FollowCamera";
 import PlayerModel from "./PlayerModel";
@@ -54,7 +56,9 @@ export default class PlayerController {
   clipName = "Idle"
 
   //Criando a lanterna
-  lanternLight = new PointLight(0xFFD700, 0, 10)
+  lanternLight = new SpotLight(0xFFD700, 0, 10)
+  pointLight = new PointLight(0xFFD700, 0, 5);
+  directionlanternLight = new Vector3();
 
   //Ações
   actions: any = {}
@@ -269,23 +273,59 @@ export default class PlayerController {
   }
 
   setFlashlight(){
+
+    this.lanternLight.angle = Math.PI / 6; // Ângulo do feixe
+    this.lanternLight.penumbra = 0.4; // Suavização da borda da luz
+    this.lanternLight.decay = .5; // Diminuição da intensidade com a distância
+    this.lanternLight.distance = 10; // Alcance da luz
+    this.lanternLight.castShadow = true; // Ativar sombras
+
+    
+    this.lanternLight.add(this.pointLight);
+
+    this.lanternLight.add(new AxesHelper(2))
+    this.lanternLight.target.add(new AxesHelper(1))
+ 
     this.lanternLight.position.set(
       this.playerModel.position.x,  // Posição X do jogador
-      this.playerModel.position.y + 2,  // Um pouco acima da cabeça do jogador (ajuste a altura conforme necessário)
-      this.playerModel.position.z + 3 // Posição Z do jogador
+      this.playerModel.position.y + 1.5,  // Um pouco acima da cabeça do jogador (ajuste a altura conforme necessário)
+      this.playerModel.position.z + .7  // Posição Z do jogador
     )
   }
 
   turnFlashlight(isOn: boolean){
     this.IsTurnOnFlashlight = isOn
     if (this.IsTurnOnFlashlight) {
-      this.lanternLight.intensity = 4; // Liga a luz 
+      this.lanternLight.intensity = 6; // Liga a luz 
+      this.pointLight.intensity = 0.5;
     } else {
-      this.lanternLight.intensity = 0; // Desliga a luz          
+      this.lanternLight.intensity = 0; // Desliga a luz 
+      this.pointLight.intensity = 0;
     }
   }
+
+  updateFlashlight() {
+
+    if (this.IsTurnOnFlashlight) {
+      // Obtém a direção para onde o jogador está olhando
+      this.playerModel.getWorldDirection(this.directionlanternLight);
+
+     // Posição do target (5 unidades à frente do jogador)
+     const targetPosition = this.playerModel.position.clone().add(this.directionlanternLight.multiplyScalar(4));
+
+    // Atualiza o target na cena
+     this.lanternLight.target.position.copy(targetPosition);
+     this.lanternLight.target.updateMatrixWorld(); // Atualiza a matriz do mundo
+
+    // Ajusta a rotação da lanterna para que ela olhe para a direção correta
+     this.lanternLight.rotation.set(0, 0, 0);  // Resetando rotação, pode ser necessário
+     this.lanternLight.lookAt(targetPosition); // Faz a lanterna olhar para o target
+  }
+   
+}
  
   update(delta: number) {
+   
     if (!this.isSitting) {
 
       if(this.isFloor || this.playerModel.position.y <= 0){
@@ -311,9 +351,9 @@ export default class PlayerController {
 
     if (!this.isSitting) {
 
-      if (this.keyBoard["KeyW"] && !this.keyBoard["ShiftLeft"]) {
+       let animationName = !this.IsTurnOnFlashlight ? "Walk" : "Crouch"
 
-        let animationName = !this.IsTurnOnFlashlight ? "Walk" : "Crouch"
+      if (this.keyBoard["KeyW"] && !this.keyBoard["ShiftLeft"]) {
         this.setAction(this.playerModel.animationsAction[animationName]);
 
         this.clipName = animationName
@@ -344,8 +384,8 @@ export default class PlayerController {
         );
       }
       else if (this.keyBoard["KeyA"]) {
-        this.setAction(this.playerModel.animationsAction["Walk"]);
-        this.clipName = "Walk"
+        this.setAction(this.playerModel.animationsAction[animationName]);
+        this.clipName = animationName
 
         const quarternion = new Quaternion().setFromAxisAngle(
           new Vector3(0, 1, 0),
@@ -363,8 +403,8 @@ export default class PlayerController {
         );
         this.playerImpulse.add(left.multiplyScalar(-this.velocity * delta));
       } else if (this.keyBoard["KeyD"]) {
-        this.setAction(this.playerModel.animationsAction["Walk"]);
-        this.clipName = "Walk"
+        this.setAction(this.playerModel.animationsAction[animationName]);
+        this.clipName = animationName
 
         const quarternion = new Quaternion().setFromAxisAngle(
           new Vector3(0, 1, 0),
@@ -382,6 +422,7 @@ export default class PlayerController {
         );
         this.playerImpulse.add(right.multiplyScalar(-this.velocity * delta));
       } else if (this.keyBoard["KeyV"]) {
+        this.turnFlashlight(false)
         this.setAction(this.playerModel.animationsAction["Waving"]);
         this.clipName = "Waving"
       } else {
@@ -434,7 +475,7 @@ export default class PlayerController {
       }
     }
 
-  
+    this.updateFlashlight()
     this.followCamera.updateCamera(this.playerModel);
     
     this.socket.io.emit('updatePosition', {
