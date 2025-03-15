@@ -1,5 +1,8 @@
 import { 
     AmbientLight,
+    Audio,
+    AudioListener,
+    AudioLoader,
     Color, 
     DirectionalLight, 
     DirectionalLightHelper, 
@@ -37,6 +40,7 @@ export default class Experience{
     camera = new PerspectiveCamera()
     octree = new Octree();
     playerController: PlayerController
+    listener = new AudioListener();
     items: Items
     socket: SocketManager
     miniMap: MinMap
@@ -50,6 +54,7 @@ export default class Experience{
         // this.setGround()
         this.setLight()    
         this.setAmbientLight()
+        this.setAudio()
         this.items = new Items(this.scene)
         this.socket = new SocketManager(this.scene)
 
@@ -116,6 +121,20 @@ export default class Experience{
     setGround(){
         this.scene.add(new Ground())
         //this.scene.add(new GridHelper(100,100))
+    }
+
+    setAudio(){
+        this.camera.add(this.listener)
+        const audioLoader = new AudioLoader();
+        const sound = new Audio(this.listener);
+    
+
+        audioLoader.load("audio/sound-ambience.mp3", (buffer) => {
+            sound.setBuffer(buffer);
+            sound.setLoop(true); // Faz o som tocar continuamente
+            sound.setVolume(0.2); // Ajuste o volume (0.0 a 1.0)
+            sound.play(); // Começa a tocar
+        });
     }
   
     setLight(){
