@@ -5,9 +5,9 @@ export const eventEmitter = new EventTarget();
 
 const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
 const contentFiles: any[] = []
-const filesInMission = ["\n   log.txt"];
-const dirInMission = ["\n   missao"];
-const filesRoot = ["\n   carteira.txt"];
+const filesInMission = [" log.txt"];
+const dirInMission = [" missao"];
+const filesRoot = ["carteira.txt"];
 
 //Processes
 const processes = [
@@ -76,6 +76,7 @@ function createTerminal() {
         terminal.style.right = "44px";
         terminal.style.width = "406px";
         terminal.style.height = "207px";
+        terminal.style.whiteSpace = "pre-wrap";
 
         // terminal.style.border = "1px solid gray";
         terminal.style.background = "transparent";
@@ -154,15 +155,15 @@ const commands: Record<string, (args: string[]) => string> = {
     "ifconfig": () => `  eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n gateway 192.168.1.1`,
 
     "help": () => `  Comandos disponíveis: 
-            \n ping [host] → Simula o comando ping, testando a conexão com um host.
-            \n ifconfig → Exibe informações de rede, como IP, máscara de sub-rede e gateway.
-            \n help → Lista os comandos disponíveis no terminal.
-            \n clear → Limpa o terminal.
-            \n cd [diretório] → Entra em um diretório válido.
-            \n cat [arquivo] → Exibe o conteúdo de um arquivo.
-            \n ls → Lista os arquivos disponíveis no diretório atual.
-            \n ps aux → Lista todos os processos.
-            \n kill -9 [PID] → Elimina um processo forçadamente.`,
+            ping [host] → Testa a conexão com um host.
+            ifconfig → Exibe informações de rede.
+            help → Lista os comandos disponíveis no terminal.
+            clear → Limpa o terminal.
+            cd [diretório] → Entra em um diretório válido.
+            cat [arquivo] → Exibe o conteúdo de um arquivo.
+            ls → Lista os arquivos disponíveis no diretório atual.
+            ps aux → Lista todos os processos.
+            kill -9 [PID] → Elimina um processo forçadamente.`,
 
     "clear": () => "",
 
@@ -209,9 +210,10 @@ const commands: Record<string, (args: string[]) => string> = {
     },
 
     "ps": () => {
-        return ` USUÁRIO    PID  %CPU  %MEM   COMANDO  
-        ----------------------------------
-        ${processes.map(p => ` user     ${p.pid}   ${p.cpu}   ${p.memory}   ${p.name}`).join("\n")}`;
+     return `
+        USUÁRIO     PID     %CPU     %MEM     COMANDO
+        --------------------------------------
+       ${processes.map(p => `user     ${p.pid}     ${p.cpu}     ${p.memory}     ${p.name}`).join("\n       ")}`;
     },
 
     "kill": (args) => {

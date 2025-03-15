@@ -155,15 +155,14 @@ export default class Experience{
 
         let reward = 300
         let mission1 = new Mission(
-            `
-                \n
-                -- [12:30]: Novo acesso: IP <201.200.928.21>[desconhecido] 
-                -- [12:58]: Aplicação instalada com sucesso
-                -- [13:01]: Aplicação em execução           
-                -- [13:04]: Alto consumo de memória
-                -- [13:05]: Alto consumo de memória
-                -- [13:15]: Sua máquina precisa de atenção
-                -- [13:17]: Alto consumo de memória
+            `  
+            -- [12:30]: Novo acesso: IP <201.200.928.21>[desconhecido] 
+            -- [12:58]: Aplicação instalada com sucesso
+            -- [13:01]: Aplicação em execução           
+            -- [13:04]: Alto consumo de memória
+            -- [13:05]: Alto consumo de memória
+            -- [13:15]: Sua máquina precisa de atenção
+            -- [13:17]: Alto consumo de memória
             `,
             new Vector3(3.4, 0.5, 6.7),
             this.scene,
