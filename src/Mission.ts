@@ -104,7 +104,7 @@ export default class Mission {
     }
 
     rewardPlayer(){
-        infoPlayer.money += this.reward
+        infoPlayer.energy += this.reward
     }
 
 

@@ -1,3 +1,4 @@
 export const infoPlayer = {
-    money: 0
+    money: 0,
+    energy: 0
 }

@@ -129,7 +129,7 @@ export default class Experience{
         const sound = new Audio(this.listener);
     
 
-        audioLoader.load("audio/sound-ambience.mp3", (buffer) => {
+        audioLoader.load("audio/night-ambience.mp3", (buffer) => {
             sound.setBuffer(buffer);
             sound.setLoop(true); // Faz o som tocar continuamente
             sound.setVolume(0.2); // Ajuste o volume (0.0 a 1.0)
@@ -172,7 +172,7 @@ export default class Experience{
 
     startFirstMission(){
 
-        let reward = 300
+        let reward = 3
         let mission1 = new Mission(
             `  
             -- [12:30]: Novo acesso: IP <201.200.928.21>[desconhecido] 
@@ -226,7 +226,7 @@ export default class Experience{
 
     startSecondMission(){
 
-        let reward = 400
+        let reward = 2
         let mission2 = new Mission(
             `
                 \n

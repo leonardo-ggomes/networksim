@@ -7,7 +7,7 @@ const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL"
 const contentFiles: any[] = []
 const filesInMission = [" log.txt"];
 const dirInMission = [" missao"];
-const filesRoot = ["carteira.txt"];
+const filesRoot = ["notas.txt"];
 
 //Processes
 const processes = [
@@ -106,7 +106,7 @@ function addNewCommandLine(terminal: HTMLDivElement) {
     // Prefixo
     const prefix = document.createElement("span");
     prefix.textContent = `${currentPrefix} ${currentDir}`;
-    prefix.style.color = "#bafc03";
+    prefix.style.color = "#00a99d";
     commandLine.appendChild(prefix);
 
     // Campo de entrada editável
@@ -193,8 +193,8 @@ const commands: Record<string, (args: string[]) => string> = {
         if (args[0] === "log.txt" && isCollided && currentDir == "/Missao ") {
             return missionContent ? formatMultiline(missionContent) : "Arquivo vazio.";
         }
-        else if (args[0] === "carteira.txt" && currentDir == "") {
-            return `Saldo em dinheiro: ${currency.format(infoPlayer.money)}`
+        else if (args[0] === "notas.txt" && currentDir == "") {
+            return `Energia:  ${infoPlayer.energy} ⚡`
         }
 
         if (args.length == 0) {
