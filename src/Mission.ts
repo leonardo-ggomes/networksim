@@ -1,8 +1,8 @@
 import { Box3, DoubleSide, Mesh, MeshBasicMaterial, Object3D, RingGeometry, Scene, Vector3 } from "three";
-import GUI from "three/examples/jsm/libs/lil-gui.module.min.js";
 import Items from "./Items";
 import elementos from "./Actions";
 import { infoPlayer } from "./InfoPlayer";
+import { gui } from "./GuiControl";
 
 
 export default class Mission {
@@ -23,18 +23,18 @@ export default class Mission {
         this.reward = reward   
         this.title = title
         this.local = position
-        this.local.y = 0.2
+        
 
         this.missionPoint = this.createMissionPoint(this.local, 0xff0000)
         scene.add(this.missionPoint)
 
-        // const gui = new GUI()
-        // const playerFolder = gui.addFolder("Mission Point")
+      
+        const playerFolder = gui.addFolder("Mission Point 1")
 
 
-        // playerFolder.add(this.missionPoint.position,"x", -100, 100)
-        // playerFolder.add(this.missionPoint.position,"y", 0, 10)
-        // playerFolder.add(this.missionPoint.position,"z", -100, 100)
+        playerFolder.add(this.missionPoint.position,"x", -100, 100)
+        playerFolder.add(this.missionPoint.position,"y", 0, 10)
+        playerFolder.add(this.missionPoint.position,"z", -100, 100)
     }
 
     /**

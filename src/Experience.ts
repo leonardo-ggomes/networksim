@@ -6,15 +6,10 @@ import {
     Color, 
     DirectionalLight, 
     DirectionalLightHelper, 
-    DoubleSide, 
     Fog, 
     Mesh, 
-    MeshBasicMaterial, 
     PerspectiveCamera, 
-    PointLight, 
-    PointLightHelper, 
     PositionalAudio, 
-    RingGeometry, 
     Scene, 
     Vector3, 
     WebGLRenderer 
@@ -25,13 +20,13 @@ import { OctreeHelper } from "three/examples/jsm/helpers/OctreeHelper.js";
 import PlayerController from "./PlayerController";
 import Items from "./Items";
 
-import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js'
 import SocketManager from "./SocketManager";
 import AudioStage from "./AudioStage";
 import MinMap from "./MiniMap";
 import MiniMap from "./MiniMap";
 import Mission from "./Mission";
 import elementos, { eventEmitter } from "./Actions";
+import { gui } from "./GuiControl";
 
 export default class Experience{
 
@@ -76,7 +71,7 @@ export default class Experience{
 
         this.miniMap = new MiniMap(this.scene, this.renderer, this.playerController.playerModel.position)
 
-        const gui = new GUI()
+        
         const playerFolder = gui.addFolder("Player")
         playerFolder.add(this.playerController.playerModel.rotation,"x", -Math.PI, Math.PI)
         playerFolder.add(this.playerController.playerModel.rotation,"y", -Math.PI, Math.PI)
@@ -183,7 +178,7 @@ export default class Experience{
             -- [13:15]: Sua máquina precisa de atenção
             -- [13:17]: Alto consumo de memória
             `,
-            new Vector3(3.4, 0.5, 6.7),
+            new Vector3(11.4, 1.15, 55.8),
             this.scene,
             eventEmitter,
             reward

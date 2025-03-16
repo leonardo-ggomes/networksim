@@ -1,5 +1,5 @@
 import { Camera, Matrix4, Object3D, Vector3, Quaternion, Euler } from "three";
-import GUI from "three/examples/jsm/libs/lil-gui.module.min.js";
+import { gui } from "./GuiControl";
 
 export default class FollowCamera {
     
@@ -27,7 +27,7 @@ export default class FollowCamera {
         });
 
 
-        const gui = new GUI()
+        
         const playerFolder = gui.addFolder("Follow Camera")
              
         playerFolder.add(this.offset,"x", -100, 100)

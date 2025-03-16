@@ -10,7 +10,7 @@ export default class PlayerModel extends Group{
     socketId?: string
     activedClip?: AnimationAction
     ring?: Mesh
-    isVisibleIndicator = true
+    isVisibleIndicator = false
 
     constructor()
     {
