@@ -25,11 +25,13 @@ export default class PlayerModel extends Group{
             this.add(model.scene)
             this.scale.set(1,1,1)
 
-            const [sitting, crouch, crouchIdle] = await Promise.all(
+            const [sitting, crouch, crouchIdle, backward, crouchBack] = await Promise.all(
                 [
                     this.loading.loader.loadAsync("models/asian_male_animated@sitting.glb"),
                     this.loading.loader.loadAsync("models/asian_male_animated@crounch_flashlight.glb"),
-                    this.loading.loader.loadAsync("models/asian_male_animated@crouch_idle.glb")
+                    this.loading.loader.loadAsync("models/asian_male_animated@crouch_idle.glb"),
+                    this.loading.loader.loadAsync("models/asian_male_animated@backward.glb"),
+                    this.loading.loader.loadAsync("models/asian_male_animated@crouch_back.glb")
                 ]
             )
   
@@ -42,6 +44,8 @@ export default class PlayerModel extends Group{
             this.animationsAction["Sitting"] = this.mixer.clipAction(sitting.animations[0])
             this.animationsAction["Crouch"] = this.mixer.clipAction(crouch.animations[0])
             this.animationsAction["CrouchIdle"] = this.mixer.clipAction(crouchIdle.animations[0])
+            this.animationsAction["Backward"] = this.mixer.clipAction(backward.animations[0])
+            this.animationsAction["CrouchBack"] = this.mixer.clipAction(crouchBack.animations[0])
             this.animationsAction["Idle"].play()   
         })
     }

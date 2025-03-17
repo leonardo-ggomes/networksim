@@ -368,7 +368,7 @@ export default class PlayerController {
           this.playerDirection.clone().multiplyScalar(this.velocity * delta)
         );
       
-      }  
+      }        
       else if(this.keyBoard["KeyW"] && this.keyBoard["ShiftLeft"]){
         this.turnFlashlight(false)
         this.setAction(this.playerModel.animationsAction["Running"]);
@@ -384,6 +384,21 @@ export default class PlayerController {
           this.playerDirection.clone().multiplyScalar(this.velocity * 2 * delta)
         );
       }
+      else if (this.keyBoard["KeyS"]) {
+        let isCrouchBack = !this.IsTurnOnFlashlight ? "Backward" : "CrouchBack"
+        this.setAction(this.playerModel.animationsAction[isCrouchBack]);
+        this.clipName = isCrouchBack
+        this.playerModel.quaternion.slerpQuaternions(
+          this.playerModel.quaternion,
+          this.quaternion,
+          delta * 4
+        );
+
+        this.playerImpulse.add(
+          this.playerDirection.clone().multiplyScalar(-(this.velocity - 1) * delta)
+        );
+      
+      }  
       else if (this.keyBoard["KeyA"]) {
         this.setAction(this.playerModel.animationsAction[animationName]);
         this.clipName = animationName
