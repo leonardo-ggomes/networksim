@@ -12,13 +12,16 @@ body {
 
 
 #status-server{
+  border-left: 5px solid #8BC34A;
   position: absolute;
   top: 55px;
   left: 5px;
-  font-family: 'Poppins';
+  font-family: Poppins;
   font-style: normal;
   font-weight: 400;
   color: white;
+  padding: 5px;
+  display: none;
 }
 
 #mini_map{
@@ -54,3 +57,27 @@ body {
   background: #909090; /* Escurece um pouco */
 }
 
+
+/* Caixa de instrução */
+#instruction{
+  position: absolute;
+  top: 105px;
+  left: 5px;
+  color: white;
+  display: none;
+}
+
+#instruction .inst-title{
+  font-size: 12px;
+  font-weight: bold;
+  font-family: 'Poppins';
+  color: #049a90;
+}
+
+#instruction .inst-subtitle{
+  font-size: 11px;
+  font-style: normal;
+  font-family: 'Poppins';
+  font-weight: 300;
+  width: 230px;
+}

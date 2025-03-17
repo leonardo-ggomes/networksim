@@ -196,6 +196,10 @@ export default class Experience{
             cpu: 47
         } 
         elementos.setProcesses(process.name, process.pid, process.memory, process.cpu)
+        mission1.showInstruction(
+            "Encontre o dispositivo",
+            "Foi visto um homem deixando um notebook na lixeira da WasteClean logo a frente."
+        )
 
         //Verifica se o processo foi removido
         mission1.addGameListener('remove_pid', (event) => {

@@ -116,5 +116,15 @@ export default class Mission {
     finished(){
         this.isComplete = true
     }
+
+    showInstruction(title: string, content: string){
+        const instruction = document.getElementById("instruction") as HTMLDivElement
+        instruction.innerHTML = `
+            <div class="inst-title">${title}</div>
+            <div class="inst-subtitle">
+                ${content}
+            </div>
+        `
+    }
     
 }

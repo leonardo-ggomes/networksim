@@ -78,6 +78,10 @@ export default class Loading
         
         // Remove a barra quando tudo estiver carregado
         this.manager.onLoad = function () {
+
+            (document.getElementById("status-server") as HTMLDivElement).style.display = "block";
+            (document.getElementById("instruction") as HTMLDivElement).style.display = "block";
+
             container.style.display = "none"; // Esconde a barra de loading
             callback(); // Chama a função para iniciar o jogo
         };

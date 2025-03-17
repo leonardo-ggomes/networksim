@@ -111,10 +111,12 @@ export default class SocketManager{
         const hudStatus = document.getElementById("status-server") as HTMLDivElement
         
         if(status){
-            hudStatus.innerHTML = '🟢 Online'
+            hudStatus.innerText = 'Online'
+            hudStatus.style.borderLeftColor = "#8BC34A"
         }
         else{
-            hudStatus.innerHTML = '🔴 Offline'
+            hudStatus.innerText = 'Offline'
+            hudStatus.style.borderLeftColor = "#FF0000"
         }
 
 
