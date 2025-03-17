@@ -1,39 +1,35 @@
 import { AnimationAction, AnimationMixer, DoubleSide, Group, Mesh, MeshBasicMaterial, Quaternion, RingGeometry, Vector3 } from 'three'
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import Loading from './Loading'
 
 export default class PlayerModel extends Group{
 
+    loading: Loading
     mixer?: AnimationMixer
-    gltfLoader = new GLTFLoader()    
     animationsAction: { [key: string]: AnimationAction } = {}
     socketId?: string
     activedClip?: AnimationAction
     ring?: Mesh
     isVisibleIndicator = false
 
-    constructor()
+    constructor(loading: Loading)
     {
         super()
-        const dracoLoader = new DRACOLoader()
-        dracoLoader.setDecoderPath("draco/")
-        this.gltfLoader.setDRACOLoader(dracoLoader) 
-
+        this.loading = loading     
         this.loadModel()
         this.showAnelIndicator(this.isVisibleIndicator)
     }
 
     loadModel(){
-        this.gltfLoader.load("models/asian_male_animated.glb", async (model) => {  
+        this.loading.loader.load("models/asian_male_animated.glb", async (model) => {  
 
             this.add(model.scene)
             this.scale.set(1,1,1)
 
             const [sitting, crouch, crouchIdle] = await Promise.all(
                 [
-                    this.gltfLoader.loadAsync("models/asian_male_animated@sitting.glb"),
-                    this.gltfLoader.loadAsync("models/asian_male_animated@crounch_flashlight.glb"),
-                    this.gltfLoader.loadAsync("models/asian_male_animated@crouch_idle.glb")
+                    this.loading.loader.loadAsync("models/asian_male_animated@sitting.glb"),
+                    this.loading.loader.loadAsync("models/asian_male_animated@crounch_flashlight.glb"),
+                    this.loading.loader.loadAsync("models/asian_male_animated@crouch_idle.glb")
                 ]
             )
   

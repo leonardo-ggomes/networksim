@@ -1,13 +1,17 @@
 import { AudioListener, AudioLoader, PerspectiveCamera, PositionalAudio } from "three";
+import Loading from "./Loading";
 
 export default class AudioStage{
 
     listener: AudioListener
     camera: PerspectiveCamera
     sound: PositionalAudio
-    audioLoader = new AudioLoader();
+    audioLoader: AudioLoader;
+    loading: Loading
 
-    constructor(camera: PerspectiveCamera){
+    constructor(camera: PerspectiveCamera, loading: Loading){
+        this.loading = loading
+        this.audioLoader = new AudioLoader(this.loading.manager);
         this.listener = new AudioListener();
         this.camera = camera
 

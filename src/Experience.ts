@@ -27,6 +27,7 @@ import MiniMap from "./MiniMap";
 import Mission from "./Mission";
 import elementos, { eventEmitter } from "./Actions";
 import { gui } from "./GuiControl";
+import Loading from "./Loading";
 
 export default class Experience{
 
@@ -40,9 +41,11 @@ export default class Experience{
     socket: SocketManager
     miniMap: MinMap
     currentMission?: Mission
+    loading: Loading
 
-    constructor()
+    constructor(loading: Loading)
     {
+        this.loading = loading
         this.setScene()
         this.setRenderer()
         this.setCamera()
@@ -50,17 +53,18 @@ export default class Experience{
         this.setLight()    
         this.setAmbientLight()
         this.setAudio()
-        this.items = new Items(this.scene)
+        this.items = new Items(this.scene, this.loading)
         this.socket = new SocketManager(this.scene)
 
-        //const audioStage = new AudioStage(this.camera)   
+        //const audioStage = new AudioStage(this.camera, this.loading)   
 
         this.playerController = new PlayerController(
             this.scene, 
             this.camera,
             this.octree,
             this.items,
-            this.socket
+            this.socket,
+            this.loading
         )
 
         //Inicia a posição do personagem
@@ -120,7 +124,7 @@ export default class Experience{
 
     setAudio(){
         this.camera.add(this.listener)
-        const audioLoader = new AudioLoader();
+        const audioLoader = new AudioLoader(this.loading.manager);
         const sound = new Audio(this.listener);
     
 

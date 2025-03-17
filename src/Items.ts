@@ -1,9 +1,9 @@
-import { AxesHelper, BoxGeometry, BoxHelper, Mesh, MeshBasicMaterial, MeshToonMaterial, Object3D, Scene, Vector3 } from "three";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { AxesHelper, BoxGeometry, BoxHelper, Mesh, MeshBasicMaterial, MeshToonMaterial, Object3D, Scene } from "three";
+import Loading from "./Loading";
 
 export default class Items{
     
+    loading: Loading
     scene: Scene
     items = [            
         {
@@ -23,8 +23,9 @@ export default class Items{
     ]
     colliders: Object3D[] = []
     
-    constructor(scene: Scene)
+    constructor(scene: Scene, loading: Loading)
     {
+        this.loading = loading
         this.scene = scene       
         this.setItems() 
         //this.createLadder()
@@ -88,13 +89,9 @@ export default class Items{
     }
   
     setItems(){
-        const draco = new DRACOLoader()
-        draco.setDecoderPath("draco/")
-        const loader = new GLTFLoader()
-        loader.setDRACOLoader(draco)
-
+       
         this.items.forEach(async (item) => {
-            const obj = await loader.loadAsync(item.path)
+            const obj = await this.loading.loader.loadAsync(item.path)
             obj.scene.name = item.name
             
             const axes = new BoxHelper(obj.scene)

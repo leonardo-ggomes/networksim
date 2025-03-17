@@ -19,6 +19,7 @@ import { Octree } from "three/examples/jsm/math/Octree.js";
 import Items from "./Items";
 import SocketManager from "./SocketManager";
 import elementos from "./Actions";
+import Loading from "./Loading";
 
 export default class PlayerController {
   playerImpulse = new Vector3(0, 0, 0);
@@ -61,21 +62,25 @@ export default class PlayerController {
   //Ações
   actions: any = {}
 
+  //Carregamento
+  loading: Loading
+
   constructor(
     scene: Scene,
     camera: PerspectiveCamera,
     octree: Octree,
     items: Items,
-    socketManager: SocketManager
+    socketManager: SocketManager,
+    loading: Loading
   ) {
-
+    this.loading = loading
     this.camera = camera;
     this.followCamera = new FollowCamera(this.camera);
     this.socket = socketManager
     this.octree = octree;
     this.items = items;
 
-    this.playerModel = new PlayerModel();
+    this.playerModel = new PlayerModel(this.loading);
     this.playerModel.position.set(0, 0, 0);
     scene.add(this.playerModel);
 

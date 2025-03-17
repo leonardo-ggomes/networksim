@@ -35,6 +35,10 @@ export default class Mission {
         playerFolder.add(this.missionPoint.position,"x", -100, 100)
         playerFolder.add(this.missionPoint.position,"y", 0, 10)
         playerFolder.add(this.missionPoint.position,"z", -100, 100)
+        playerFolder.add(this.missionPoint.scale,"x", -100, 100)
+        playerFolder.add(this.missionPoint.scale,"y", -100, 100)
+        playerFolder.add(this.missionPoint.scale,"z", -100, 100)
+       
     }
 
     /**
@@ -52,7 +56,7 @@ export default class Mission {
             transparent: true,
             opacity: 0.3,
             side: DoubleSide,
-            visible: true
+            visible: false
         });
 
 
@@ -63,6 +67,7 @@ export default class Mission {
         ring.position.x = position.x
         ring.position.z = position.z
         ring.position.y = position.y;
+        ring.scale.set(3,3,3)
 
         return ring;
     }
