@@ -1,6 +1,6 @@
 import { ArrowHelper, Box3, BoxHelper, DoubleSide, HemisphereLightHelper, Mesh, MeshBasicMaterial, Object3D, RingGeometry, Scene, Vector3 } from "three";
 import Items from "./Items";
-import elementos from "./Actions";
+import elementos, { eventEmitter } from "./Actions";
 import { infoPlayer } from "./InfoPlayer";
 import { gui } from "./GuiControl";
 
@@ -16,6 +16,7 @@ export default class Mission {
     reward: number
     isComplete: boolean
     helper: boolean
+    missionHelper?: ArrowHelper
 
     constructor(title: string, position: Vector3, scene: Scene, event: EventTarget, reward: number, helper: boolean) {
         
@@ -30,14 +31,14 @@ export default class Mission {
         this.missionPoint = this.createMissionPoint(this.local, 0xff0000, this.helper)      
         scene.add(this.missionPoint)
       
-        const playerFolder = gui.addFolder("Mission Point 1")
+        // const playerFolder = gui.addFolder("Mission Point 1")
 
-        playerFolder.add(this.missionPoint.position,"x", -100, 100)
-        playerFolder.add(this.missionPoint.position,"y", 0, 10)
-        playerFolder.add(this.missionPoint.position,"z", -100, 100)
-        playerFolder.add(this.missionPoint.scale,"x", -100, 100)
-        playerFolder.add(this.missionPoint.scale,"y", -100, 100)
-        playerFolder.add(this.missionPoint.scale,"z", -100, 100)
+        // playerFolder.add(this.missionPoint.position,"x", -100, 100)
+        // playerFolder.add(this.missionPoint.position,"y", 0, 10)
+        // playerFolder.add(this.missionPoint.position,"z", -100, 100)
+        // playerFolder.add(this.missionPoint.scale,"x", -100, 100)
+        // playerFolder.add(this.missionPoint.scale,"y", -100, 100)
+        // playerFolder.add(this.missionPoint.scale,"z", -100, 100)
     }
 
     /**
@@ -70,18 +71,18 @@ export default class Mission {
 
         if(hasHelper)
         {
-            const missionHelper = new ArrowHelper(new Vector3(0,0,-1))
-            missionHelper.setLength(0.07)
-            missionHelper.setColor(0xffffff)
-            missionHelper.position.z += 0.6
-            ring.add(missionHelper)
+            this.missionHelper = new ArrowHelper(new Vector3(0,0,-1))
+            this.missionHelper.setLength(0.07)
+            this.missionHelper.setColor(0xffffff)
+            this.missionHelper.position.z += 0.6
+            ring.add(this.missionHelper)
         }
       
 
         return ring;
     }
 
-    removeMissionPoint(object: Mesh, scene: Scene) {
+    removeMissionPoint(object: Mesh, scene: Scene) {      
         scene.remove(object);
     }
 
@@ -97,6 +98,15 @@ export default class Mission {
             // Verifica se o jogador está dentro do raio do anel
             this.isCollided = distance < radius;
             elementos.setIsCollided(this.isCollided)
+
+            if(this.isCollided){
+                eventEmitter.dispatchEvent(new CustomEvent("collided", {
+                    detail: {
+                        collided: this.isCollided
+                    }
+                }))
+            }            
+
         }
         else{
             elementos.setIsCollided(false)

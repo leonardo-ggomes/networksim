@@ -173,6 +173,48 @@ export default class Experience{
 
         let reward = 3
         let mission1 = new Mission(
+            "Encontre o dispositivo",
+            new Vector3(11.4, 1.15, 55.8),
+            this.scene,
+            eventEmitter,
+            reward,
+            true
+        )
+        
+        setTimeout(() => {
+            mission1.showInstruction(
+                "Encontre o dispositivo",
+                "Foi visto um homem deixando um notebook na lixeira da WasteClean logo a frente."
+            )
+        }, 3000);        
+      
+
+        //Verifica se o processo foi removido
+        mission1.addGameListener('collided', (event) => {
+            const {detail} = event as CustomEvent;
+            
+           const foundDevice = detail.collided as boolean
+
+           if(foundDevice){
+                mission1.rewardPlayer()
+                elementos.showMsg('✅ Dispositivo encontrado')
+                mission1.removeMissionPoint(mission1.missionPoint, this.scene)
+                mission1.showInstruction("","")
+                mission1.finished()
+               
+                this.startSecondMission()
+           }           
+                    
+        }, true)
+            
+        this.currentMission = mission1
+        elementos.setCurrentMission(this.currentMission.title) 
+    }
+
+    startSecondMission(){
+
+        let reward = 3
+        let mission2 = new Mission(
             `  
             -- [12:30]: Novo acesso: IP <201.200.928.21>[desconhecido] 
             -- [12:58]: Aplicação instalada com sucesso
@@ -199,26 +241,26 @@ export default class Experience{
         elementos.setProcesses(process.name, process.pid, process.memory, process.cpu)
         
         setTimeout(() => {
-            mission1.showInstruction(
-                "Encontre o dispositivo",
+            mission2.showInstruction(
+                "Elimine o Malware",
                 "Foi visto um homem deixando um notebook na lixeira da WasteClean logo a frente."
             )
         }, 3000);        
       
 
         //Verifica se o processo foi removido
-        mission1.addGameListener('remove_pid', (event) => {
+        mission2.addGameListener('remove_pid', (event) => {
             const {detail} = event as CustomEvent;
             
            const removido = (detail.processes as any[]).findIndex(i => i.pid == 7777) //malware.exe
 
            if(removido === -1 && detail.isCollided){
-                mission1.rewardPlayer()
+                mission2.rewardPlayer()
                 elementos.showMsg('✅ Missão Concluída')
-                mission1.removeMissionPoint(mission1.missionPoint, this.scene)
-                mission1.finished()
+                mission2.removeMissionPoint(mission2.missionPoint, this.scene)
+                mission2.finished()
                 
-                this.startSecondMission()
+                this.startThirdMission()
            }
            else if(removido === -1){
             //Adiciona o processo suspeito novamente se apagar fora da missão
@@ -227,15 +269,14 @@ export default class Experience{
                     
         }, false)
             
-        this.currentMission = mission1
+        this.currentMission = mission2
         elementos.setCurrentMission(this.currentMission.title) 
     }
     
-
-    startSecondMission(){
+    startThirdMission(){
 
         let reward = 2
-        let mission2 = new Mission(
+        let mission3 = new Mission(
             `
                 \n
                 -- [13:50]: O App EstacionaSyS parou inesperadamente.
@@ -268,21 +309,21 @@ export default class Experience{
         elementos.setFilesInMission(file.name, file.content)
 
         //Verifica se o processo foi removido
-        mission2.addGameListener('new_code', (event) => {
+        mission3.addGameListener('new_code', (event) => {
             const {detail} = event as CustomEvent;
             
            const linhaCorreta = detail.line == 3
            const codigoCorreto = String(detail.code).includes("let pos = 0")
            
            if(codigoCorreto && linhaCorreta && detail.isCollided){
-                mission2.rewardPlayer()
+                mission3.rewardPlayer()
                 elementos.showMsg('✅ Missão Concluída')
-                mission2.removeMissionPoint(mission2.missionPoint, this.scene)
-                mission2.finished()
+                mission3.removeMissionPoint(mission3.missionPoint, this.scene)
+                mission3.finished()
            }  
         }, false)
             
-        this.currentMission = mission2
+        this.currentMission = mission3
         elementos.setCurrentMission(this.currentMission.title) 
     }
 
