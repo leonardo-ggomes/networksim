@@ -1,4 +1,4 @@
-import { Box3, DoubleSide, Mesh, MeshBasicMaterial, Object3D, RingGeometry, Scene, Vector3 } from "three";
+import { ArrowHelper, Box3, BoxHelper, DoubleSide, HemisphereLightHelper, Mesh, MeshBasicMaterial, Object3D, RingGeometry, Scene, Vector3 } from "three";
 import Items from "./Items";
 import elementos from "./Actions";
 import { infoPlayer } from "./InfoPlayer";
@@ -15,22 +15,22 @@ export default class Mission {
     eventEmitter: EventTarget;
     reward: number
     isComplete: boolean
+    helper: boolean
 
-    constructor(title: string, position: Vector3, scene: Scene, event: EventTarget, reward: number) {
+    constructor(title: string, position: Vector3, scene: Scene, event: EventTarget, reward: number, helper: boolean) {
         
         this.isComplete = false
         this.eventEmitter = event     
         this.reward = reward   
         this.title = title
         this.local = position
+        this.helper = helper
         
 
-        this.missionPoint = this.createMissionPoint(this.local, 0xff0000)
+        this.missionPoint = this.createMissionPoint(this.local, 0xff0000, this.helper)      
         scene.add(this.missionPoint)
-
       
         const playerFolder = gui.addFolder("Mission Point 1")
-
 
         playerFolder.add(this.missionPoint.position,"x", -100, 100)
         playerFolder.add(this.missionPoint.position,"y", 0, 10)
@@ -38,7 +38,6 @@ export default class Mission {
         playerFolder.add(this.missionPoint.scale,"x", -100, 100)
         playerFolder.add(this.missionPoint.scale,"y", -100, 100)
         playerFolder.add(this.missionPoint.scale,"z", -100, 100)
-       
     }
 
     /**
@@ -48,7 +47,7 @@ export default class Mission {
      * @param color 
      * @description O parâmetro {color} é do tipo hexadecimal. Ex: 0xff0000
      */
-    private createMissionPoint(position: Vector3, color: any): Mesh {
+    private createMissionPoint(position: Vector3, color: any, hasHelper: boolean): Mesh {
 
         const ringGeometry = new RingGeometry(1.2, 1.5, 32);
         const ringMaterial = new MeshBasicMaterial({
@@ -68,6 +67,16 @@ export default class Mission {
         ring.position.z = position.z
         ring.position.y = position.y;
         ring.scale.set(3,3,3)
+
+        if(hasHelper)
+        {
+            const missionHelper = new ArrowHelper(new Vector3(0,0,-1))
+            missionHelper.setLength(0.07)
+            missionHelper.setColor(0xffffff)
+            missionHelper.position.z += 0.6
+            ring.add(missionHelper)
+        }
+      
 
         return ring;
     }
@@ -111,7 +120,6 @@ export default class Mission {
     rewardPlayer(){
         infoPlayer.energy += this.reward
     }
-
 
     finished(){
         this.isComplete = true

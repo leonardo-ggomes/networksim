@@ -131,7 +131,7 @@ export default class Experience{
         audioLoader.load("audio/night-ambience.mp3", (buffer) => {
             sound.setBuffer(buffer);
             sound.setLoop(true); // Faz o som tocar continuamente
-            sound.setVolume(0.2); // Ajuste o volume (0.0 a 1.0)
+            sound.setVolume(0.5); // Ajuste o volume (0.0 a 1.0)
             sound.play(); // Começa a tocar
         });
     }
@@ -185,7 +185,8 @@ export default class Experience{
             new Vector3(11.4, 1.15, 55.8),
             this.scene,
             eventEmitter,
-            reward
+            reward,
+            true
         )
 
         //Adiciona o processo suspeito
@@ -196,10 +197,14 @@ export default class Experience{
             cpu: 47
         } 
         elementos.setProcesses(process.name, process.pid, process.memory, process.cpu)
-        mission1.showInstruction(
-            "Encontre o dispositivo",
-            "Foi visto um homem deixando um notebook na lixeira da WasteClean logo a frente."
-        )
+        
+        setTimeout(() => {
+            mission1.showInstruction(
+                "Encontre o dispositivo",
+                "Foi visto um homem deixando um notebook na lixeira da WasteClean logo a frente."
+            )
+        }, 3000);        
+      
 
         //Verifica se o processo foi removido
         mission1.addGameListener('remove_pid', (event) => {
@@ -239,7 +244,8 @@ export default class Experience{
             new Vector3(-54.8, 0.5, -13),
             this.scene,
             eventEmitter,
-            reward
+            reward,
+            true
         )
 
         //Adiciona o processo suspeito
