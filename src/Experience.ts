@@ -274,6 +274,10 @@ export default class Experience{
                 mission2.rewardPlayer()
                 elementos.showMsg('✅ Missão Concluída')
                 mission2.removeMissionPoint(mission2.missionPoint, this.scene)
+                mission2.showInstruction(
+                    "",
+                    ""
+                )
                 mission2.finished()
                 
                 this.startThirdMission()
