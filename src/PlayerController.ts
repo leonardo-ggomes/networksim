@@ -441,7 +441,8 @@ export default class PlayerController {
       qy: this.playerModel.quaternion.y,
       qz: this.playerModel.quaternion.z,
       qw: this.playerModel.quaternion.w,
-      clip: this.clipName
+      clip: this.clipName,
+      isLatern: this.playerModel.IsTurnOnFlashlight
     })
   }
 }

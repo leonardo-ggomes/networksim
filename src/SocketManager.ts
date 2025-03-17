@@ -102,6 +102,8 @@ export default class SocketManager{
             this.players[data.id].setAnimation(
                 this.players[data.id].animationsAction[data.clip]
             )   
+
+            this.players[data.id].turnFlashlight(data.isLatern)
                         
         }
 

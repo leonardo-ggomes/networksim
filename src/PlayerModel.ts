@@ -181,6 +181,8 @@ export default class PlayerModel extends Group {
     update(delta: number) {
         this.mixer?.update(delta)
         this.updateFlashlight()
+
+        
         if (this.isVisibleIndicator)
             this.animateRing()
 
