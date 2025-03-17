@@ -43,17 +43,20 @@ export default class Experience{
     miniMap: MinMap
     currentMission?: Mission
     loading: Loading
+    audioLoader: AudioLoader
 
     constructor(loading: Loading)
     {
         this.loading = loading
+        this.audioLoader = new AudioLoader(this.loading.manager)
         this.setScene()
         this.setRenderer()
         this.setCamera()
         // this.setGround()
         this.setLight()    
         this.setAmbientLight()
-        this.setAudio()
+        this.camera.add(this.listener)
+        this.setAmbienceAudio()
         this.items = new Items(this.scene, this.loading)
         this.socket = new SocketManager(this.scene, this.loading)
 
@@ -123,17 +126,24 @@ export default class Experience{
         //this.scene.add(new GridHelper(100,100))
     }
 
-    setAudio(){
-        this.camera.add(this.listener)
-        const audioLoader = new AudioLoader(this.loading.manager);
+    setAmbienceAudio(){
         const sound = new Audio(this.listener);
-    
-
-        audioLoader.load("audio/night-ambience.mp3", (buffer) => {
+        this.audioLoader.load("audio/night-ambience.mp3", (buffer) => {
             sound.setBuffer(buffer);
             sound.setLoop(true); // Faz o som tocar continuamente
             sound.setVolume(0.5); // Ajuste o volume (0.0 a 1.0)
             sound.play(); // Começa a tocar
+        });
+    }
+
+    beep(){     
+        const sound = new Audio(this.listener);    
+
+        this.audioLoader.load("audio/beep.mp3", (buffer) => {
+            sound.setBuffer(buffer);
+            sound.setLoop(false); // Toca apenas 1 vez
+            sound.setVolume(0.8); 
+            sound.play(); 
         });
     }
   
@@ -199,6 +209,7 @@ export default class Experience{
            if(foundDevice){
                 mission1.rewardPlayer()
                 infoPlayer.hasTerminal = true //Habilita o terminal
+                this.beep()
                 elementos.showMsg('✅ Dispositivo encontrado')
                 mission1.removeMissionPoint(mission1.missionPoint, this.scene)
                 mission1.showInstruction(
