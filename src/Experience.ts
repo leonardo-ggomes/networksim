@@ -305,6 +305,13 @@ export default class Experience{
             true
         )
 
+        setTimeout(() => {
+            mission3.showInstruction(
+                "Sistema parado",
+                "O hacker implantou uma falha no código, corrija o mais rápido possível."
+            )
+        }, 15000);        
+
         //Adiciona o processo suspeito
         let file ={
             name: "app.js", 
