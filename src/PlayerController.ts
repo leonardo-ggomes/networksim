@@ -20,6 +20,7 @@ import Items from "./Items";
 import SocketManager from "./SocketManager";
 import elementos from "./Actions";
 import Loading from "./Loading";
+import { infoPlayer } from "./InfoPlayer";
 
 export default class PlayerController {
   playerImpulse = new Vector3(0, 0, 0);
@@ -122,7 +123,7 @@ export default class PlayerController {
   callAction(event: KeyboardEvent){
 
     if(this.keyBoard["KeyT"]){
-      if(!this.actions['terminal']){
+      if(!this.actions['terminal'] && infoPlayer.hasTerminal){
         event.preventDefault();
         elementos.showTerminal()
         this.actions['terminal'] = true

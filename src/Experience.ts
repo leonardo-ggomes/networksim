@@ -28,6 +28,7 @@ import Mission from "./Mission";
 import elementos, { eventEmitter } from "./Actions";
 import { gui } from "./GuiControl";
 import Loading from "./Loading";
+import { infoPlayer } from "./InfoPlayer";
 
 export default class Experience{
 
@@ -197,9 +198,13 @@ export default class Experience{
 
            if(foundDevice){
                 mission1.rewardPlayer()
+                infoPlayer.hasTerminal = true //Habilita o terminal
                 elementos.showMsg('✅ Dispositivo encontrado')
                 mission1.removeMissionPoint(mission1.missionPoint, this.scene)
-                mission1.showInstruction("","")
+                mission1.showInstruction(
+                    "Dispositivo habilitado",
+                    "Pressione a tecla T para usar o dispositivo."
+                )
                 mission1.finished()
                
                 this.startSecondMission()
@@ -243,9 +248,9 @@ export default class Experience{
         setTimeout(() => {
             mission2.showInstruction(
                 "Elimine o Malware",
-                "Foi visto um homem deixando um notebook na lixeira da WasteClean logo a frente."
+                "Há uma suspeita que o hacker executou um programa malicioso antes do blackout"
             )
-        }, 3000);        
+        }, 15000);        
       
 
         //Verifica se o processo foi removido
