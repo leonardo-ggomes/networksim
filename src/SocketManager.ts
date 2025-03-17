@@ -4,15 +4,18 @@ import { Mesh, MeshBasicMaterial, Quaternion, Scene, Vector3 } from 'three'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { Faker, pt_BR } from '@faker-js/faker'
+import Loading from './Loading'
 
 export default class SocketManager{
 
+    loading: Loading
     io: Socket
     players: { [key: string] : PlayerModel } = {}
     scene: Scene
     faker = new Faker({locale: pt_BR})
 
-    constructor(scene: Scene){
+    constructor(scene: Scene, loading: Loading){
+        this.loading = loading
         this.scene = scene
         this.io = io('http://localhost:3000')
 
@@ -49,7 +52,7 @@ export default class SocketManager{
         Object.keys(players).forEach(async(player) => {            
             
             if(player != this.io.id){
-                const newPlayer = new PlayerModel()
+                const newPlayer = new PlayerModel(this.loading)
 
                 const font = await loader.loadAsync( 'fonts/helvetiker_regular.typeface.json')
                 const name = this.faker.person.firstName()
@@ -64,7 +67,7 @@ export default class SocketManager{
                 meshName.position.z = newPlayer.position.z - 0.2
                 meshName.position.x = newPlayer.position.x - (name.length / 2 / 10 )
                 
-                meshName.rotation.x = -Math.PI / 2
+                // meshName.rotation.x = -Math.PI / 2
                 newPlayer.add(meshName)
 
                 if(this.io.id != undefined){                    

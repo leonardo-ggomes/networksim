@@ -54,7 +54,7 @@ export default class Experience{
         this.setAmbientLight()
         this.setAudio()
         this.items = new Items(this.scene, this.loading)
-        this.socket = new SocketManager(this.scene)
+        this.socket = new SocketManager(this.scene, this.loading)
 
         //const audioStage = new AudioStage(this.camera, this.loading)   
 
