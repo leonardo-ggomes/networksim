@@ -174,7 +174,8 @@ export default class PlayerController {
         else if (
           obj.name == "Object_102" ||
           obj.name == "Object_189" ||
-          obj.name == "Object_188") {
+          obj.name == "Object_188" ||
+          obj.name == "Object_206") {
           this.goUpStreet(obj)
           this.isFloor = false
         }

@@ -121,7 +121,11 @@ export default class Items{
                             }
                         }
 
-                        if(child.name.includes("Object_102")){ //102 > Ruas
+                        if(
+                            child.name.includes("Object_102") ||
+                            child.name == "Object_188" ||
+                            child.name == "Object_206" 
+                        ){ //102 > Ruas
                             this.colliders.push(child)
                         }
 
