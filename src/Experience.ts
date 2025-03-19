@@ -198,8 +198,10 @@ export default class Experience{
                 "Encontre o dispositivo",
                 "Foi visto um homem deixando um notebook na lixeira da WasteClean logo a frente."
             )
-        }, 3000);        
-      
+        }, 3000);    
+
+        this.items.addLight(new Vector3(10.8,9.5,-3))
+        
 
         //Verifica se o processo foi removido
         mission1.addGameListener('collided', (event) => {
@@ -247,7 +249,7 @@ export default class Experience{
             reward,
             true
         )
-
+    
         //Adiciona o processo suspeito
         let process ={
             name: "anomimo",
@@ -279,7 +281,7 @@ export default class Experience{
                     "Progresso",
                     "A energia parece que está voltando"
                 )
-                this.ambientLight.intensity = 0.5
+                this.ambientLight.intensity = 0.4                
                 mission2.finished()
                 
                 this.startThirdMission()

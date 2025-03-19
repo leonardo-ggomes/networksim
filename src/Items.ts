@@ -1,5 +1,21 @@
-import { AxesHelper, BoxGeometry, BoxHelper, Mesh, MeshBasicMaterial, MeshToonMaterial, Object3D, Scene } from "three";
+import { 
+    AxesHelper, 
+    BoxGeometry, 
+    BoxHelper, 
+    ColorRepresentation
+    ,Mesh, 
+    MeshBasicMaterial, 
+    MeshStandardMaterial, 
+    MeshToonMaterial, 
+    Object3D, 
+    PointLight, 
+    Scene, 
+    SphereGeometry, 
+    SpotLight, 
+    Vector3 
+} from "three";
 import Loading from "./Loading";
+import { gui } from "./GuiControl";
 
 export default class Items{
     
@@ -21,6 +37,7 @@ export default class Items{
             isGroup: true
         }  
     ]
+    lights: Mesh[] = []
     colliders: Object3D[] = []
     
     constructor(scene: Scene, loading: Loading)
@@ -96,10 +113,9 @@ export default class Items{
             
             const axes = new BoxHelper(obj.scene)
             obj.scene.add(axes)
-
+        
             if(item.isGroup){
                 obj.scene.traverse((child) => {
-             
                     if((child as Mesh).isMesh)
                     {
                        
@@ -190,6 +206,38 @@ export default class Items{
                 }
             }
         })
+    }   
+
+    addLight(position: Vector3){
+        const lightGeometry = new SphereGeometry(.1,2,2)
+        const lightMaterial = new MeshStandardMaterial({
+            emissive: 0xFFD700,
+            emissiveIntensity: 1.5
+        })
+
+        const lightMesh = new Mesh(lightGeometry, lightMaterial)
+        lightMesh.position.copy(position)
+
+     
+        const pointLight = new PointLight(0xFFD700, 10, 2)
+        lightMesh.add(pointLight)
+        pointLight.position.y -= 1
+
+        const spotLight = new SpotLight(0xFFFF80,100, 20, Math.PI / 3, .4, 2)
+        spotLight.target.lookAt(0,0,0)
+
+        lightMesh.add(spotLight)
+        lightMesh.add(spotLight.target)
+
+        this.scene.add(lightMesh)
+        this.lights.push(lightMesh)
+
+        // const f = gui.addFolder("Luz")
+
+        // f.add(lightMesh.position,"x", -100, 100, .1)
+        // f.add(lightMesh.position,"y", -100, 100, .1)
+        // f.add(lightMesh.position,"z", -100, 100, .1)
+       
     }
-    
+  
 }
