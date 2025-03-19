@@ -140,6 +140,12 @@ export default class Items{
                         ){ 
                             this.colliders.push(child)                            
                         }
+
+                        if(
+                            child.name == "Object_17" //Lixeira
+                        ){                                                            
+                            this.colliders.push(child)                            
+                        }
                                                
                     }
                 })

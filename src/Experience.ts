@@ -44,6 +44,7 @@ export default class Experience{
     currentMission?: Mission
     loading: Loading
     audioLoader: AudioLoader
+    ambientLight = new AmbientLight(0x34495E, 0)
 
     constructor(loading: Loading)
     {
@@ -117,8 +118,8 @@ export default class Experience{
     }
 
     setAmbientLight(){
-        const ambientLight = new AmbientLight(0x34495E,.1)
-        this.scene.add(ambientLight)
+        this.ambientLight.intensity = .2
+        this.scene.add(this.ambientLight)
     }
 
     setGround(){
@@ -275,9 +276,10 @@ export default class Experience{
                 elementos.showMsg('✅ Missão Concluída')
                 mission2.removeMissionPoint(mission2.missionPoint, this.scene)
                 mission2.showInstruction(
-                    "",
-                    ""
+                    "Progresso",
+                    "A energia parece que está voltando"
                 )
+                this.ambientLight.intensity = 0.5
                 mission2.finished()
                 
                 this.startThirdMission()

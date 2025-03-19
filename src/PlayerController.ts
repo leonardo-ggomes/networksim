@@ -311,9 +311,9 @@ export default class PlayerController {
 
       }
       else if (this.keyBoard["KeyW"] && this.keyBoard["ShiftLeft"]) {
-        this.playerModel.turnFlashlight(false)
-        this.setAction(this.playerModel.animationsAction["Running"]);
-        this.clipName = "Running"
+        let runOrCrouch = !this.playerModel.IsTurnOnFlashlight ? "Running" : "CrouchRun"
+        this.setAction(this.playerModel.animationsAction[runOrCrouch]);
+        this.clipName = runOrCrouch
 
         this.playerModel.quaternion.slerpQuaternions(
           this.playerModel.quaternion,

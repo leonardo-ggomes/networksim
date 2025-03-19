@@ -17,7 +17,7 @@ export default class SocketManager{
     constructor(scene: Scene, loading: Loading){
         this.loading = loading
         this.scene = scene
-        this.io = io('http://localhost:3000')
+        this.io = io('http://10.111.9.146:3000')
 
         
         this.io.on('connect', () => {
