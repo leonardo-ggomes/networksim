@@ -158,5 +158,17 @@ export default class Mission {
             </div>
         `
     }
+
+    async addObject(position: Vector3, scale: number, name: string, scene: Scene){
+        const [obj] = await Promise.all(
+            [
+                this.loading.loader.loadAsync(`models/${name}.glb`)
+            ]
+        )
+
+        obj.scene.position.copy(position)
+        obj.scene.scale.set(scale, scale, scale)
+        scene.add(obj.scene)
+    }
     
 }

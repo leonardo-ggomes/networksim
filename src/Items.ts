@@ -45,7 +45,7 @@ export default class Items{
         this.loading = loading
         this.scene = scene       
         this.setItems() 
-        //this.createLadder()
+        this.addLight(new Vector3(10.8,9.5,-3)) //Adiciona luz
 
         const axes = new AxesHelper()
         axes.position.set(0,1,0)

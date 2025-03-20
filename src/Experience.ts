@@ -201,7 +201,7 @@ export default class Experience{
             )
         }, 3000);    
 
-        this.items.addLight(new Vector3(10.8,9.5,-3))
+       // mission1.addObject(new Vector3(11.4, 1.15, 55.8), .5,"laptop", this.scene)
         
 
         //Verifica se o processo foi removido
