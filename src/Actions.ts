@@ -34,13 +34,24 @@ type dir = {
     contentDir: string[]
 }
 
+const rootPath = "/"
 let diretories: { [key: string]: dir } = {}
+let systemDirs = ["bin", "home","var"]
 
-diretories["/"] = {
-    name: "/",
+diretories[rootPath] = {
+    name: rootPath,
     contentFile: [],
-    contentDir: ["bin","home", "lib","var"]
+    contentDir: []
 }
+
+systemDirs.forEach(sysdir => {
+    diretories[rootPath].contentDir.push(sysdir)
+    diretories[`${rootPath}${sysdir}/`] = {
+        name: sysdir,
+        contentFile: [],
+        contentDir: []
+    }
+})
 
 let currentPrefix = "player@lnx:~$ "; // Prefixo dinâmico do terminal
 let currentDir = "/";
