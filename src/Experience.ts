@@ -99,7 +99,7 @@ export default class Experience{
   
     setScene(){      
         this.scene.background = new Color( 0x34495E );
-        this.scene.fog = new Fog( 0x34495E, 0, 50 );
+        this.scene.fog = new Fog( 0x34495E, 0, 80 );
     }
     
     setRenderer(){

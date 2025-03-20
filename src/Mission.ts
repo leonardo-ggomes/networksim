@@ -1,4 +1,4 @@
-import { ArrowHelper, Box3, BoxHelper, DoubleSide, HemisphereLightHelper, Mesh, MeshBasicMaterial, Object3D, RingGeometry, Scene, Vector3 } from "three";
+import { ArrowHelper, Box3, BoxHelper, DoubleSide, HemisphereLightHelper, Mesh, MeshBasicMaterial, Object3D, RingGeometry, Scene, Sprite, SpriteMaterial, TextureLoader, Vector3 } from "three";
 import Items from "./Items";
 import elementos, { eventEmitter } from "./Actions";
 import { infoPlayer } from "./InfoPlayer";
@@ -71,11 +71,23 @@ export default class Mission {
 
         if(hasHelper)
         {
-            this.missionHelper = new ArrowHelper(new Vector3(0,0,-1))
-            this.missionHelper.setLength(0.07)
-            this.missionHelper.setColor(0xffffff)
-            this.missionHelper.position.z += 0.6
-            ring.add(this.missionHelper)
+            const textureLoader = new TextureLoader()
+            const textureMap = textureLoader.load("img/pin_local.png")
+            const markerMaterial = new SpriteMaterial({
+                map: textureMap,
+                depthTest: false
+            })
+
+            const marker = new Sprite(markerMaterial)
+            marker.scale.set(.2,.2,.2)
+            marker.position.z += 0.6
+            ring.add(marker)
+
+            // this.missionHelper = new ArrowHelper(new Vector3(0,0,-1))
+            // this.missionHelper.setLength(0.07)
+            // this.missionHelper.setColor(0xffffff)
+            // this.missionHelper.position.z += 0.6
+            // ring.add(this.missionHelper)
         }
       
 
