@@ -25,7 +25,7 @@ let missionContent = "";
 
 type file = {
     name: string,
-    content: string[]   
+    content: string[]
 }
 
 type dir = {
@@ -38,8 +38,8 @@ let diretories: { [key: string]: dir } = {}
 
 diretories["/"] = {
     name: "/",
-    contentFile: [],  
-    contentDir: []
+    contentFile: [],
+    contentDir: ["bin","home", "lib","var"]
 }
 
 let currentPrefix = "player@lnx:~$ "; // Prefixo dinâmico do terminal
@@ -169,7 +169,7 @@ function addNewCommandLine(terminal: HTMLDivElement) {
 // Dicionário de comandos do terminal
 const commands: Record<string, (args: string[]) => string> = {
     "ping": (args) => `  PING ${args[0] || "127.0.0.1"}: 56 data bytes\n64 bytes from ${args[0] || "127.0.0.1"}: icmp_seq=1 ttl=64 time=0.5 ms`,
-    "pwd": () => `  ${currentDir ? currentDir : "/"}`,
+    "pwd": () => currentDir,
     "ifconfig": () => `  eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n gateway 192.168.1.1`,
     "help": () => `  Comandos disponíveis: 
             ping [host] → Testa a conexão com um host.
@@ -187,26 +187,23 @@ const commands: Record<string, (args: string[]) => string> = {
             let backDir = currentDir.split("/").filter(i => i != "")
             backDir.pop()
 
-            if(backDir.length > 0)
-            {
+            if (backDir.length > 0) {
                 currentDir = `/${backDir.join("/")}/`
             }
-            else
-            {
+            else {
                 currentDir = "/"
             }
-          
-            return "";           
+
+            return "";
         }
         else if (args[0]) {
             let changerDir = `${currentDir}${args[0]}/`
-            if(diretories[changerDir])
-            {
+            if (diretories[changerDir]) {
                 currentDir = changerDir
                 return ""
             }
         }
-      
+
         return "Erro: Diretório não encontrado.";
     },
     "cat": (args) => {
@@ -231,7 +228,7 @@ const commands: Record<string, (args: string[]) => string> = {
         return AllFilesAndDirs;
     },
     "ps": () => {
-     return `
+        return `
         USUÁRIO     PID     %CPU     %MEM     COMANDO
         --------------------------------------
        ${processes.map(p => `user     ${p.pid}     ${p.cpu}     ${p.memory}     ${p.name}`).join("\n       ")}`;
@@ -292,13 +289,11 @@ const commands: Record<string, (args: string[]) => string> = {
         return "Falta argumento para esse comando"
     },
     "mkdir": (args) => {
-    
-        if(args[0])
-        {  
+
+        if (args[0]) {
             let path = `${currentDir}${args[0]}/`
 
-            if(diretories[path] === undefined)
-            {
+            if (diretories[path] === undefined) {
 
                 diretories[currentDir].contentDir.push(args[0])
 
@@ -310,12 +305,37 @@ const commands: Record<string, (args: string[]) => string> = {
 
                 return ""
             }
-            
+
             return `O diretório ${args[0]} já existe`
         }
 
         return "uso: mkdir <nome_diretorio>";
     },
+    "rmdir": (args) => {
+        if (args[0]) {
+            let path = `${currentDir}${args[0]}/`;
+
+            // Verifica se o diretório existe
+            if (diretories[path] === undefined) {
+                return `O diretório ${args[0]} não existe`;
+            }
+
+            // Remove referência no contentDir do diretório pai
+            diretories[currentDir].contentDir = diretories[currentDir].contentDir.filter(dir => !dir.includes(args[0]));
+
+            // Remove todos os subdiretórios e arquivos do diretório a ser excluído
+            Object.keys(diretories).forEach((chave) => {
+                if (chave.startsWith(path)) {
+                    delete diretories[chave];
+                }
+            });
+
+            console.log(diretories);
+            return "";
+        }
+
+        return "uso: rmdir <nome_diretorio>";
+    }
 };
 
 // Executar um comando digitado
