@@ -22,8 +22,28 @@ const processes = [
 let isCollided = false;
 let missionContent = "";
 
+
+type file = {
+    name: string,
+    content: string[]   
+}
+
+type dir = {
+    name: string,
+    contentFile: file[],
+    contentDir: string[]
+}
+
+let diretories: { [key: string]: dir } = {}
+
+diretories["/"] = {
+    name: "/",
+    contentFile: [],  
+    contentDir: []
+}
+
 let currentPrefix = "player@lnx:~$ "; // Prefixo dinâmico do terminal
-let currentDir = "";
+let currentDir = "/";
 
 // Funções globais
 let elementos = {
@@ -149,11 +169,8 @@ function addNewCommandLine(terminal: HTMLDivElement) {
 // Dicionário de comandos do terminal
 const commands: Record<string, (args: string[]) => string> = {
     "ping": (args) => `  PING ${args[0] || "127.0.0.1"}: 56 data bytes\n64 bytes from ${args[0] || "127.0.0.1"}: icmp_seq=1 ttl=64 time=0.5 ms`,
-
     "pwd": () => `  ${currentDir ? currentDir : "/"}`,
-
     "ifconfig": () => `  eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n gateway 192.168.1.1`,
-
     "help": () => `  Comandos disponíveis: 
             ping [host] → Testa a conexão com um host.
             ifconfig → Exibe informações de rede.
@@ -164,31 +181,34 @@ const commands: Record<string, (args: string[]) => string> = {
             ls → Lista os arquivos disponíveis no diretório atual.
             ps aux → Lista todos os processos.
             kill -9 [PID] → Elimina um processo forçadamente.`,
-
-    "clear": () => "",
-
     "cd": (args) => {
-        if (isCollided && args[0] !== "..") {
-            if (args[0] == "missao") {
-                currentDir = "/Missao ";
-                return "Entrando da missão...";
-            }
-            else {
-                return "Caminho não encontrado.";
-            }
-        }
 
-        if (args[0] == ".." && currentDir == "/Missao ") {
-            currentDir = "";
-            return "Saindo da missão...";
-        }
-        else if (args[0] == "..") {
-            return `${currentDir}`
-        }
+        if (args[0] === "..") {
+            let backDir = currentDir.split("/").filter(i => i != "")
+            backDir.pop()
 
+            if(backDir.length > 0)
+            {
+                currentDir = `/${backDir.join("/")}/`
+            }
+            else
+            {
+                currentDir = "/"
+            }
+          
+            return "";           
+        }
+        else if (args[0]) {
+            let changerDir = `${currentDir}${args[0]}/`
+            if(diretories[changerDir])
+            {
+                currentDir = changerDir
+                return ""
+            }
+        }
+      
         return "Erro: Diretório não encontrado.";
     },
-
     "cat": (args) => {
         if (args[0] === "log.txt" && isCollided && currentDir == "/Missao ") {
             return missionContent ? formatMultiline(missionContent) : "Arquivo vazio.";
@@ -203,19 +223,19 @@ const commands: Record<string, (args: string[]) => string> = {
 
         return `Erro: O arquivo "${args[0]}" não existe.`;
     },
-
     "ls": () => {
-        const files = isCollided ? currentDir == "/Missao " ? filesInMission : dirInMission : filesRoot;
-        return `\n${files.map(file => ` ${file}`).join("\n")}`;
-    },
+        const actualDir = diretories[currentDir];
+        let AllFilesAndDirs = `\n${actualDir.contentDir.map(dir => ` ${dir}`).join("  ")}`
+        AllFilesAndDirs += `${actualDir.contentFile.map(file => ` ${file}`).join("  ")}`
 
+        return AllFilesAndDirs;
+    },
     "ps": () => {
      return `
         USUÁRIO     PID     %CPU     %MEM     COMANDO
         --------------------------------------
        ${processes.map(p => `user     ${p.pid}     ${p.cpu}     ${p.memory}     ${p.name}`).join("\n       ")}`;
     },
-
     "kill": (args) => {
         if (args.length < 2 || args[0] !== "-9") {
             return "Erro: Uso correto: kill -9 [número do processo]";
@@ -231,7 +251,6 @@ const commands: Record<string, (args: string[]) => string> = {
         eventEmitter.dispatchEvent(new CustomEvent("remove_pid", { detail: { processes, isCollided } }));
         return `Processo ${pid} encerrado com sucesso.`;
     },
-
     "nano": (args) => {
         if (args.length > 0) {
             const foundFile = contentFiles.filter(f => f.name == args[0])[0]
@@ -271,7 +290,32 @@ const commands: Record<string, (args: string[]) => string> = {
         }
 
         return "Falta argumento para esse comando"
-    }
+    },
+    "mkdir": (args) => {
+    
+        if(args[0])
+        {  
+            let path = `${currentDir}${args[0]}/`
+
+            if(diretories[path] === undefined)
+            {
+
+                diretories[currentDir].contentDir.push(args[0])
+
+                diretories[path] = {
+                    name: `${path}`,
+                    contentFile: [],
+                    contentDir: []
+                }
+
+                return ""
+            }
+            
+            return `O diretório ${args[0]} já existe`
+        }
+
+        return "uso: mkdir <nome_diretorio>";
+    },
 };
 
 // Executar um comando digitado
