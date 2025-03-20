@@ -190,7 +190,8 @@ export default class Experience{
             this.scene,
             eventEmitter,
             reward,
-            true
+            true,
+            this.loading
         )
         
         setTimeout(() => {
@@ -247,7 +248,8 @@ export default class Experience{
             this.scene,
             eventEmitter,
             reward,
-            true
+            true,
+            this.loading
         )
     
         //Adiciona o processo suspeito
@@ -310,7 +312,8 @@ export default class Experience{
             this.scene,
             eventEmitter,
             reward,
-            true
+            true,
+            this.loading
         )
 
         setTimeout(() => {

@@ -1,4 +1,4 @@
-import { LoadingManager } from "three";
+import { LoadingManager, TextureLoader } from "three";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -7,6 +7,7 @@ export default class Loading
     manager: LoadingManager
     dracoLoader: DRACOLoader
     loader: GLTFLoader
+    textureLoader: TextureLoader
 
     constructor()
     {      
@@ -14,6 +15,7 @@ export default class Loading
 
         this.dracoLoader = new DRACOLoader(this.manager)
         this.loader = new GLTFLoader(this.manager)
+        this.textureLoader = new TextureLoader(this.manager)
         
         this.dracoLoader.setDecoderPath("draco/")
         this.loader.setDRACOLoader(this.dracoLoader)

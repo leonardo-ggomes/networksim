@@ -3,6 +3,7 @@ import Items from "./Items";
 import elementos, { eventEmitter } from "./Actions";
 import { infoPlayer } from "./InfoPlayer";
 import { gui } from "./GuiControl";
+import Loading from "./Loading";
 
 
 export default class Mission {
@@ -17,9 +18,11 @@ export default class Mission {
     isComplete: boolean
     helper: boolean
     missionHelper?: ArrowHelper
+    loading: Loading
 
-    constructor(title: string, position: Vector3, scene: Scene, event: EventTarget, reward: number, helper: boolean) {
+    constructor(title: string, position: Vector3, scene: Scene, event: EventTarget, reward: number, helper: boolean, loading: Loading) {
         
+        this.loading = loading
         this.isComplete = false
         this.eventEmitter = event     
         this.reward = reward   
@@ -71,8 +74,7 @@ export default class Mission {
 
         if(hasHelper)
         {
-            const textureLoader = new TextureLoader()
-            const textureMap = textureLoader.load("img/pin_local.png")
+            const textureMap = this.loading.textureLoader.load("img/pin_local.png")
             const markerMaterial = new SpriteMaterial({
                 map: textureMap,
                 depthTest: false
