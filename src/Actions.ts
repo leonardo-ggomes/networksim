@@ -6,8 +6,6 @@ export const eventEmitter = new EventTarget();
 const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
 const contentFiles: any[] = []
 const filesInMission = [" log.txt"];
-const dirInMission = [" missao"];
-const filesRoot = ["notas.txt"];
 
 //Processes
 const processes = [
