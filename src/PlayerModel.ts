@@ -168,34 +168,30 @@ export default class PlayerModel extends Group {
                     this.flashlightObj.scale.set(.08, .08, .08)
 
                     handBone.attach(this.flashlightObj)
-                    this.flashlightObj.position.set(0.05, 0, 0.1);  // Alinhar na palma da mão
+                    this.flashlightObj.position.set(3.9, 8.1, 3.2);  // Alinhar na palma da mão
                     this.flashlightObj.rotation.set(
                         -0.182212373908208,
                         -2.80858383230928,
                         -1.33831847042925
-                    );  // Ajustar rotação correta
-
-
-                    // const playerFolder = gui.addFolder("Ajuste lanterna")
-
-                    // playerFolder.add(this.flashlightObj.rotation, "x", -Math.PI, Math.PI)
-                    // playerFolder.add(this.flashlightObj.rotation, "y", -Math.PI, Math.PI)
-                    // playerFolder.add(this.flashlightObj.rotation, "z", -Math.PI, Math.PI)
-                 
-
+                    );       
+                    
+                    this.flashlightObj.add(this.lanternLight)
+                    this.flashlightObj.visible = false
                 }
             })
         })
 
-        this.add(this.lanternLight); // Adicionando a luz ao modelo do jogador
+        
     }
 
     turnFlashlight(isOn: boolean) {
         this.IsTurnOnFlashlight = isOn
         if (this.IsTurnOnFlashlight) {
+            this.flashlightObj.visible = true
             this.lanternLight.intensity = 6; // Liga a luz 
             this.pointLight.intensity = 0.5;
         } else {
+            this.flashlightObj.visible = false
             this.lanternLight.intensity = 0; // Desliga a luz 
             this.pointLight.intensity = 0;
         }
