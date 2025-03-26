@@ -1,5 +1,6 @@
-import { AnimationAction, AnimationMixer, Bone, DoubleSide, Group, Mesh, MeshBasicMaterial, Object3D, PointLight, Quaternion, RingGeometry, SpotLight, Vector3 } from 'three'
+import { AnimationAction, AnimationMixer, DoubleSide, Group, Mesh, MeshBasicMaterial, Object3D, PointLight, Quaternion, RingGeometry, SpotLight, Vector3 } from 'three'
 import Loading from './Loading'
+import { gui } from './GuiControl'
 
 export default class PlayerModel extends Group {
 
@@ -11,7 +12,7 @@ export default class PlayerModel extends Group {
     ring?: Mesh
     isVisibleIndicator = false
     model?: Object3D
-   
+
     IsTurnOnFlashlight = false;
     lanternLight = new SpotLight(0xFFD700, 0, 10)
     pointLight = new PointLight(0xFFD700, 0, 5);
@@ -32,10 +33,10 @@ export default class PlayerModel extends Group {
     async loadModel() {
         return await new Promise<void>((resolve) => {
             this.loading.loader.load("models/asian_male_animated_v2.glb", async (model) => {
-                this.model = model.scene           
+                this.model = model.scene
                 this.add(this.model)
                 this.scale.set(1, 1, 1)
-    
+
                 const [sitting, crouch, crouchIdle, backward, crouchBack, crouchRun] = await Promise.all(
                     [
                         this.loading.loader.loadAsync("models/asian_male_animated@sitting.glb"),
@@ -43,13 +44,13 @@ export default class PlayerModel extends Group {
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_idle.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@backward.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_back.glb"),
-                        this.loading.loader.loadAsync("models/asian_male_animated@crouch_run.glb")                  
+                        this.loading.loader.loadAsync("models/asian_male_animated@crouch_run.glb")
                     ]
                 )
-    
+
                 //Animação
                 this.mixer = new AnimationMixer(model.scene)
-    
+
                 this.animationsAction["Idle"] = this.mixer.clipAction(model.animations[1])
                 this.animationsAction["Running"] = this.mixer.clipAction(model.animations[3])
                 this.animationsAction["Walk"] = this.mixer.clipAction(model.animations[4])
@@ -153,28 +154,35 @@ export default class PlayerModel extends Group {
         )
 
 
-        this.isLoadedModel.then(() => {            
+        this.isLoadedModel.then(() => {
             this.loading.loader.load("models/flashlight.glb", gltf => {
                 this.flashlightObj = gltf.scene
-                //this.flashlightObj.scale.set(0.05,0.05,0.05)
                 this.flashlightObj.rotation.y = Math.PI / 2
-                let handBone = this.model?.getObjectByName("Wolf3D_RightHand001")
-                
-                if(handBone)
-                {      
-                    // this.flashlightObj.position.set(
-                    //     this.position.x + 0.1,  // Posição X do jogador
-                    //     this.position.y + 1.45,  // Um pouco acima da cabeça do jogador (ajuste a altura conforme necessário)
-                    //     this.position.z + .65  // Posição Z do jogador
-                    // )
-                    
-                    // handBone.attach(this.flashlightObj)
-                                     
-                   
-                    handBone.children.push(this.flashlightObj);
-                    console.log(handBone)
-                    this.flashlightObj.parent = handBone
-                
+                let handBone = this.model?.getObjectByName("mixamorigLeftHand")
+
+
+                if (handBone) {
+
+                    this.flashlightObj.position.set(0, 0, 0);
+                    this.flashlightObj.rotation.set(0, 0, 0);
+                    this.flashlightObj.scale.set(.08, .08, .08)
+
+                    handBone.attach(this.flashlightObj)
+                    this.flashlightObj.position.set(0.05, 0, 0.1);  // Alinhar na palma da mão
+                    this.flashlightObj.rotation.set(
+                        -0.182212373908208,
+                        -2.80858383230928,
+                        -1.33831847042925
+                    );  // Ajustar rotação correta
+
+
+                    // const playerFolder = gui.addFolder("Ajuste lanterna")
+
+                    // playerFolder.add(this.flashlightObj.rotation, "x", -Math.PI, Math.PI)
+                    // playerFolder.add(this.flashlightObj.rotation, "y", -Math.PI, Math.PI)
+                    // playerFolder.add(this.flashlightObj.rotation, "z", -Math.PI, Math.PI)
+                 
+
                 }
             })
         })
@@ -196,19 +204,19 @@ export default class PlayerModel extends Group {
     updateFlashlight() {
 
         if (this.IsTurnOnFlashlight) {
-          // Obtém a direção para onde o jogador está olhando
-          this.getWorldDirection(this.directionlanternLight);
-    
-          // Posição do target (5 unidades à frente do jogador)
-          const targetPosition = this.position.clone().add(this.directionlanternLight.multiplyScalar(4));
-    
-          // Atualiza o target na cena
-          this.lanternLight.target.position.copy(targetPosition);
-          this.lanternLight.target.updateMatrixWorld(); // Atualiza a matriz do mundo
-    
-          // Ajusta a rotação da lanterna para que ela olhe para a direção correta
-          this.lanternLight.rotation.set(0, 0, 0);  // Resetando rotação, pode ser necessário
-          this.lanternLight.lookAt(targetPosition); // Faz a lanterna olhar para o target
+            // Obtém a direção para onde o jogador está olhando
+            this.getWorldDirection(this.directionlanternLight);
+
+            // Posição do target (5 unidades à frente do jogador)
+            const targetPosition = this.position.clone().add(this.directionlanternLight.multiplyScalar(4));
+
+            // Atualiza o target na cena
+            this.lanternLight.target.position.copy(targetPosition);
+            this.lanternLight.target.updateMatrixWorld(); // Atualiza a matriz do mundo
+
+            // Ajusta a rotação da lanterna para que ela olhe para a direção correta
+            this.lanternLight.rotation.set(0, 0, 0);  // Resetando rotação, pode ser necessário
+            this.lanternLight.lookAt(targetPosition); // Faz a lanterna olhar para o target
         }
     }
 
@@ -217,7 +225,7 @@ export default class PlayerModel extends Group {
         this.mixer?.update(delta)
         this.updateFlashlight()
 
-        
+
         if (this.isVisibleIndicator)
             this.animateRing()
     }
