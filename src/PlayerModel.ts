@@ -1,4 +1,4 @@
-import { AnimationAction, AnimationMixer, DoubleSide, Group, Mesh, MeshBasicMaterial, PointLight, Quaternion, RingGeometry, SpotLight, Vector3 } from 'three'
+import { AnimationAction, AnimationMixer, Bone, DoubleSide, Group, Mesh, MeshBasicMaterial, Object3D, PointLight, Quaternion, RingGeometry, SpotLight, Vector3 } from 'three'
 import Loading from './Loading'
 
 export default class PlayerModel extends Group {
@@ -10,54 +10,60 @@ export default class PlayerModel extends Group {
     activedClip?: AnimationAction
     ring?: Mesh
     isVisibleIndicator = false
-
+    model?: Object3D
+   
     IsTurnOnFlashlight = false;
     lanternLight = new SpotLight(0xFFD700, 0, 10)
     pointLight = new PointLight(0xFFD700, 0, 5);
     directionlanternLight = new Vector3();
+    flashlightObj: Object3D = new Object3D()
+
+    isLoadedModel: Promise<void>
 
     constructor(loading: Loading) {
         super()
         this.loading = loading
-        this.loadModel()
+        this.isLoadedModel = this.loadModel()
         this.showAnelIndicator(this.isVisibleIndicator)
 
-        //lanterna
-        this.add(this.lanternLight); // Adicionando a luz ao modelo do jogador
         this.setFlashlight()
-
     }
 
-    loadModel() {
-        this.loading.loader.load("models/asian_male_animated.glb", async (model) => {
+    async loadModel() {
+        return await new Promise<void>((resolve) => {
+            this.loading.loader.load("models/asian_male_animated_v2.glb", async (model) => {
+                this.model = model.scene           
+                this.add(this.model)
+                this.scale.set(1, 1, 1)
+    
+                const [sitting, crouch, crouchIdle, backward, crouchBack, crouchRun] = await Promise.all(
+                    [
+                        this.loading.loader.loadAsync("models/asian_male_animated@sitting.glb"),
+                        this.loading.loader.loadAsync("models/asian_male_animated@crounch_flashlight.glb"),
+                        this.loading.loader.loadAsync("models/asian_male_animated@crouch_idle.glb"),
+                        this.loading.loader.loadAsync("models/asian_male_animated@backward.glb"),
+                        this.loading.loader.loadAsync("models/asian_male_animated@crouch_back.glb"),
+                        this.loading.loader.loadAsync("models/asian_male_animated@crouch_run.glb")                  
+                    ]
+                )
+    
+                //Animação
+                this.mixer = new AnimationMixer(model.scene)
+    
+                this.animationsAction["Idle"] = this.mixer.clipAction(model.animations[1])
+                this.animationsAction["Running"] = this.mixer.clipAction(model.animations[3])
+                this.animationsAction["Walk"] = this.mixer.clipAction(model.animations[4])
+                this.animationsAction["Waving"] = this.mixer.clipAction(model.animations[5])
+                this.animationsAction["Sitting"] = this.mixer.clipAction(sitting.animations[0])
+                this.animationsAction["Crouch"] = this.mixer.clipAction(crouch.animations[0])
+                this.animationsAction["CrouchIdle"] = this.mixer.clipAction(crouchIdle.animations[0])
+                this.animationsAction["Backward"] = this.mixer.clipAction(backward.animations[0])
+                this.animationsAction["CrouchBack"] = this.mixer.clipAction(crouchBack.animations[0])
+                this.animationsAction["CrouchRun"] = this.mixer.clipAction(crouchRun.animations[0])
+                this.animationsAction["Idle"].play()
 
-            this.add(model.scene)
-            this.scale.set(1, 1, 1)
-
-            const [sitting, crouch, crouchIdle, backward, crouchBack, crouchRun] = await Promise.all(
-                [
-                    this.loading.loader.loadAsync("models/asian_male_animated@sitting.glb"),
-                    this.loading.loader.loadAsync("models/asian_male_animated@crounch_flashlight.glb"),
-                    this.loading.loader.loadAsync("models/asian_male_animated@crouch_idle.glb"),
-                    this.loading.loader.loadAsync("models/asian_male_animated@backward.glb"),
-                    this.loading.loader.loadAsync("models/asian_male_animated@crouch_back.glb"),
-                    this.loading.loader.loadAsync("models/asian_male_animated@crouch_run.glb"),
-                ]
-            )
-
-            this.mixer = new AnimationMixer(model.scene)
-
-            this.animationsAction["Idle"] = this.mixer.clipAction(model.animations[1])
-            this.animationsAction["Running"] = this.mixer.clipAction(model.animations[3])
-            this.animationsAction["Walk"] = this.mixer.clipAction(model.animations[4])
-            this.animationsAction["Waving"] = this.mixer.clipAction(model.animations[5])
-            this.animationsAction["Sitting"] = this.mixer.clipAction(sitting.animations[0])
-            this.animationsAction["Crouch"] = this.mixer.clipAction(crouch.animations[0])
-            this.animationsAction["CrouchIdle"] = this.mixer.clipAction(crouchIdle.animations[0])
-            this.animationsAction["Backward"] = this.mixer.clipAction(backward.animations[0])
-            this.animationsAction["CrouchBack"] = this.mixer.clipAction(crouchBack.animations[0])
-            this.animationsAction["CrouchRun"] = this.mixer.clipAction(crouchRun.animations[0])
-            this.animationsAction["Idle"].play()
+                resolve()
+            })
         })
     }
 
@@ -97,7 +103,6 @@ export default class PlayerModel extends Group {
         this.ring?.scale.set(scale, scale, scale);// Aplicando escala
         //this.ring?.material.opacity = opacity; // Aplicando opacidade
     }
-
 
     setPosition(newPosition: Vector3) {
         this.position.copy(newPosition)
@@ -146,6 +151,35 @@ export default class PlayerModel extends Group {
             this.position.y + 1.5,  // Um pouco acima da cabeça do jogador (ajuste a altura conforme necessário)
             this.position.z + .7  // Posição Z do jogador
         )
+
+
+        this.isLoadedModel.then(() => {            
+            this.loading.loader.load("models/flashlight.glb", gltf => {
+                this.flashlightObj = gltf.scene
+                //this.flashlightObj.scale.set(0.05,0.05,0.05)
+                this.flashlightObj.rotation.y = Math.PI / 2
+                let handBone = this.model?.getObjectByName("Wolf3D_RightHand001")
+                
+                if(handBone)
+                {      
+                    // this.flashlightObj.position.set(
+                    //     this.position.x + 0.1,  // Posição X do jogador
+                    //     this.position.y + 1.45,  // Um pouco acima da cabeça do jogador (ajuste a altura conforme necessário)
+                    //     this.position.z + .65  // Posição Z do jogador
+                    // )
+                    
+                    // handBone.attach(this.flashlightObj)
+                                     
+                   
+                    handBone.children.push(this.flashlightObj);
+                    console.log(handBone)
+                    this.flashlightObj.parent = handBone
+                
+                }
+            })
+        })
+
+        this.add(this.lanternLight); // Adicionando a luz ao modelo do jogador
     }
 
     turnFlashlight(isOn: boolean) {
@@ -176,8 +210,7 @@ export default class PlayerModel extends Group {
           this.lanternLight.rotation.set(0, 0, 0);  // Resetando rotação, pode ser necessário
           this.lanternLight.lookAt(targetPosition); // Faz a lanterna olhar para o target
         }
-    
-      }
+    }
 
 
     update(delta: number) {
@@ -187,8 +220,6 @@ export default class PlayerModel extends Group {
         
         if (this.isVisibleIndicator)
             this.animateRing()
-
-
     }
 
 }
