@@ -59,7 +59,10 @@ export default class Experience{
         this.camera.add(this.listener)
         this.setAmbienceAudio()
         this.items = new Items(this.scene, this.loading)
-        this.socket = new SocketManager(this.scene, this.loading)
+        
+        this.socket = new SocketManager()
+        this.socket.scene = this.scene
+        this.socket.loading = this.loading
 
         //const audioStage = new AudioStage(this.camera, this.loading)   
 

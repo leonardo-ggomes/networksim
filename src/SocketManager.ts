@@ -5,20 +5,18 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { Faker, pt_BR } from '@faker-js/faker'
 import Loading from './Loading'
+import { addNewCommandLine, appendToTerminal, isRemotelyConnected } from './Actions'
 
 export default class SocketManager{
 
-    loading: Loading
+    loading?: Loading
     io: Socket
     players: { [key: string] : PlayerModel } = {}
-    scene: Scene
+    scene?: Scene
     faker = new Faker({locale: pt_BR})
 
-    constructor(scene: Scene, loading: Loading){
-        this.loading = loading
-        this.scene = scene
-        this.io = io('http://10.111.9.146:3000')
-
+    constructor(){
+        this.io = io('http://localhost:3000')
         
         this.io.on('connect', () => {
             console.log('Conectado')
@@ -29,7 +27,7 @@ export default class SocketManager{
             console.log('Conexão perdida')
 
             if(this.io.id != undefined){
-                this.scene.remove(this.players[this.io.id])
+                this.scene?.remove(this.players[this.io.id])
                 delete this.players[this.io.id]
             }
             
@@ -39,7 +37,8 @@ export default class SocketManager{
         this.io.on('joinInRoom', this.joinInRoom)
         this.io.on('receivePlayerPosition', this.updatePosition)
         this.io.on('exitTheRoom', this.exitTheRoom)
-        this.io.on('didConnect', this.joinInRoom)
+        this.io.on('didConnect', this.joinInRoom)       
+        this.io.on('receiveRemoteAccess', this.receiveRemoteAccess)
 
 
     }
@@ -51,7 +50,7 @@ export default class SocketManager{
         const textMaterial = new MeshBasicMaterial()
         Object.keys(players).forEach(async(player) => {            
             
-            if(player != this.io.id){
+            if(player != this.io.id && this.loading){
                 const newPlayer = new PlayerModel(this.loading)
 
                 const font = await loader.loadAsync( 'fonts/helvetiker_regular.typeface.json')
@@ -71,7 +70,7 @@ export default class SocketManager{
                 newPlayer.add(meshName)
 
                 if(this.io.id != undefined){                    
-                    this.scene.add(newPlayer)
+                    this.scene?.add(newPlayer)
                     this.players[player] = newPlayer
                 }
                 
@@ -83,7 +82,7 @@ export default class SocketManager{
 
     exitTheRoom = (id: any) => {
         console.log('exit the room')
-        this.scene.remove(this.players[id])
+        this.scene?.remove(this.players[id])
         delete this.players[id]
     }
 
@@ -122,6 +121,28 @@ export default class SocketManager{
         }
 
 
+    }
+
+    sendRemoteAccess = (currentDir: string, dir: string , command: string) => {
+        this.io.emit("sendRemoteAccess", {
+            currentDir,
+            dir,
+            command
+        })
+    }
+
+    receiveRemoteAccess = (log: string) => {
+        if(isRemotelyConnected)
+        {
+          let terminal =  document.getElementById("terminal") as HTMLDivElement
+
+          if(terminal)
+          {
+            appendToTerminal(log, terminal)
+            addNewCommandLine(terminal)
+          }
+         
+        }
     }
 
 

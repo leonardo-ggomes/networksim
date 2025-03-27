@@ -1,7 +1,9 @@
 import { infoPlayer } from "./InfoPlayer";
+import SocketManager from "./SocketManager";
 
 //Compartilhado globalmente
 export const eventEmitter = new EventTarget();
+const socket = new SocketManager()
 
 const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
 const contentFiles: any[] = []
@@ -42,6 +44,7 @@ diretories[rootPath] = {
     contentDir: []
 }
 
+
 systemDirs.forEach(sysdir => {
     diretories[rootPath].contentDir.push(sysdir)
     diretories[`${rootPath}${sysdir}/`] = {
@@ -51,7 +54,12 @@ systemDirs.forEach(sysdir => {
     }
 })
 
-let currentPrefix = "player@lnx:~$ "; // Prefixo dinâmico do terminal
+export let isRemotelyConnected = false;
+let serverAddressRemote = "teste@123"
+let serverPrefix = "user@server:~$ "; // Prefixo dinâmico do server
+let localPrefix = "player@local:~$ "; // Prefixo dinâmico local
+let currentPrefix = localPrefix; // Prefixo dinâmico do terminal
+
 let currentDir = "/";
 
 // Funções globais
@@ -83,8 +91,7 @@ let elementos = {
 // Criar o terminal
 function createTerminal() {
     let terminal = document.getElementById("terminal") as HTMLDivElement;
-
-
+    
     if (!terminal) {
         let framescreen = document.createElement("div");
         framescreen.id = "framescreen"
@@ -127,7 +134,7 @@ function createTerminal() {
 }
 
 // Adicionar uma nova linha de comando ao terminal
-function addNewCommandLine(terminal: HTMLDivElement) {
+export function addNewCommandLine(terminal: HTMLDivElement) {
     const commandLine = document.createElement("div");
     commandLine.style.display = "flex";
     commandLine.style.alignItems = "center";
@@ -189,6 +196,7 @@ const commands: Record<string, (args: string[]) => string> = {
             cat [arquivo] → Exibe o conteúdo de um arquivo.
             ls → Lista os arquivos disponíveis no diretório atual.
             ps aux → Lista todos os processos.
+            ssh [user@address] → Realiza um conexão remota.
             kill -9 [PID] → Elimina um processo forçadamente.`,
     "cd": (args) => {
 
@@ -230,6 +238,13 @@ const commands: Record<string, (args: string[]) => string> = {
         return `Erro: O arquivo "${args[0]}" não existe.`;
     },
     "ls": () => {
+
+        if(isRemotelyConnected)
+        {
+            socket.sendRemoteAccess(currentDir, "", "ls")
+            return ""
+        }
+       
         const actualDir = diretories[currentDir];
         let AllFilesAndDirs = `\n${actualDir.contentDir.map(dir => ` ${dir}`).join("  ")}`
         AllFilesAndDirs += `${actualDir.contentFile.map(file => ` ${file}`).join("  ")}`
@@ -338,12 +353,40 @@ const commands: Record<string, (args: string[]) => string> = {
                     delete diretories[chave];
                 }
             });
-
-            console.log(diretories);
+         
             return "";
         }
 
         return "uso: rmdir <nome_diretorio>";
+    },
+    "ssh": (args) => {
+        if (args[0]) 
+        {
+            if(args[0] === serverAddressRemote)
+            {
+                isRemotelyConnected = true;
+                currentPrefix = serverPrefix
+                return "Conectado ao servidor remoto"
+            }
+            else
+            {
+                return `SSH: Conexão não realizada para ${args[0]}`
+            }
+        }
+        else
+        {
+            return "Uso: ssh <user>@<server>"
+        }
+    },
+    "exit": () => {
+
+        if(currentPrefix == serverPrefix)
+        {
+            isRemotelyConnected = false;
+            currentPrefix = localPrefix
+        }
+
+        return ""
     }
 };
 
@@ -365,7 +408,7 @@ function executeCommand(command: string, terminal: HTMLDivElement) {
 }
 
 // Adiciona a saída no terminal
-function appendToTerminal(text: string, terminal: HTMLDivElement) {
+export function appendToTerminal(text: string, terminal: HTMLDivElement) {
     const lines = text.split("\n");
     lines.forEach(line => {
         const div = document.createElement("div");
