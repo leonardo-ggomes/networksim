@@ -3,7 +3,7 @@ import SocketManager from "./SocketManager";
 
 //Compartilhado globalmente
 export const eventEmitter = new EventTarget();
-const socket = SocketManager
+
 
 const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
 const contentFiles: any[] = []
@@ -241,7 +241,7 @@ const commands: Record<string, (args: string[]) => string> = {
 
         if(isRemotelyConnected)
         {
-            socket.sendRemoteAccess(currentDir, "", "ls")
+            SocketManager.sendRemoteAccess(currentDir, "", "ls")
             return ""
         }
        
