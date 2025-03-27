@@ -5,7 +5,7 @@ import SocketManager from "./SocketManager";
 export const eventEmitter = new EventTarget();
 
 
-const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
+//const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
 const contentFiles: any[] = []
 const filesInMission = [" log.txt"];
 
@@ -55,7 +55,7 @@ systemDirs.forEach(sysdir => {
 })
 
 export let isRemotelyConnected = false;
-let serverAddressRemote = "teste@123"
+let serverAddressRemote = "server@2025"
 let serverPrefix = "user@server:~$ "; // Prefixo dinâmico do server
 let localPrefix = "player@local:~$ "; // Prefixo dinâmico local
 let currentPrefix = localPrefix; // Prefixo dinâmico do terminal
@@ -315,6 +315,13 @@ const commands: Record<string, (args: string[]) => string> = {
     "mkdir": (args) => {
 
         if (args[0]) {
+
+            if(isRemotelyConnected)
+            {
+                SocketManager.sendRemoteAccess(currentDir, args[0], "mkdir")
+                return ""
+            }
+
             let path = `${currentDir}${args[0]}/`
 
             if (diretories[path] === undefined) {
@@ -338,6 +345,12 @@ const commands: Record<string, (args: string[]) => string> = {
     "rmdir": (args) => {
         if (args[0]) {
             let path = `${currentDir}${args[0]}/`;
+
+            if(isRemotelyConnected)
+            {
+                SocketManager.sendRemoteAccess(currentDir, args[0], "rmdir")
+                return ""
+            }
 
             // Verifica se o diretório existe
             if (diretories[path] === undefined) {
@@ -380,13 +393,16 @@ const commands: Record<string, (args: string[]) => string> = {
     },
     "exit": () => {
 
+        let info = ""
+
         if(currentPrefix == serverPrefix)
         {
             isRemotelyConnected = false;
             currentPrefix = localPrefix
+            info = "desconectado"
         }
 
-        return ""
+        return info
     }
 };
 
