@@ -29,6 +29,8 @@ import elementos, { eventEmitter } from "./Actions";
 import { gui } from "./GuiControl";
 import Loading from "./Loading";
 import { infoPlayer } from "./InfoPlayer";
+import { driver } from "driver.js"
+import "driver.js/dist/driver.css"
 
 export default class Experience{
 
@@ -39,7 +41,7 @@ export default class Experience{
     playerController: PlayerController
     listener = new AudioListener();
     items: Items
-    socket: SocketManager
+    socket = SocketManager
     miniMap: MinMap
     currentMission?: Mission
     loading: Loading
@@ -59,8 +61,7 @@ export default class Experience{
         this.camera.add(this.listener)
         this.setAmbienceAudio()
         this.items = new Items(this.scene, this.loading)
-        
-        this.socket = SocketManager.getInstance()
+
         this.socket.scene = this.scene
         this.socket.loading = this.loading
 
@@ -184,6 +185,17 @@ export default class Experience{
         this.renderer.setSize(window.innerWidth, window.innerHeight); 
     }
 
+    setDriver(title: string, content: string){
+        const driverObj = driver();
+        driverObj.highlight({
+          element: "#instruction",
+          popover: {
+            title: title,
+            description: content
+          }
+        });
+    }
+
     startFirstMission(){
 
         let reward = 3
@@ -202,6 +214,8 @@ export default class Experience{
                 "Encontre o dispositivo",
                 "Foi visto um homem deixando um notebook na lixeira da WasteClean logo a frente."
             )
+
+            this.setDriver("Caixa de mensagem","Aqui você encontrará a descrição da atividade" )
         }, 3000);    
 
        // mission1.addObject(new Vector3(11.4, 1.15, 55.8), .5,"laptop", this.scene)

@@ -3,7 +3,7 @@ import SocketManager from "./SocketManager";
 
 //Compartilhado globalmente
 export const eventEmitter = new EventTarget();
-const socket = SocketManager.getInstance()
+const socket = SocketManager
 
 const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
 const contentFiles: any[] = []

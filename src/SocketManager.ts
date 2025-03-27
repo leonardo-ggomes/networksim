@@ -7,15 +7,13 @@ import { Faker, pt_BR } from '@faker-js/faker'
 import Loading from './Loading'
 import { addNewCommandLine, appendToTerminal, isRemotelyConnected } from './Actions'
 
-export default class SocketManager{
+class SocketManager{
    
     loading?: Loading
     io: Socket
     players: { [key: string] : PlayerModel } = {}
     scene?: Scene
     faker = new Faker({locale: pt_BR})
-
-    private static instance: SocketManager;
 
     constructor(){
         this.io = io('http://localhost:3000')
@@ -44,13 +42,6 @@ export default class SocketManager{
 
 
     }
-
-    static getInstance(): SocketManager {
-        if (!SocketManager.instance) {
-            SocketManager.instance = new SocketManager();
-        }
-        return SocketManager.instance;
-      }
 
     joinInRoom = (players: any) => {
       
@@ -156,3 +147,5 @@ export default class SocketManager{
 
 
 }
+
+export default new SocketManager()
