@@ -5,7 +5,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { Faker, pt_BR } from '@faker-js/faker'
 import Loading from './Loading'
-import { addNewCommandLine, appendToTerminal, isRemotelyConnected } from './Actions'
+import { addNewCommandLine, appendToTerminal, isRemotelyConnected, remoteDiretories as rd } from './Actions'
 
 class SocketManager{
    
@@ -131,14 +131,15 @@ class SocketManager{
         })
     }
 
-    receiveRemoteAccess = (log: string) => {
+    receiveRemoteAccess = (data: any) => {
         if(isRemotelyConnected)
         {
           let terminal =  document.getElementById("terminal") as HTMLDivElement
-
+          rd.dirs = data.diretories
+          
           if(terminal)
           {
-            appendToTerminal(log, terminal)
+            appendToTerminal(data.output, terminal)
             addNewCommandLine(terminal)
           }
          

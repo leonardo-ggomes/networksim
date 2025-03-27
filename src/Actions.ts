@@ -35,15 +35,17 @@ type dir = {
 }
 
 const rootPath = "/"
-let diretories: { [key: string]: dir } = {}
-let systemDirs = ["bin", "home","var"]
+export let diretories: { [key: string]: dir } = {}
+export let remoteDiretories: { [key: string]: dir } = {}
+export let systemDirs = ["bin", "home","var"]
 
+
+//Inicializa o diretório root com algumas pastas
 diretories[rootPath] = {
     name: rootPath,
     contentFile: [],
     contentDir: []
 }
-
 
 systemDirs.forEach(sysdir => {
     diretories[rootPath].contentDir.push(sysdir)
@@ -54,12 +56,12 @@ systemDirs.forEach(sysdir => {
     }
 })
 
+//Configurações do servidor remoto e prefixos
 export let isRemotelyConnected = false;
 let serverAddressRemote = "server@2025"
 let serverPrefix = "user@server:~$ "; // Prefixo dinâmico do server
 let localPrefix = "player@local:~$ "; // Prefixo dinâmico local
 let currentPrefix = localPrefix; // Prefixo dinâmico do terminal
-
 let currentDir = "/";
 
 // Funções globais
@@ -214,8 +216,11 @@ const commands: Record<string, (args: string[]) => string> = {
             return "";
         }
         else if (args[0]) {
+
+            let dir = isRemotelyConnected ? remoteDiretories.dirs as any : diretories
+
             let changerDir = `${currentDir}${args[0]}/`
-            if (diretories[changerDir]) {
+            if (dir[changerDir]) {
                 currentDir = changerDir
                 return ""
             }
@@ -379,6 +384,7 @@ const commands: Record<string, (args: string[]) => string> = {
             {
                 isRemotelyConnected = true;
                 currentPrefix = serverPrefix
+                currentDir = rootPath
                 return "Conectado ao servidor remoto"
             }
             else
@@ -400,6 +406,7 @@ const commands: Record<string, (args: string[]) => string> = {
             isRemotelyConnected = false;
             currentPrefix = localPrefix
             info = "desconectado"
+            currentDir = rootPath
         }
 
         return info
