@@ -14,23 +14,26 @@ class SocketManager{
     players: { [key: string] : PlayerModel } = {}
     scene?: Scene
     faker = new Faker({locale: pt_BR})
+    isConnected = false
 
     constructor(){
         this.io = io('http://localhost:3000')
         
         this.io.on('connect', () => {
             console.log('Conectado')
+            this.isConnected = true
             this.setHudStatus(true)
         })
 
         this.io.on('disconnect', () => {
             console.log('Conexão perdida')
-
+         
             if(this.io.id != undefined){
                 this.scene?.remove(this.players[this.io.id])
                 delete this.players[this.io.id]
             }
             
+            this.isConnected = false
             this.setHudStatus(false)
         })
 

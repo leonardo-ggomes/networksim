@@ -380,7 +380,7 @@ const commands: Record<string, (args: string[]) => string> = {
     "ssh": (args) => {
         if (args[0]) 
         {
-            if(args[0] === serverAddressRemote)
+            if(args[0] === serverAddressRemote && SocketManager.isConnected)
             {
                 isRemotelyConnected = true;
                 currentPrefix = serverPrefix
