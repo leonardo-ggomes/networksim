@@ -51,7 +51,7 @@ export default class PlayerController {
   playerCapsule: Mesh;
   capsuleHeight = 1.5; // altura da cápsula
   capsuleRadius = 0.3; // raio da cápsula
-  socket: SocketManager
+  socket = SocketManager
   clipName = "Idle"
 
   //Ações
@@ -65,13 +65,11 @@ export default class PlayerController {
     camera: PerspectiveCamera,
     octree: Octree,
     items: Items,
-    socketManager: SocketManager,
     loading: Loading
   ) {
     this.loading = loading
     this.camera = camera;
     this.followCamera = new FollowCamera(this.camera);
-    this.socket = socketManager
     this.octree = octree;
     this.items = items;
 

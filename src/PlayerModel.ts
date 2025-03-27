@@ -1,6 +1,6 @@
 import { AnimationAction, AnimationMixer, DoubleSide, Group, Mesh, MeshBasicMaterial, Object3D, PointLight, Quaternion, RingGeometry, SpotLight, Vector3 } from 'three'
 import Loading from './Loading'
-import { gui } from './GuiControl'
+
 
 export default class PlayerModel extends Group {
 

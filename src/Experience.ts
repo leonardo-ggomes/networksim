@@ -72,7 +72,6 @@ export default class Experience{
             this.camera,
             this.octree,
             this.items,
-            this.socket,
             this.loading
         )
 
@@ -215,7 +214,7 @@ export default class Experience{
                 "Foi visto um homem deixando um notebook na lixeira da WasteClean logo a frente."
             )
 
-            this.setDriver("Caixa de mensagem","Aqui você encontrará a descrição da atividade" )
+            this.setDriver("🎯Caixa de mensagem","Aqui você encontrará instruções básicas, fique de olho!" )
         }, 3000);    
 
        // mission1.addObject(new Vector3(11.4, 1.15, 55.8), .5,"laptop", this.scene)
