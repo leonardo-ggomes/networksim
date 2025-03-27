@@ -60,7 +60,7 @@ export default class Experience{
         this.setAmbienceAudio()
         this.items = new Items(this.scene, this.loading)
         
-        this.socket = new SocketManager()
+        this.socket = SocketManager.getInstance()
         this.socket.scene = this.scene
         this.socket.loading = this.loading
 
