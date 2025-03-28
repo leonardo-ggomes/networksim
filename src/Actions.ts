@@ -233,18 +233,25 @@ const commands: Record<string, (args: string[]) => string> = {
         return "Erro: Diretório não encontrado.";
     },
     "cat": (args) => {
-        if (args[0] === "log.txt" && isCollided && currentDir == "/Missao ") {
-            return missionContent ? formatMultiline(missionContent) : "Arquivo vazio.";
-        }
-        else if (args[0] === "notas.txt" && currentDir == "") {
-            return `Energia:  ${infoPlayer.energy} ⚡`
-        }
 
-        if (args.length == 0) {
-            return `Erro: Comando inválido.`;
-        }
+        let msg = "Uso: cat [arquivo.ext]"
 
-        return `Erro: O arquivo "${args[0]}" não existe.`;
+        if(args[0])
+        {
+            const findFile = diretories[currentDir].contentFile.find(file => file.name === args[0])
+
+            if(findFile)
+            {
+                msg = findFile.content
+            }
+            else
+            {
+                msg = `Erro: O arquivo "${args[0]}" não existe.`
+            }
+
+        }
+        
+        return formatMultiline(msg)
     },
     "ls": () => {
 
@@ -368,6 +375,23 @@ const commands: Record<string, (args: string[]) => string> = {
         }
 
         return "uso: rmdir <nome_diretorio>";
+    },
+    "rm": (args) => {
+
+        let msg = "uso: rm <nome_diretorio>"
+
+        if (args[0]) {
+
+            if (isRemotelyConnected) {
+                SocketManager.sendRemoteAccess(currentDir, args[0], "rm")
+                return ""
+            }
+
+            diretories[currentDir].contentFile = diretories[currentDir].contentFile.filter(file => file.name !== args[0])
+            msg = ""
+        }
+
+        return msg;
     },
     "ssh": (args) => {
         if (args[0]) {
