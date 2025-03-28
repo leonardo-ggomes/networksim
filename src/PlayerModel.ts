@@ -68,7 +68,6 @@ export default class PlayerModel extends Group {
         })
     }
 
-
     showAnelIndicator(visible: boolean) {
 
         this.isVisibleIndicator = visible

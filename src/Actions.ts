@@ -6,7 +6,6 @@ export const eventEmitter = new EventTarget();
 
 
 //const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
-const contentFiles: any[] = []
 const filesInMission = [" log.txt"];
 
 //Processes
@@ -25,7 +24,7 @@ let missionContent = "";
 
 type file = {
     name: string,
-    content: string[]
+    content: string
 }
 
 type dir = {
@@ -37,7 +36,7 @@ type dir = {
 const rootPath = "/"
 export let diretories: { [key: string]: dir } = {}
 export let remoteDiretories: { [key: string]: dir } = {}
-export let systemDirs = ["bin", "home","var"]
+export let systemDirs = ["bin", "home", "var"]
 
 
 //Inicializa o diretório root com algumas pastas
@@ -81,9 +80,14 @@ let elementos = {
             cpu: cpu
         })
     },
-    setFilesInMission: (name: string, content: string) => {
-        filesInMission.push(name)
-        contentFiles.push({ name, content })
+    setFilesInMission: (dirPath = rootPath, name: string, content: string) => {
+
+        const missionFile: file = {
+            name,
+            content
+        }
+
+        diretories[dirPath].contentFile.push(missionFile)
     },
     showMsg: (msg: string) => {
         showMissionFinished(msg)
@@ -93,7 +97,7 @@ let elementos = {
 // Criar o terminal
 function createTerminal() {
     let terminal = document.getElementById("terminal") as HTMLDivElement;
-    
+
     if (!terminal) {
         let framescreen = document.createElement("div");
         framescreen.id = "framescreen"
@@ -244,15 +248,14 @@ const commands: Record<string, (args: string[]) => string> = {
     },
     "ls": () => {
 
-        if(isRemotelyConnected)
-        {
+        if (isRemotelyConnected) {
             SocketManager.sendRemoteAccess(currentDir, "", "ls")
             return ""
         }
-       
+
         const actualDir = diretories[currentDir];
         let AllFilesAndDirs = `\n${actualDir.contentDir.map(dir => ` ${dir}`).join("  ")}`
-        AllFilesAndDirs += `${actualDir.contentFile.map(file => ` ${file}`).join("  ")}`
+        AllFilesAndDirs += `  ${actualDir.contentFile.map(file => ` ${file.name}`).join("  ")}`
 
         return AllFilesAndDirs;
     },
@@ -278,51 +281,41 @@ const commands: Record<string, (args: string[]) => string> = {
         return `Processo ${pid} encerrado com sucesso.`;
     },
     "nano": (args) => {
-        if (args.length > 0) {
-            const foundFile = contentFiles.filter(f => f.name == args[0])[0]
-
-            if (args[1]) {
-                if (args[2]) {
-
-                    let comando = ""
-
-                    for (let i = 2; i < args.length; i++) {
-                        comando += args[i] + " "
-                    }
-
-                    eventEmitter.dispatchEvent(new CustomEvent("new_code", {
-                        detail: {
-                            nano: comando,
-                            line: args[1],
-                            isCollided: isCollided
-                        }
-                    }));
-
-                    return comando
-                }
-
-                return `
-                    nano [aquivo] [linha] (código aqui)
-                    Use > Exemplo: nano demo.js 5 (var y = 0; //Seu código)
-                 `
-            }
-            else {
-                if (foundFile) {
-                    return foundFile.content
-                }
-
-                return `Não foi encontrado o aquivo ${args[0]}.`
-            }
+        if (args.length < 2) {
+            return "Uso: nano [arquivo.ext] \"conteúdo\" (extensões permitidas: .txt, .js, .py)";
         }
 
-        return "Falta argumento para esse comando"
+        const fileName = args[0];
+        const contentMatch = args.join(" ").match(/\"(.*?)\"/);
+        const allowedExtensions = [".txt", ".js", ".py"];
+
+        if (!contentMatch) {
+            return "Erro: O conteúdo deve estar entre aspas. Exemplo: nano arquivo.txt \"seu texto aqui\"";
+        }
+
+        const content = contentMatch[1];
+        const fileExtension = fileName.slice(fileName.lastIndexOf("."));
+
+        if (!allowedExtensions.includes(fileExtension)) {
+            return "Erro: Extensão não permitida. Use .txt, .js ou .py";
+        }
+
+        const fileExists = diretories[currentDir].contentFile.some(f => f.name === fileName);
+
+        if (fileExists) {
+            const file = diretories[currentDir].contentFile.find(f => f.name === fileName);
+            if (file) file.content = content;
+            return `Arquivo ${fileName} atualizado.`;
+        } else {
+            diretories[currentDir].contentFile.push({ name: fileName, content });
+            return `Arquivo ${fileName} criado com sucesso.`;
+        }
     },
     "mkdir": (args) => {
 
         if (args[0]) {
 
-            if(isRemotelyConnected)
-            {
+            if (isRemotelyConnected) {
                 SocketManager.sendRemoteAccess(currentDir, args[0], "mkdir")
                 return ""
             }
@@ -351,8 +344,7 @@ const commands: Record<string, (args: string[]) => string> = {
         if (args[0]) {
             let path = `${currentDir}${args[0]}/`;
 
-            if(isRemotelyConnected)
-            {
+            if (isRemotelyConnected) {
                 SocketManager.sendRemoteAccess(currentDir, args[0], "rmdir")
                 return ""
             }
@@ -371,29 +363,25 @@ const commands: Record<string, (args: string[]) => string> = {
                     delete diretories[chave];
                 }
             });
-         
+
             return "";
         }
 
         return "uso: rmdir <nome_diretorio>";
     },
     "ssh": (args) => {
-        if (args[0]) 
-        {
-            if(args[0] === serverAddressRemote && SocketManager.isConnected)
-            {
+        if (args[0]) {
+            if (args[0] === serverAddressRemote && SocketManager.isConnected) {
                 isRemotelyConnected = true;
                 currentPrefix = serverPrefix
                 currentDir = rootPath
                 return "Conectado ao servidor remoto"
             }
-            else
-            {
+            else {
                 return `SSH: Conexão não realizada para ${args[0]}`
             }
         }
-        else
-        {
+        else {
             return "Uso: ssh <user>@<server>"
         }
     },
@@ -401,8 +389,7 @@ const commands: Record<string, (args: string[]) => string> = {
 
         let info = ""
 
-        if(currentPrefix == serverPrefix)
-        {
+        if (currentPrefix == serverPrefix) {
             isRemotelyConnected = false;
             currentPrefix = localPrefix
             info = "desconectado"

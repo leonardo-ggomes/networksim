@@ -356,7 +356,7 @@ export default class Experience{
             `
         } 
 
-        elementos.setFilesInMission(file.name, file.content)
+        elementos.setFilesInMission("/",file.name, file.content)
 
         //Verifica se o processo foi removido
         mission3.addGameListener('new_code', (event) => {

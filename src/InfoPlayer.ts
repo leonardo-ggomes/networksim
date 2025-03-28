@@ -1,5 +1,6 @@
 export const infoPlayer = {
     money: 0,
     energy: 0,
-    hasTerminal: false
+    hasTerminal: true,
+    hasFlashlight: true
 }
