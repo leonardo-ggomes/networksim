@@ -1,12 +1,11 @@
 import { infoPlayer } from "./InfoPlayer";
 import SocketManager from "./SocketManager";
+import { estructure } from './enums/estructure'
 
 //Compartilhado globalmente
 export const eventEmitter = new EventTarget();
 
-
-//const currency = Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
-const filesInMission = [" log.txt"];
+let missionContent = ""
 
 //Processes
 const processes = [
@@ -19,15 +18,13 @@ const processes = [
 
 // Variáveis de estado
 let isCollided = false;
-let missionContent = "";
 
-
-type file = {
+export type file = {
     name: string,
     content: string
 }
 
-type dir = {
+export type dir = {
     name: string,
     contentFile: file[],
     contentDir: string[]
@@ -238,7 +235,8 @@ const commands: Record<string, (args: string[]) => string> = {
 
         if(args[0])
         {
-            const findFile = diretories[currentDir].contentFile.find(file => file.name === args[0])
+            const dirLocal = isRemotelyConnected ? remoteDiretories.dirs as any : diretories
+            const findFile = (dirLocal[currentDir].contentFile as file[]).find(file => file.name === args[0])
 
             if(findFile)
             {
@@ -289,7 +287,7 @@ const commands: Record<string, (args: string[]) => string> = {
     },
     "nano": (args) => {
         if (args.length < 2) {
-            return "Uso: nano [arquivo.ext] \"conteúdo\" (extensões permitidas: .txt, .js, .py)";
+            return "Uso: nano [arquivo.ext] \"conteúdo\" (extensões: .txt, .js, .py)";
         }
 
         const fileName = args[0];
@@ -307,14 +305,37 @@ const commands: Record<string, (args: string[]) => string> = {
             return "Erro: Extensão não permitida. Use .txt, .js ou .py";
         }
 
-        const fileExists = diretories[currentDir].contentFile.some(f => f.name === fileName);
+        const dirLocal = isRemotelyConnected ? remoteDiretories.dirs as any : diretories
+      
+        const fileExists = (dirLocal[currentDir].contentFile as file[]).some( f => f.name === fileName);
 
         if (fileExists) {
-            const file = diretories[currentDir].contentFile.find(f => f.name === fileName);
-            if (file) file.content = content;
+            const file = (dirLocal[currentDir].contentFile as file[]).find(f => f.name === fileName);
+          
+            if (file){
+                file.content = content;
+            }
+
+            if(isRemotelyConnected){
+                if(file)
+                {
+                    SocketManager.handleFileRemote("nano", currentDir, file)
+                }
+
+                return "";
+            }
+
             return `Arquivo ${fileName} atualizado.`;
         } else {
-            diretories[currentDir].contentFile.push({ name: fileName, content });
+
+            const localFile: file = { name: fileName, content }
+
+            if(isRemotelyConnected){
+                SocketManager.handleFileRemote("nano", currentDir, localFile)
+                return "";
+            }
+
+            dirLocal[currentDir].contentFile.push(localFile);
             return `Arquivo ${fileName} criado com sucesso.`;
         }
     },
@@ -378,12 +399,12 @@ const commands: Record<string, (args: string[]) => string> = {
     },
     "rm": (args) => {
 
-        let msg = "uso: rm <nome_diretorio>"
+        let msg = "uso: rm <nome_arquivo>"
 
         if (args[0]) {
 
             if (isRemotelyConnected) {
-                SocketManager.sendRemoteAccess(currentDir, args[0], "rm")
+                SocketManager.sendRemoteAccess(currentDir, "", "rm",args[0])
                 return ""
             }
 

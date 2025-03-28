@@ -5,7 +5,7 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { Faker, pt_BR } from '@faker-js/faker'
 import Loading from './Loading'
-import { addNewCommandLine, appendToTerminal, isRemotelyConnected, remoteDiretories as rd } from './Actions'
+import { addNewCommandLine, appendToTerminal, dir, file, isRemotelyConnected, remoteDiretories as rd } from './Actions'
 
 class SocketManager{
    
@@ -126,11 +126,12 @@ class SocketManager{
 
     }
 
-    sendRemoteAccess = (currentDir: string, dir: string , command: string) => {
+    sendRemoteAccess = (currentDir: string, dir: string , command: string, name?: string) => {
         this.io.emit("sendRemoteAccess", {
             currentDir,
             dir,
-            command
+            command,
+            name
         })
     }
 
@@ -147,6 +148,14 @@ class SocketManager{
           }
          
         }
+    }
+
+    handleFileRemote = (command: string, currentDir: string, file: file) => {
+        this.io.emit("handleFileRemote", {
+            command,
+            currentDir,
+            file
+        })
     }
 
 
