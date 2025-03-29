@@ -8,9 +8,11 @@ import {
     DirectionalLightHelper, 
     Fog, 
     Mesh, 
+    MeshBasicMaterial, 
     PerspectiveCamera, 
     PositionalAudio, 
     Scene, 
+    SphereGeometry, 
     Vector3, 
     WebGLRenderer 
 } from "three";
@@ -31,6 +33,8 @@ import Loading from "./Loading";
 import { infoPlayer } from "./InfoPlayer";
 import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
+import { NPC } from "./NPC";
+import { EntityManager } from "yuka";
 
 export default class Experience{
 
@@ -47,6 +51,7 @@ export default class Experience{
     loading: Loading
     audioLoader: AudioLoader
     ambientLight = new AmbientLight(0x34495E, 0)
+    entityManager: EntityManager 
 
     constructor(loading: Loading)
     {
@@ -95,6 +100,18 @@ export default class Experience{
 
         this.setOctree()
         window.addEventListener('resize', this.onResize)
+
+        //Teste NPC
+        this.entityManager = new EntityManager();
+        const npcGeometry = new SphereGeometry(0.5, 16, 16);
+        const npcMaterial = new MeshBasicMaterial({ color: 0xff0000 });
+        const npcMesh = new Mesh(npcGeometry, npcMaterial);
+        npcMesh.position.set(0,1,0)
+        this.scene.add(npcMesh);
+
+        // Criar NPC
+        const npc = new NPC("Guardião", npcMesh);
+        this.entityManager.add(npc);
 
         //Missão
         this.startFirstMission()
@@ -395,6 +412,7 @@ export default class Experience{
             2
         )
 
+        this.entityManager.update(delta)
 
         //Renderiza os mapas
         this.miniMap.update()

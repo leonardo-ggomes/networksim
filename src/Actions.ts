@@ -442,7 +442,8 @@ const commands: Record<string, (args: string[]) => string> = {
         }
 
         return info
-    }
+    },
+    "energy": () => `Energia: ${infoPlayer.energy}% ⚡`
 };
 
 // Executar um comando digitado
