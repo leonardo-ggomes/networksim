@@ -50,6 +50,12 @@ export default class Items{
         const axes = new AxesHelper()
         axes.position.set(0,1,0)
         this.scene.add(axes)
+
+        const axesFolder = gui.addFolder("Axes Folder")
+
+        axesFolder.add(axes.position, "x", -100, 100)
+        axesFolder.add(axes.position, "y", -100, 100)
+        axesFolder.add(axes.position, "z", -100, 100)
     }
 
     createLadder(){

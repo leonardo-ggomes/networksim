@@ -7,7 +7,7 @@ export class NPC extends YUKA.Vehicle {
     name: string;
     stateMachine: StateMachine;
     path: YUKA.Path;
-    speed: number = 150;
+    speed: number = 2;
 
     constructor(name: string, mesh: THREE.Mesh) {
         super();
@@ -18,10 +18,16 @@ export class NPC extends YUKA.Vehicle {
 
         // Criar um caminho de patrulha
         this.path = new YUKA.Path();
-        this.path.add(new YUKA.Vector3(0, 1, 0));
-        this.path.add(new YUKA.Vector3(5, 1, 5));
-        this.path.add(new YUKA.Vector3(10, 1, 0));
-        this.path.add(new YUKA.Vector3(5, 1, -5));
+        this.path.add(new YUKA.Vector3(10, 1, 26));
+        this.path.add(new YUKA.Vector3(10, 1, 30));
+        this.path.add(new YUKA.Vector3(10, 1, 35));
+        this.path.add(new YUKA.Vector3(10, 1, 45));
+        this.path.add(new YUKA.Vector3(10, 1, 50));
+        this.path.add(new YUKA.Vector3(10, 1, 55));
+        this.path.add(new YUKA.Vector3(10, 1, 60));
+        this.path.add(new YUKA.Vector3(10, 1, 65));
+        this.path.add(new YUKA.Vector3(10, 1, 70));
+        this.path.add(new YUKA.Vector3(10, 1, 75));
         this.path.loop = true;
 
         // Definir posição inicial
@@ -48,9 +54,9 @@ export class NPC extends YUKA.Vehicle {
         const target = new THREE.Vector3(targetYuka.x, targetYuka.y, targetYuka.z);
 
         // Criar uma cópia da posição atual do NPC e interpolar
-        const pos = this.mesh.position.clone().lerp(target, delta * this.speed * 0.1);
+        const pos = this.mesh.position.clone().lerp(target, delta * this.speed * 0.5);
 
-        if (pos.distanceTo(target) < 0.5) {
+        if (pos.distanceTo(target) < 2.0) {
             this.path.advance(); // Avança para o próximo ponto
         }
 
