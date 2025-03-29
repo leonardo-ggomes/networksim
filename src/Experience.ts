@@ -101,17 +101,9 @@ export default class Experience{
         this.setOctree()
         window.addEventListener('resize', this.onResize)
 
-        //Teste NPC
+        //NPC
         this.entityManager = new EntityManager();
-        const npcGeometry = new SphereGeometry(0.5, 16, 16);
-        const npcMaterial = new MeshBasicMaterial({ color: 0xff0000 });
-        const npcMesh = new Mesh(npcGeometry, npcMaterial);
-        npcMesh.position.set(0,1,0)
-        this.scene.add(npcMesh);
-
-        // Criar NPC
-        const npc = new NPC("Guardião", npcMesh);
-        this.entityManager.add(npc);
+        this.setNpc()
 
         //Missão
         this.startFirstMission()
@@ -210,6 +202,11 @@ export default class Experience{
             description: content
           }
         });
+    }
+
+    setNpc(){
+        const npc = new NPC("Hacker", this.scene, this.loading, "models/asian_male_animated_v2.glb");
+        this.entityManager.add(npc);
     }
 
     startFirstMission(){
