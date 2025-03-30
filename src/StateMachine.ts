@@ -31,6 +31,22 @@ export class StateMachine {
     }
 }
 
+export class IdleState implements State {
+    enter(owner: NPC) {
+        console.log(`${owner.name} está parado`);
+    }
+
+    execute(owner: NPC) {
+        owner.playAnimation("Walking")
+    }
+
+    exit(owner: NPC) {
+        console.log(`${owner.name} Não está mais parado`);
+    }
+}
+
+
+
 export class WalkState implements State {
     enter(owner: NPC) {
         console.log(`${owner.name} entrou no estado de patrulha.`);
@@ -39,6 +55,7 @@ export class WalkState implements State {
 
     execute(owner: NPC, delta: number) {
         owner.moveAlongPath(delta);
+        owner.playAnimation("Walking")
     }
 
     exit(owner: NPC) {
@@ -53,6 +70,7 @@ export class ChaseState implements State {
     }
 
     execute(owner: NPC, delta: number) {
+        owner.playAnimation("Run");
         owner.chasePlayer(delta);
     }
 

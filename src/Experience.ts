@@ -35,6 +35,7 @@ import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
 import { NPC } from "./NPC";
 import { EntityManager } from "yuka";
+import { npcPaths } from "./Path";
 
 export default class Experience{
 
@@ -205,7 +206,13 @@ export default class Experience{
     }
 
     setNpc(){
-        const npc = new NPC("Hacker", this.scene, this.loading, "models/asian_male_animated_v2.glb");
+        const npc = new NPC(
+            "Hacker", 
+            this.scene, 
+            this.loading, 
+            "models/asian_male_animated_v2.glb",
+            npcPaths["patrol"]
+        );
         this.entityManager.add(npc);
     }
 

@@ -13,8 +13,13 @@ export class NPC extends YUKA.Vehicle {
     scene: Scene;
     mixer?: AnimationMixer;
     animations: AnimationClip[] = [];
+    currentAnimation: string
+    
+    private currentIndex = 0
+    private reversePath = false;
+    pathNav: YUKA.Vector3[]
 
-    constructor(name: string, scene: Scene, loading: Loading, modelPath: string) {
+    constructor(name: string, scene: Scene, loading: Loading, modelPath: string, pathNav: YUKA.Vector3[]) {
         super();
         this.name = name;
         this.stateMachine = new StateMachine(this);
@@ -22,27 +27,47 @@ export class NPC extends YUKA.Vehicle {
         this.loading = loading;
         this.scene = scene;
 
+     
         this.path = new YUKA.Path();
-        this.setPath();
+        this.pathNav = pathNav;
+        this.setPath(this.pathNav);
         this.setModel(modelPath);
+        this.currentAnimation = "Idle"
     }
 
-    setPath() {
-        // Criar um caminho de patrulha       
-        this.path.add(new YUKA.Vector3(10, .5, 26));
-        this.path.add(new YUKA.Vector3(10,.5, 30));
-        this.path.add(new YUKA.Vector3(10,.5, 35));
-        this.path.add(new YUKA.Vector3(10,.5, 45));
-        this.path.add(new YUKA.Vector3(10,.5, 50));
-        this.path.add(new YUKA.Vector3(10,.5, 55));
-        this.path.add(new YUKA.Vector3(10,.5, 60));
-        this.path.add(new YUKA.Vector3(10,.5, 65));
-        this.path.add(new YUKA.Vector3(10,.5, 70));
-        this.path.add(new YUKA.Vector3(10,.5, 75));
-        this.path.loop = true;
+    setPath(paths: YUKA.Vector3[]) {
 
-        // Definir posição inicial
-        this.position.copy(this.path.current());
+        if(paths.length > 0)
+        {
+            this.path.clear()
+
+            for(let path of paths)
+            {
+                this.path.add(path)
+            }
+          
+            this.position.copy(this.path.current());
+            this.currentIndex = 0; 
+        }
+    }
+
+    private revertPath() {
+        this.path.clear(); // Limpa o caminho atual
+    
+        const lenghtPath = this.pathNav.length - 1
+        for (let i = lenghtPath; i >= 0; i--) {
+
+            if(this.reversePath)
+            {
+                this.path.add(this.pathNav[lenghtPath - i]); 
+            }
+            else
+            {
+                this.path.add(this.pathNav[i]); 
+            }           
+        }
+
+        this.position.copy(this.path.current()); // Atualiza a posição inicial
     }
 
     setModel(path: string) {
@@ -58,8 +83,8 @@ export class NPC extends YUKA.Vehicle {
                 if (model.animations.length > 0) {
                     this.mixer = new AnimationMixer(this.npcMesh);
                     this.animations = model.animations;
-                    
-                    this.playAnimation("Walking"); // Reproduzir animação inicial
+    
+                    this.playAnimation(this.currentAnimation); 
                 }
             },
             undefined,
@@ -69,10 +94,17 @@ export class NPC extends YUKA.Vehicle {
 
     playAnimation(name: string) {
         if (this.mixer && this.animations.length > 0) {
-            const clip = AnimationClip.findByName(this.animations, name);
-            if (clip) {
-                const action = this.mixer.clipAction(clip);
-                action.reset().play();
+            if (name !== this.currentAnimation) {
+                const clip = AnimationClip.findByName(this.animations, name);
+                if (clip) {
+                    const prevAction = this.mixer.clipAction(AnimationClip.findByName(this.animations, this.currentAnimation));
+                    const newAction = this.mixer.clipAction(clip);
+    
+                    prevAction?.fadeOut(0.3);  // Suaviza a saída da animação anterior
+                    newAction.reset().fadeIn(0.3).play(); // Suaviza entrada da nova animação
+                    
+                    this.currentAnimation = name;
+                }
             }
         }
     }
@@ -87,7 +119,6 @@ export class NPC extends YUKA.Vehicle {
 
     chasePlayer(delta: number) {
         console.log(`${this.name} ${delta} está correndo atrás do jogador!`);
-        this.playAnimation("Run"); // Muda para animação de corrida (se houver)
     }
 
     followPath(delta: number) {
@@ -101,7 +132,15 @@ export class NPC extends YUKA.Vehicle {
             // Criar uma cópia da posição atual do NPC e interpolar
             const pos = this.npcMesh.position.clone().lerp(target, delta * this.speed * 0.3);
 
-            if (pos.distanceTo(target) < 2.0) {
+            if (pos.distanceTo(target) < 2.5) {
+
+                if(this.path.finished())
+                {
+                    this.reversePath = !this.reversePath;
+                    this.revertPath();
+                }
+
+               
                 this.path.advance(); // Avança para o próximo ponto
             }
 
