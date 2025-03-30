@@ -40,21 +40,14 @@ export class NPC extends YUKA.Vehicle {
         if(this.pathNav.length > 0)
         {
             this.path.clear(); // Limpa o caminho atual
-    
-            const lenghtPath = this.pathNav.length - 1
-            for (let i = lenghtPath; i >= 0; i--) {
-    
-                if(!this.reversePath)
-                {
-                    this.path.add(this.pathNav[lenghtPath - i]); 
-                }
-                else
-                {
-                    this.path.add(this.pathNav[i]); 
-                }           
+
+            const points = this.reversePath ? [...this.pathNav].reverse() : [...this.pathNav];
+
+            for (const point of points) {
+                this.path.add(point);
             }
-    
-            this.position.copy(this.path.current()); // Atualiza a posição inicial
+
+            this.position.copy(this.path.current());
         }
        
     }
@@ -117,6 +110,14 @@ export class NPC extends YUKA.Vehicle {
 
             // Converter target de YUKA.Vector3 para THREE.Vector3
             const target = new Vector3(targetYuka.x, targetYuka.y, targetYuka.z);
+      
+            // Criar rotação alvo
+            const targetRotation = new Object3D();
+            targetRotation.position.copy(this.npcMesh.position);
+            targetRotation.lookAt(target);
+
+            // Interpolação suave da rotação
+            this.npcMesh.quaternion.slerp(targetRotation.quaternion, delta * 3.0);
 
             // Criar uma cópia da posição atual do NPC e interpolar
             const pos = this.npcMesh.position.clone().lerp(target, delta * this.speed * 0.3);
