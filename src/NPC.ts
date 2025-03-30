@@ -15,7 +15,6 @@ export class NPC extends YUKA.Vehicle {
     animations: AnimationClip[] = [];
     currentAnimation: string
     
-    private currentIndex = 0
     private reversePath = false;
     pathNav: YUKA.Vector3[]
 
@@ -30,44 +29,34 @@ export class NPC extends YUKA.Vehicle {
      
         this.path = new YUKA.Path();
         this.pathNav = pathNav;
-        this.setPath(this.pathNav);
+        this.setPath();
         this.setModel(modelPath);
         this.currentAnimation = "Idle"
     }
 
-    setPath(paths: YUKA.Vector3[]) {
 
-        if(paths.length > 0)
-        {
-            this.path.clear()
-
-            for(let path of paths)
-            {
-                this.path.add(path)
-            }
-          
-            this.position.copy(this.path.current());
-            this.currentIndex = 0; 
-        }
-    }
-
-    private revertPath() {
-        this.path.clear(); // Limpa o caminho atual
+    private setPath() {
     
-        const lenghtPath = this.pathNav.length - 1
-        for (let i = lenghtPath; i >= 0; i--) {
-
-            if(this.reversePath)
-            {
-                this.path.add(this.pathNav[lenghtPath - i]); 
+        if(this.pathNav.length > 0)
+        {
+            this.path.clear(); // Limpa o caminho atual
+    
+            const lenghtPath = this.pathNav.length - 1
+            for (let i = lenghtPath; i >= 0; i--) {
+    
+                if(!this.reversePath)
+                {
+                    this.path.add(this.pathNav[lenghtPath - i]); 
+                }
+                else
+                {
+                    this.path.add(this.pathNav[i]); 
+                }           
             }
-            else
-            {
-                this.path.add(this.pathNav[i]); 
-            }           
+    
+            this.position.copy(this.path.current()); // Atualiza a posição inicial
         }
-
-        this.position.copy(this.path.current()); // Atualiza a posição inicial
+       
     }
 
     setModel(path: string) {
@@ -132,12 +121,11 @@ export class NPC extends YUKA.Vehicle {
             // Criar uma cópia da posição atual do NPC e interpolar
             const pos = this.npcMesh.position.clone().lerp(target, delta * this.speed * 0.3);
 
-            if (pos.distanceTo(target) < 2.5) {
-
+            if (pos.distanceTo(target) < 4.5) {
                 if(this.path.finished())
                 {
                     this.reversePath = !this.reversePath;
-                    this.revertPath();
+                    this.setPath();
                 }
 
                
