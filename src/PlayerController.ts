@@ -114,12 +114,10 @@ export default class PlayerController {
         event.preventDefault();
         elementos.showTerminal()
         this.actions['terminal'] = true
-        this.followCamera.disableMouseMoveControl = true
       }
       else {
         elementos.hideTerminal()
         this.actions['terminal'] = false
-        this.followCamera.disableMouseMoveControl = false
       }
     }
     else if (this.keyBoard["KeyL"] && infoPlayer.hasFlashlight) { //Liga a laterna
@@ -341,43 +339,50 @@ export default class PlayerController {
 
       }
       else if (this.keyBoard["KeyA"]) {
+
+        animationName = animationName === "Crouch" ? "CrouchLeft" : "WalkLeft"
+
         this.setAction(this.playerModel.animationsAction[animationName]);
         this.clipName = animationName
 
-        const quarternion = new Quaternion().setFromAxisAngle(
-          new Vector3(0, 1, 0),
-          angle - -1.5708
-        );
         this.playerModel.quaternion.slerpQuaternions(
           this.playerModel.quaternion,
-          quarternion,
+          this.quaternion,
           delta * 4
         );
-        let left = new Vector3(
+
+        this.playerDirection.set(
           -this.playerDirection.z,
           0,
-          this.playerDirection.x
-        );
-        this.playerImpulse.add(left.multiplyScalar(-this.velocity * delta));
+          this.playerDirection.x,
+        )        
+
+        this.playerImpulse.add(
+          this.playerDirection.clone().multiplyScalar(-(this.velocity - 1) * delta)
+        );      
       } else if (this.keyBoard["KeyD"]) {
+
+        animationName = animationName === "Crouch" ? "CrouchRight" : "WalkRight"
+
         this.setAction(this.playerModel.animationsAction[animationName]);
         this.clipName = animationName
 
-        const quarternion = new Quaternion().setFromAxisAngle(
-          new Vector3(0, 1, 0),
-          angle - 1.5708
-        );
         this.playerModel.quaternion.slerpQuaternions(
           this.playerModel.quaternion,
-          quarternion,
+          this.quaternion,
           delta * 4
         );
-        let right = new Vector3(
+
+        this.playerDirection.set(
           this.playerDirection.z,
           0,
-          -this.playerDirection.x
+          -this.playerDirection.x,
+        )      
+
+        this.playerImpulse.add(
+          this.playerDirection.clone().multiplyScalar(-(this.velocity - 1) * delta)
         );
-        this.playerImpulse.add(right.multiplyScalar(-this.velocity * delta));
+
       } else if (this.keyBoard["KeyV"]) {
         this.playerModel.turnFlashlight(false)
         this.setAction(this.playerModel.animationsAction["Waving"]);

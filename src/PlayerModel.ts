@@ -37,14 +37,29 @@ export default class PlayerModel extends Group {
                 this.add(this.model)
                 this.scale.set(1, 1, 1)
 
-                const [sitting, crouch, crouchIdle, backward, crouchBack, crouchRun] = await Promise.all(
+                const [
+                    sitting, 
+                    crouch, 
+                    crouchIdle, 
+                    backward, 
+                    crouchBack, 
+                    crouchRun,
+                    walkCrouchRight,
+                    walkCrouchLeft,
+                    walkRight,
+                    walkLeft
+                ] = await Promise.all(
                     [
                         this.loading.loader.loadAsync("models/asian_male_animated@sitting.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crounch_flashlight.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_idle.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@backward.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_back.glb"),
-                        this.loading.loader.loadAsync("models/asian_male_animated@crouch_run.glb")
+                        this.loading.loader.loadAsync("models/asian_male_animated@crouch_run.glb"),
+                        this.loading.loader.loadAsync("models/asian_male_animated@crouch_walk_right.glb"),
+                        this.loading.loader.loadAsync("models/asian_male_animated@crouch_walk_left.glb"),
+                        this.loading.loader.loadAsync("models/asian_male_animated@walk_right.glb"),
+                        this.loading.loader.loadAsync("models/asian_male_animated@walk_left.glb"),
                     ]
                 )
 
@@ -61,6 +76,10 @@ export default class PlayerModel extends Group {
                 this.animationsAction["Backward"] = this.mixer.clipAction(backward.animations[0])
                 this.animationsAction["CrouchBack"] = this.mixer.clipAction(crouchBack.animations[0])
                 this.animationsAction["CrouchRun"] = this.mixer.clipAction(crouchRun.animations[0])
+                this.animationsAction["CrouchRight"] = this.mixer.clipAction(walkCrouchRight.animations[0])
+                this.animationsAction["CrouchLeft"] = this.mixer.clipAction(walkCrouchLeft.animations[0])
+                this.animationsAction["WalkRight"] = this.mixer.clipAction(walkRight.animations[0])
+                this.animationsAction["WalkLeft"] = this.mixer.clipAction(walkLeft.animations[0])
                 this.animationsAction["Idle"].play()
 
                 resolve()
