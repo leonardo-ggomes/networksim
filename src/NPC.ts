@@ -8,24 +8,26 @@ export class NPC extends YUKA.Vehicle {
     name: string;
     stateMachine: StateMachine;
     path: YUKA.Path;
-    speed: number = 2;
+    speed: number = 1;
     loading: Loading;
     scene: Scene;
     mixer?: AnimationMixer;
     animations: AnimationClip[] = [];
     currentAnimation: string
+    player?: Object3D;
     
+    private targetRotation = new Object3D();    
     private reversePath = false;
     pathNav: YUKA.Vector3[]
 
-    constructor(name: string, scene: Scene, loading: Loading, modelPath: string, pathNav: YUKA.Vector3[]) {
+    constructor(name: string, scene: Scene, loading: Loading, modelPath: string, pathNav: YUKA.Vector3[], playerModel: Object3D) {
         super();
         this.name = name;
         this.stateMachine = new StateMachine(this);
         this.stateMachine.changeState(new WalkState());
         this.loading = loading;
         this.scene = scene;
-
+        this.player = playerModel
      
         this.path = new YUKA.Path();
         this.pathNav = pathNav;
@@ -112,12 +114,11 @@ export class NPC extends YUKA.Vehicle {
             const target = new Vector3(targetYuka.x, targetYuka.y, targetYuka.z);
       
             // Criar rotação alvo
-            const targetRotation = new Object3D();
-            targetRotation.position.copy(this.npcMesh.position);
-            targetRotation.lookAt(target);
+            this.targetRotation.position.copy(this.npcMesh.position);
+            this.targetRotation.lookAt(target);
 
             // Interpolação suave da rotação
-            this.npcMesh.quaternion.slerp(targetRotation.quaternion, delta * 3.0);
+            this.npcMesh.quaternion.slerp(this.targetRotation.quaternion, delta * 3.0);
 
             // Criar uma cópia da posição atual do NPC e interpolar
             const pos = this.npcMesh.position.clone().lerp(target, delta * this.speed * 0.3);

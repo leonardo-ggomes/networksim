@@ -211,7 +211,8 @@ export default class Experience{
             this.scene, 
             this.loading, 
             "models/asian_male_animated_v2.glb",
-            npcPaths["patrol"]
+            npcPaths["patrol"],
+            this.playerController.playerModel
         );
         this.entityManager.add(npc);
     }

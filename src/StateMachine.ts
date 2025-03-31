@@ -1,3 +1,4 @@
+import { Vector3 } from 'three';
 import { NPC } from './NPC';
 
 // Definição da interface para os estados
@@ -9,10 +10,17 @@ export interface State {
 
 // Implementação da Máquina de Estados
 export class StateMachine {
-    private currentState!: State;
+    private currentState: State;
     private owner: NPC;
+    private states = {
+        lookAt: new LookAtPlayerState(),
+        idle: new IdleState(),
+        chase: new ChaseState(),
+        walk: new WalkState()
+    }
 
     constructor(owner: NPC) {
+        this.currentState = new IdleState();
         this.owner = owner;
     }
 
@@ -28,6 +36,24 @@ export class StateMachine {
         if (this.currentState) {
             this.currentState.execute(this.owner, delta);
         }
+
+        if(this.owner.player && this.owner.npcMesh)
+        {
+            const distance = this.owner.npcMesh.position.distanceTo(this.owner.player.position);
+
+            if(distance < 5)
+            {
+                if (!(this.currentState instanceof LookAtPlayerState)) {
+                    this.changeState(this.states['lookAt']);
+                }
+            }
+            else {
+                if (this.currentState instanceof LookAtPlayerState) {
+                    this.changeState(this.states['walk']);
+                }
+            }
+        }
+       
     }
 }
 
@@ -37,7 +63,7 @@ export class IdleState implements State {
     }
 
     execute(owner: NPC) {
-        owner.playAnimation("Walking")
+        owner.playAnimation("Idle")
     }
 
     exit(owner: NPC) {
@@ -70,13 +96,37 @@ export class ChaseState implements State {
     }
 
     execute(owner: NPC, delta: number) {
-        owner.playAnimation("Run");
+        owner.playAnimation("Running");
         owner.chasePlayer(delta);
     }
 
     exit(owner: NPC) {
         console.log(`${owner.name} parou de perseguir o jogador.`);
+   
+        owner.playAnimation("Idle");
+        owner.setSpeed(0);
     }
 }
 
+
+export class LookAtPlayerState implements State {
+    enter(owner: NPC) {
+        console.log(`${owner.name} parou e está olhando para o jogador.`);
+        owner.playAnimation("Idle");
+        owner.setSpeed(0); 
+    }
+
+    execute(owner: NPC) {
+        if (owner.player) { // Se o jogador existir
+            const direction = new Vector3().subVectors(owner.player.position, owner.npcMesh!.position).normalize();
+            
+            const lookAtTarget = owner.npcMesh!.position.clone().add(direction);
+            owner.npcMesh!.lookAt(lookAtTarget);
+        }
+    }
+
+    exit(owner: NPC) {
+        console.log(`${owner.name} parou de olhar para o jogador.`);
+    }
+}
 
