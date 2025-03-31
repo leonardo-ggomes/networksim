@@ -12,7 +12,7 @@ export interface State {
 export class StateMachine {
     private currentState: State;
     private owner: NPC;
-    private states = {
+    states = {
         lookAt: new LookAtPlayerState(),
         idle: new IdleState(),
         chase: new ChaseState(),

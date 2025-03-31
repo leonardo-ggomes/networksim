@@ -15,10 +15,12 @@ export class NPC extends YUKA.Vehicle {
     animations: AnimationClip[] = [];
     currentAnimation: string
     player?: Object3D;
+    pathNav: YUKA.Vector3[]
+    paused: boolean = false;
     
     private targetRotation = new Object3D();    
     private reversePath = false;
-    pathNav: YUKA.Vector3[]
+    
 
     constructor(name: string, scene: Scene, loading: Loading, modelPath: string, pathNav: YUKA.Vector3[], playerModel: Object3D) {
         super();
@@ -51,7 +53,6 @@ export class NPC extends YUKA.Vehicle {
 
             this.position.copy(this.path.current());
         }
-       
     }
 
     setModel(path: string) {
@@ -106,7 +107,7 @@ export class NPC extends YUKA.Vehicle {
     }
 
     followPath(delta: number) {
-        if (this.npcMesh) {
+        if (this.npcMesh && !this.paused) {
             const targetYuka = this.path.current(); // Obtém o próximo ponto do caminho
             if (!targetYuka) return; // Se não houver pontos, sai da função
 
@@ -118,7 +119,7 @@ export class NPC extends YUKA.Vehicle {
             this.targetRotation.lookAt(target);
 
             // Interpolação suave da rotação
-            this.npcMesh.quaternion.slerp(this.targetRotation.quaternion, delta * 3.0);
+            this.npcMesh.quaternion.slerp(this.targetRotation.quaternion, delta * 9.0);
 
             // Criar uma cópia da posição atual do NPC e interpolar
             const pos = this.npcMesh.position.clone().lerp(target, delta * this.speed * 0.3);
@@ -128,10 +129,16 @@ export class NPC extends YUKA.Vehicle {
                 {
                     this.reversePath = !this.reversePath;
                     this.setPath();
+                    this.stateMachine.changeState(this.stateMachine.states["idle"])
+
+                    setTimeout(() => {
+                        this.paused = false;
+                        this.stateMachine.changeState(this.stateMachine.states["walk"])
+                    }, 3000)
+            
                 }
 
-               
-                this.path.advance(); // Avança para o próximo ponto
+                this.path.advance(); // Avança para o próximo ponto               
             }
 
             this.npcMesh.position.copy(pos); // Atualiza a posição no Three.js
