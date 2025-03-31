@@ -68,7 +68,7 @@ export class NPC extends YUKA.Vehicle {
                 if (model.animations.length > 0) {
                     this.mixer = new AnimationMixer(this.npcMesh);
                     this.animations = model.animations;
-    
+                
                     this.playAnimation(this.currentAnimation); 
                 }
             },
@@ -98,10 +98,6 @@ export class NPC extends YUKA.Vehicle {
         this.speed = speed;
     }
 
-    moveAlongPath(delta: number) {
-        this.followPath(delta);
-    }
-
     chasePlayer(delta: number) {
         console.log(`${this.name} ${delta} está correndo atrás do jogador!`);
     }
@@ -124,7 +120,7 @@ export class NPC extends YUKA.Vehicle {
             // Criar uma cópia da posição atual do NPC e interpolar
             const pos = this.npcMesh.position.clone().lerp(target, delta * this.speed * 0.3);
 
-            if (pos.distanceTo(target) < 4.5) {
+            if (pos.distanceTo(target) < 3.0) {
                 if(this.path.finished())
                 {
                     this.reversePath = !this.reversePath;

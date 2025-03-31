@@ -172,31 +172,30 @@ export default class PlayerModel extends Group {
         )
 
 
-        this.isLoadedModel.then(() => {
-            this.loading.loader.load("models/flashlight.glb", gltf => {
-                this.flashlightObj = gltf.scene
-                this.flashlightObj.rotation.y = Math.PI / 2
-                let handBone = this.model?.getObjectByName("mixamorigLeftHand")
+        this.isLoadedModel.then(async () => {
+            let gltf = await this.loading.loader.loadAsync("models/flashlight.glb")
+            
+            this.flashlightObj = gltf.scene
+            this.flashlightObj.rotation.y = Math.PI / 2
+            let handBone = this.model?.getObjectByName("mixamorigLeftHand")
+            
+            if (handBone) {
 
+                this.flashlightObj.position.set(0, 0, 0);
+                this.flashlightObj.rotation.set(0, 0, 0);
+                this.flashlightObj.scale.set(.08, .08, .08)
 
-                if (handBone) {
-
-                    this.flashlightObj.position.set(0, 0, 0);
-                    this.flashlightObj.rotation.set(0, 0, 0);
-                    this.flashlightObj.scale.set(.08, .08, .08)
-
-                    handBone.attach(this.flashlightObj)
-                    this.flashlightObj.position.set(3.9, 8.1, 3.2);  // Alinhar na palma da mão
-                    this.flashlightObj.rotation.set(
-                        -0.182212373908208,
-                        -2.80858383230928,
-                        -1.33831847042925
-                    );       
-                    
-                    this.flashlightObj.add(this.lanternLight)
-                    this.flashlightObj.visible = false
-                }
-            })
+                handBone.attach(this.flashlightObj)
+                this.flashlightObj.position.set(3.9, 8.1, 3.2);  // Alinhar na palma da mão
+                this.flashlightObj.rotation.set(
+                    -0.182212373908208,
+                    -2.80858383230928,
+                    -1.33831847042925
+                );       
+                
+                this.flashlightObj.add(this.lanternLight)
+                this.flashlightObj.visible = false
+            }
         })
 
         

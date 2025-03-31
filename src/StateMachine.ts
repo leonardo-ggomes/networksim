@@ -80,7 +80,7 @@ export class WalkState implements State {
     }
 
     execute(owner: NPC, delta: number) {
-        owner.moveAlongPath(delta);
+        owner.followPath(delta);
         owner.playAnimation("Walking")
     }
 
