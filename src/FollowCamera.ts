@@ -12,6 +12,8 @@ export default class FollowCamera {
     private isFollowWalking = true;
     private rotationSpeed = 0.006;
     private smoothFactor = 0.1; // Ajustável para suavidade
+
+    disableMouseMoveControl = false
     
     constructor(camera: Camera) {
         this.camera = camera;
@@ -20,7 +22,7 @@ export default class FollowCamera {
         document.addEventListener("mouseup", () => (this.mousePressed = false));
         
         document.addEventListener("mousemove", (e) => {
-            if (this.mousePressed) {   
+            if (this.mousePressed || !this.disableMouseMoveControl) {   
                 this.yaw -= e.movementX * this.rotationSpeed;  
                 this.pitch = Math.max(-0.2, Math.min(0.2, this.pitch - e.movementY * this.rotationSpeed));
             }         

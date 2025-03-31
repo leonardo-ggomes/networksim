@@ -114,10 +114,12 @@ export default class PlayerController {
         event.preventDefault();
         elementos.showTerminal()
         this.actions['terminal'] = true
+        this.followCamera.disableMouseMoveControl = true
       }
       else {
         elementos.hideTerminal()
         this.actions['terminal'] = false
+        this.followCamera.disableMouseMoveControl = false
       }
     }
     else if (this.keyBoard["KeyL"] && infoPlayer.hasFlashlight) { //Liga a laterna
