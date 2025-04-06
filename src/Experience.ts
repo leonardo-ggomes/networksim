@@ -111,7 +111,7 @@ export default class Experience{
     }
   
     setScene(){      
-        this.scene.background = new Color( 0x34495E );
+        this.scene.background = new Color( 0x000 );
         this.scene.fog = new Fog( 0x34495E, 0, 80 );
     }
     
@@ -207,7 +207,7 @@ export default class Experience{
 
     setNpc(){
         const npc = new NPC(
-            "Hacker", 
+            "Inspetor", 
             this.scene, 
             this.loading, 
             "models/asian_male_animated_v2.glb",
@@ -222,7 +222,7 @@ export default class Experience{
         let reward = 3
         let mission1 = new Mission(
             "Encontre o dispositivo",
-            new Vector3(11.4, 1.15, 55.8),
+            new Vector3(11.4, 1.15, 30),
             this.scene,
             eventEmitter,
             reward,
@@ -233,7 +233,7 @@ export default class Experience{
         setTimeout(() => {
             mission1.showInstruction(
                 "Encontre o dispositivo",
-                "Foi visto um homem deixando um notebook na lixeira da WasteClean logo a frente."
+                "Você precisa de um computador para realizar as atividades"
             )
 
             this.setDriver("🎯Caixa de mensagem","Aqui você encontrará instruções básicas, fique de olho!" )
@@ -282,7 +282,7 @@ export default class Experience{
             -- [13:15]: Sua máquina precisa de atenção
             -- [13:17]: Alto consumo de memória
             `,
-            new Vector3(11.4, 1.15, 55.8),
+            new Vector3(-11.4, 1.15, 30),
             this.scene,
             eventEmitter,
             reward,
@@ -346,7 +346,7 @@ export default class Experience{
                 -- [13:50]: O App EstacionaSyS parou inesperadamente.
                 -- [13:51]: ReferenceError: pos is not defined.               
             `,
-            new Vector3(-54.8, 0.5, -13),
+            new Vector3(10, 0.5, 30),
             this.scene,
             eventEmitter,
             reward,

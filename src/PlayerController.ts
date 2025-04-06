@@ -225,7 +225,7 @@ export default class PlayerController {
 
         setTimeout(() => {
           this.isSitting = true;
-
+          this.followCamera.mouseMoveActived = true
           const direction = new Vector3();
           obj.getWorldDirection(direction);
 
@@ -255,7 +255,7 @@ export default class PlayerController {
   }
 
   upStair(degrau: Object3D) {
-    this.playerModel.position.y = degrau.position.y
+    this.playerModel.position.y = degrau.position.y + 0.78
   }
 
   lerp(a: number, b: number, t: number) {
@@ -428,6 +428,7 @@ export default class PlayerController {
       if (this.isSitting && this.keyBoard["KeyF"]) {
         setTimeout(() => {
           this.isSitting = false;
+          this.followCamera.mouseMoveActived = false
           this.playerModel.position.copy(this.prevPlayerPosition);
           this.playerModel.quaternion.copy(this.prevPlayerQuaternion);
           this.followCamera.setFollowMode(true)

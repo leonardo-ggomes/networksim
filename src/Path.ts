@@ -2,15 +2,15 @@
 
   export const npcPaths = {
     patrol: [
-        new YUKA.Vector3(10,.7, 26),
-        new YUKA.Vector3(10,.7, 30),
-        new YUKA.Vector3(10,.7, 35),
-        new YUKA.Vector3(10,.7, 45),
-        new YUKA.Vector3(10,.7, 50),
-        new YUKA.Vector3(10,.7, 55),
-        new YUKA.Vector3(10,.7, 60),
-        new YUKA.Vector3(10,.7, 65),
-        new YUKA.Vector3(10,.7, 70),
-        new YUKA.Vector3(10,.7, 75)
+        new YUKA.Vector3(10,0,5),
+        new YUKA.Vector3(10,0,7),
+        new YUKA.Vector3(10,0,10),
+        new YUKA.Vector3(10,0,13),
+        new YUKA.Vector3(10,0,16),
+        new YUKA.Vector3(10,0,19),
+        new YUKA.Vector3(10,0,22),
+        new YUKA.Vector3(10,0,24),
+        new YUKA.Vector3(10,0,27),
+        new YUKA.Vector3(10,0,30)
     ]
   }
