@@ -2,8 +2,10 @@ import {
     AxesHelper, 
     BoxGeometry, 
     BoxHelper, 
-    ColorRepresentation
-    ,Mesh, 
+    BufferGeometry, 
+    InstancedMesh,
+    Material,
+    Mesh, 
     MeshBasicMaterial, 
     MeshStandardMaterial, 
     MeshToonMaterial, 
@@ -24,12 +26,26 @@ export default class Items{
     items = [            
         {
             instances: 1,
-            name:"city",
-            path: "models/city.glb",
+            name:"auditorio",
+            path: "models/auditorio.glb",
             positions: [
                 { x: 0, y: 0, z: 0}                          
             ],
-            scales: [...new Array(1).fill(3)],
+            scales: [...new Array(1).fill(1)],
+            rotations: [
+                {x: 0, y: 0, z: 0}                              
+            ],
+            isCollider: true,
+            isGroup: true
+        },
+        {
+            instances: 1,
+            name:"poltrona",
+            path: "models/poltrona_v2.glb",
+            positions: [
+                { x: 0, y: 0, z: 0}                          
+            ],
+            scales: [...new Array(1).fill(1.5)],
             rotations: [
                 {x: 0, y: 0, z: 0}                              
             ],
@@ -39,6 +55,7 @@ export default class Items{
     ]
     lights: Mesh[] = []
     colliders: Object3D[] = []
+    raycasterView: Object3D[] = []
     
     constructor(scene: Scene, loading: Loading)
     {
@@ -144,13 +161,13 @@ export default class Items{
                         }
 
                         if(
-                            child.name.includes("Object_102") ||
-                            child.name == "Object_188" ||
-                            child.name == "Object_206" 
-                        ){ //102 > Ruas
+                            child.name.includes("Mureta") ||
+                            child.name.includes("Object_102")
+                        ){ 
                             this.colliders.push(child)
                         }
 
+                      
                         /***
                          * 132, 4, 134> Carro
                          * 
@@ -162,13 +179,7 @@ export default class Items{
                         ){ 
                             this.colliders.push(child)                            
                         }
-
-                        if(
-                            child.name == "Object_17" //Lixeira
-                        ){                                                            
-                            this.colliders.push(child)                            
-                        }
-                                               
+                                   
                     }
                 })
 
@@ -178,39 +189,34 @@ export default class Items{
                     item.scales[0]
                 )
 
-                obj.scene.position.set(
-                    item.positions[0].x,
-                    item.positions[0].y,
-                    item.positions[0].z
-                )
+                // obj.scene.position.set(
+                //     item.positions[0].x,
+                //     item.positions[0].y,
+                //     item.positions[0].z
+                // )
 
                 this.scene.add(obj.scene) 
             }
-            else{
-                for(let i = 0; i < item.instances; i++){
-                    let instance = obj.scene.clone()
-    
-                    instance.position.set(
-                        item.positions[i].x, 
-                        item.positions[i].y, 
-                        item.positions[i].z, 
-                    )
-        
-                    instance.scale.set(
-                        item.scales[i],
-                        item.scales[i],
-                        item.scales[i]
-                    )
-        
-                    instance.rotation.set(
-                        item.rotations[i].x, 
-                        item.rotations[i].y, 
-                        item.rotations[i].z, 
-                    )
-        
-                    this.scene.add(instance) 
-                }
+
+         
+            if(item.name === "poltrona"){
+                const baseChair = obj.scene
+                
+                this.createChairsGrid(
+                    baseChair,
+                    8,          // número de fileiras
+                    12,         // cadeiras por fileira
+                    1.2,        // espaço entre cadeiras (x)
+                    2.5,        // espaço entre fileiras (z)
+                    4,          // corredor a cada 4 cadeiras
+                    2.5,        // largura do corredor
+                    -10,        // posição inicial X
+                    10          // posição inicial Z
+                )
             }
+
+         
+            
         })
     }   
 
@@ -237,13 +243,50 @@ export default class Items{
 
         this.scene.add(lightMesh)
         this.lights.push(lightMesh)
-
-        // const f = gui.addFolder("Luz")
-
-        // f.add(lightMesh.position,"x", -100, 100, .1)
-        // f.add(lightMesh.position,"y", -100, 100, .1)
-        // f.add(lightMesh.position,"z", -100, 100, .1)
        
+    }
+
+    createChairsGrid = (
+        baseMesh: Object3D,
+        numRows: number,               // número de fileiras
+        chairsPerRow: number,         // número de cadeiras por fileira
+        chairSpacing: number,         // espaçamento entre cadeiras (x)
+        rowSpacing: number,           // espaçamento entre fileiras (z)
+        corridorEvery: number,        // a cada quantas cadeiras adicionar um corredor
+        corridorWidth: number,        // largura do corredor
+        startX = 0,                   // posição inicial em X
+        startZ = 0                    // posição inicial em Z
+    ) => {
+        let chairIndex = 0
+    
+        for (let row = 0; row < numRows; row++) {
+            let offsetX = startX
+    
+            for (let col = 0; col < chairsPerRow; col++) {
+    
+                // Adiciona espaço para corredor
+                if (corridorEvery > 0 && col > 0 && col % corridorEvery === 0) {
+                    offsetX += corridorWidth
+                }
+    
+                // Clona a cadeira
+                const chair = baseMesh.clone()
+                chair.name = `poltrona_${row}_${col}`
+    
+                // Define posição da cadeira
+                chair.position.set(
+                    offsetX + (col * chairSpacing),
+                    0,
+                    startZ + (row * rowSpacing)
+                )
+    
+                // Adiciona ao cenário
+                this.scene.add(chair)
+                this.colliders.push(chair)
+    
+                chairIndex++
+            }
+        }
     }
   
 }

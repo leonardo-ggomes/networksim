@@ -34,6 +34,7 @@ export default class PlayerController {
   activedClip?: AnimationAction;
   items: Items;
   octree: Octree;
+  scene: Scene
 
   isSitting = false;
   isCollided = false
@@ -72,10 +73,11 @@ export default class PlayerController {
     this.followCamera = new FollowCamera(this.camera);
     this.octree = octree;
     this.items = items;
+    this.scene = scene;
 
     this.playerModel = new PlayerModel(this.loading);
     this.playerModel.position.set(0, 0, 0);
-    scene.add(this.playerModel);
+    this.scene.add(this.playerModel);
 
     //Criando cápsula para representar o bounding volume do jogador
     const capsuleGeometry = new CapsuleGeometry(
@@ -164,16 +166,12 @@ export default class PlayerController {
       // Novo: Verificando colisão entre a cápsula e a caixa de cada objeto
       if (this.checkCapsuleCollisionWithBox(playerCapsuleTop, this.capsuleRadius, objectBoundingBox)) {
         isColliding = true;
-
+        console.log(obj.name)
         if (obj.name == "degrau") {
           this.upStair(obj)
           this.isFloor = false
         }
-        else if (
-          obj.name == "Object_102" ||
-          obj.name == "Object_189" ||
-          obj.name == "Object_188" ||
-          obj.name == "Object_206") {
+        else if (obj.name.includes("Object_102")) {
           this.goUpStreet(obj)
           this.isFloor = false
         }
@@ -220,7 +218,7 @@ export default class PlayerController {
   }
 
   toSit(obj: Object3D) {
-    if (obj.name.includes("Cadeira")) {
+    if (obj.name.includes("poltrona")) {
       if (!this.isSitting && this.keyBoard["KeyF"]) {
         this.prevPlayerPosition.copy(this.playerModel.position);
         this.prevPlayerQuaternion.copy(this.playerModel.quaternion);
@@ -235,11 +233,11 @@ export default class PlayerController {
 
           this.followCamera.setFollowMode(false)
           this.playerModel.position.copy(
-            obj.position.clone().add(new Vector3(0, -0.3, 0))
+            obj.position.clone().add(new Vector3(0, .17, -.4))
           );
 
           // this.playerModel.rotation.x = -1.5707963267949;
-          // this.playerModel.rotation.y = 0;
+          this.playerModel.rotation.y = -Math.PI;
 
 
 
@@ -437,7 +435,7 @@ export default class PlayerController {
       }
     }
 
-    this.followCamera.updateCamera(this.playerModel);
+    this.followCamera.updateCamera(this.playerModel, this.items.raycasterView);
 
     this.socket.io.emit('updatePosition', {
       x: this.playerModel.position.x,

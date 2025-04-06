@@ -1,4 +1,4 @@
-import { Camera, Matrix4, Object3D, Vector3, Quaternion, Euler } from "three";
+import { Camera, Matrix4, Object3D, Vector3, Quaternion, Euler, Raycaster } from "three";
 import { gui } from "./GuiControl";
 
 export default class FollowCamera {
@@ -12,6 +12,8 @@ export default class FollowCamera {
     private isFollowWalking = true;
     private rotationSpeed = 0.006;
     private smoothFactor = 0.1; // Ajustável para suavidade
+
+    raycaster = new Raycaster()
     
     constructor(camera: Camera) {
         this.camera = camera;
@@ -41,12 +43,12 @@ export default class FollowCamera {
             this.offset.set(0, 4, -5.74);
             this.lookAtOffset.set(0, 2, 0);
         } else {
-            this.offset.set(0, 10, -10);
+            this.offset.set(0, 2, 1.16);
             this.lookAtOffset.set(0, 2, 0);
         }
     }
 
-    updateCamera(target: Object3D) {
+    updateCamera(target: Object3D, sceneObjects: Object3D[]) {
         // Calcular a posição da câmera com base na rotação Yaw
         const rotationMatrix = new Matrix4().makeRotationFromQuaternion(new Quaternion().setFromEuler(new Euler(
            this.pitch,
@@ -54,15 +56,29 @@ export default class FollowCamera {
             0,
             "YXZ"
         )));
-        
+    
         const cameraOffset = this.offset.clone().applyMatrix4(rotationMatrix);
-        const desiredPosition = target.position.clone().add(cameraOffset);
-
-        // Suavizar a posição da câmera
-        this.camera.position.lerp(desiredPosition, this.smoothFactor);
-        
-        // Olhar suavemente para o alvo
+        let desiredPosition = target.position.clone().add(cameraOffset);
+    
+        // Raycasting para detectar obstáculos
+        this.raycaster.set(target.position, desiredPosition.clone().sub(target.position).normalize());
+        const intersects = this.raycaster.intersectObjects(sceneObjects, true);
+    
+        if (intersects.length > 0) {
+            const collisionPoint = intersects[0].point;
+    
+            // 🟢 Mantemos a altura original da câmera para evitar ângulos estranhos
+            collisionPoint.y = desiredPosition.y;  
+    
+            // Ajustamos a posição suavemente
+            this.camera.position.lerp(collisionPoint, this.smoothFactor);
+        } else {
+            this.camera.position.lerp(desiredPosition, this.smoothFactor);
+        }
+    
+        // 🔵 Garante que a câmera olhe para o jogador de forma natural
         const lookAtTarget = target.position.clone().add(this.lookAtOffset);
         this.camera.lookAt(lookAtTarget);
     }
+    
 }

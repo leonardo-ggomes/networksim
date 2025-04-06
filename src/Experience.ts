@@ -51,7 +51,7 @@ export default class Experience{
     currentMission?: Mission
     loading: Loading
     audioLoader: AudioLoader
-    ambientLight = new AmbientLight(0x34495E, 0)
+    ambientLight = new AmbientLight(0xFFCC88, 2)
     entityManager: EntityManager 
 
     constructor(loading: Loading)
@@ -142,7 +142,7 @@ export default class Experience{
 
     setAmbienceAudio(){
         const sound = new Audio(this.listener);
-        this.audioLoader.load("audio/night-ambience.mp3", (buffer) => {
+        this.audioLoader.load("audio/auditorio.mp3", (buffer) => {
             sound.setBuffer(buffer);
             sound.setLoop(true); // Faz o som tocar continuamente
             sound.setVolume(0.5); // Ajuste o volume (0.0 a 1.0)
