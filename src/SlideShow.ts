@@ -104,5 +104,12 @@ import {
       texture.colorSpace  = SRGBColorSpace;
       return texture;
     }
+
+    setSlide(index: number) {
+        if (this.slideTextures.length === 0) return;
+      
+        this.currentIndex = index % this.slideTextures.length;
+        this.applyTexture(this.slideTextures[this.currentIndex]);
+    }
   }
   

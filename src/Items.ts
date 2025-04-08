@@ -19,6 +19,7 @@ import {
 import Loading from "./Loading";
 import { gui } from "./GuiControl";
 import SlideShow from "./SlideShow";
+import SlideController from "./SlideControllers";
 
 export default class Items {
 
@@ -203,6 +204,8 @@ export default class Items {
                                     'img/Slide2.PNG',
                                     'img/Slide3.PNG'
                                   ]);
+
+                                new SlideController(slide);
                                 
                                 this.raycasterView.push(child)
                             }
