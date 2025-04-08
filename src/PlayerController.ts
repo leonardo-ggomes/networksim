@@ -9,9 +9,7 @@ import {
   MeshBasicMaterial,
   CapsuleGeometry,
   Box3,
-  Raycaster,
-  PointLight,
-  SpotLight
+  Raycaster
 } from "three";
 import FollowCamera from "./FollowCamera";
 import PlayerModel from "./PlayerModel";

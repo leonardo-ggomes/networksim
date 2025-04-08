@@ -18,6 +18,7 @@ import {
 } from "three";
 import Loading from "./Loading";
 import { gui } from "./GuiControl";
+import SlideShow from "./SlideShow";
 
 export default class Items {
 
@@ -56,13 +57,13 @@ export default class Items {
     lights: Mesh[] = []
     colliders: Object3D[] = []
     raycasterView: Object3D[] = []
-
+  
     constructor(scene: Scene, loading: Loading) {
         this.loading = loading
         this.scene = scene
         this.setItems()
         this.addLight(new Vector3(10.8, 9.5, -3)) //Adiciona luz
-
+      
         const axes = new AxesHelper()
         axes.position.set(0, 1, 0)
         this.scene.add(axes)
@@ -186,6 +187,23 @@ export default class Items {
                                 console.log(child.name)
                                 this.colliders.push(child)
                                                 
+                            }
+
+                            if (child.name == "screen1_screen1_0") 
+                            {
+                                const mesh = child as Mesh;
+                                console.log(mesh)
+                                // Limpa a textura original do GLTF
+                                mesh.material = new MeshBasicMaterial({color: 0xffffff})
+
+                                
+                                const slide = new SlideShow(mesh)
+                                slide.loadSlidesFromUrls([
+                                    'img/screenframe.png',
+                                    'img/pin_l.png'
+                                  ]);
+                                
+                                this.raycasterView.push(child)
                             }
 
 

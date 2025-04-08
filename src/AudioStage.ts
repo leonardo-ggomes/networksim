@@ -20,14 +20,14 @@ export default class AudioStage{
 
         navigator.mediaDevices.getUserMedia({audio: true}).then((stream) => {
       
-            this.audioLoader.load('audio/test.mp3', (buffer) => {
+            this.audioLoader.load('audio/music_1.mp3', (buffer) => {
                 this.sound.setBuffer(buffer);
                 this.sound.setRefDistance(10); // Distância mínima para o som ser ouvido claramente
                 this.sound.play(); // Tocar o som1
             });
         })
-
-       
     }
+
+    
 
 }

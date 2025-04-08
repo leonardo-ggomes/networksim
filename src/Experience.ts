@@ -9,6 +9,7 @@ import {
     Fog, 
     Mesh, 
     MeshBasicMaterial, 
+    Object3D, 
     PerspectiveCamera, 
     PositionalAudio, 
     Scene, 
@@ -36,6 +37,7 @@ import "driver.js/dist/driver.css"
 import { NPC } from "./NPC";
 import { EntityManager } from "yuka";
 import { npcPaths } from "./Path";
+import VoiceChatManager from "./VoiceChatManager";
 
 export default class Experience{
 
@@ -53,6 +55,7 @@ export default class Experience{
     audioLoader: AudioLoader
     ambientLight = new AmbientLight(0xFFCC88, 2)
     entityManager: EntityManager 
+    voiceChatManager: VoiceChatManager
 
     constructor(loading: Loading)
     {
@@ -67,11 +70,17 @@ export default class Experience{
         this.camera.add(this.listener)
         this.setAmbienceAudio()
         this.items = new Items(this.scene, this.loading)
-
         this.socket.scene = this.scene
         this.socket.loading = this.loading
 
-        //const audioStage = new AudioStage(this.camera, this.loading)   
+        //Gerenciador de Voz
+        this.voiceChatManager = new VoiceChatManager(this.listener);
+        this.voiceChatManager.initMicrophone();
+        const audioSourceObject = new Object3D();
+        audioSourceObject.position.set(0, 3, 0); // posição fixa na cena
+        this.scene.add(audioSourceObject);
+        this.voiceChatManager.handleIncomingAudio(audioSourceObject);
+
 
         this.playerController = new PlayerController(
             this.scene, 
@@ -83,7 +92,7 @@ export default class Experience{
 
         //Inicia a posição do personagem
         this.playerController.playerModel.setPosition(
-            new Vector3(Math.random() * 10, 0, 0)
+            new Vector3(Math.round(Math.random() * (20 - 5) + 5), 0, -20)
         )
 
 
