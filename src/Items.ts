@@ -199,8 +199,9 @@ export default class Items {
                                 
                                 const slide = new SlideShow(mesh)
                                 slide.loadSlidesFromUrls([
-                                    'img/screenframe.png',
-                                    'img/pin_l.png'
+                                    'img/Slide1.PNG',
+                                    'img/Slide2.PNG',
+                                    'img/Slide3.PNG'
                                   ]);
                                 
                                 this.raycasterView.push(child)
