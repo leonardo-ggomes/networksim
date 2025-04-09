@@ -6,6 +6,8 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { Faker, pt_BR } from '@faker-js/faker'
 import Loading from './Loading'
 import { addNewCommandLine, appendToTerminal, dir, file, isRemotelyConnected, remoteDiretories as rd } from './Actions'
+import { infoPlayer } from './InfoPlayer'
+import { colliders } from './Colliders'
 
 class SocketManager{
    
@@ -16,8 +18,9 @@ class SocketManager{
     faker = new Faker({locale: pt_BR})
     isConnected = false
 
+
     constructor(){
-        this.io = io('http://192.168.5.46:3000')
+        this.io = io('http://localhost:3000')
 
         this.io.on('connect', () => {
             console.log('Conectado')
@@ -43,7 +46,23 @@ class SocketManager{
         this.io.on('didConnect', this.joinInRoom)       
         this.io.on('receiveRemoteAccess', this.receiveRemoteAccess)
 
+        this.io.on("player:info", this.getPlayerInfo);          
+        this.io.on("players:update", this.updatePlayerInfo);
+    }
 
+    getPlayerInfo = (data: any) => {
+        infoPlayer.id = data.id;
+        infoPlayer.role = data.role;
+    }
+
+    updatePlayerInfo = (players: any) => {
+        Object.entries(players).forEach(([id, player]) => {
+            let player_socket = player as any;
+
+            if(this.io.id == id){
+                infoPlayer.role = player_socket.role       
+            }            
+        });
     }
 
     joinInRoom = (players: any) => {
@@ -54,10 +73,11 @@ class SocketManager{
         Object.keys(players).forEach(async(player) => {            
             
             if(player != this.io.id && this.loading){
-                const newPlayer = new PlayerModel(this.loading)
-
-                const font = await loader.loadAsync( 'fonts/helvetiker_regular.typeface.json')
                 const name = this.faker.person.firstName()
+
+                const newPlayer = new PlayerModel(this.loading, true, player)
+                const font = await loader.loadAsync( 'fonts/helvetiker_regular.typeface.json')
+               
                 const nameGeometry = new TextGeometry(name, {
                     font: font,
                     size: 0.15 ,
@@ -71,12 +91,11 @@ class SocketManager{
                 
                 // meshName.rotation.x = -Math.PI / 2
                 newPlayer.add(meshName)
-
+              
                 if(this.io.id != undefined){                    
                     this.scene?.add(newPlayer)
                     this.players[player] = newPlayer
-                }
-                
+                }                     
             }
         })
 
@@ -157,9 +176,6 @@ class SocketManager{
             file
         })
     }
-
-
-    
 }
 
 export default new SocketManager()

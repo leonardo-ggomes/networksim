@@ -14,11 +14,12 @@ import {
 import FollowCamera from "./FollowCamera";
 import PlayerModel from "./PlayerModel";
 import { Octree } from "three/examples/jsm/math/Octree.js";
-import Items from "./Items";
 import SocketManager from "./SocketManager";
-import elementos from "./Actions";
+import elementos, { promotePlayerToPresenter } from "./Actions";
 import Loading from "./Loading";
-import { infoPlayer } from "./InfoPlayer";
+import { infoPlayer, roles } from "./InfoPlayer";
+import Items from "./Items";
+import { colliders } from "./Colliders";
 
 export default class PlayerController {
   playerImpulse = new Vector3(0, 0, 0);
@@ -73,7 +74,7 @@ export default class PlayerController {
     this.items = items;
     this.scene = scene;
 
-    this.playerModel = new PlayerModel(this.loading);
+    this.playerModel = new PlayerModel(this.loading, false);
     this.playerModel.position.set(0, 0, 0);
     this.scene.add(this.playerModel);
 
@@ -157,14 +158,14 @@ export default class PlayerController {
     let isColliding = false;
 
     // Verificar a colisão com cada objeto
-    this.items.colliders.forEach((obj) => {
+    colliders.forEach((obj: Object3D) => {
 
       const objectBoundingBox = new Box3().setFromObject(obj);
 
       // Novo: Verificando colisão entre a cápsula e a caixa de cada objeto
       if (this.checkCapsuleCollisionWithBox(playerCapsuleTop, this.capsuleRadius, objectBoundingBox)) {
         isColliding = true;
-        console.log(obj.name)
+  
         if (obj.name == "degrau") {
           this.upStair(obj)
           this.isFloor = false
@@ -172,6 +173,10 @@ export default class PlayerController {
         else if (obj.name.includes("Object_102")) {
           this.goUpStreet(obj)
           this.isFloor = false
+        }
+        else if(obj.name.includes("guest.")){
+          let id = obj.name.split(".")[1]
+          this.toPresenter(id)
         }
         else {
           this.toSit(obj);
@@ -213,6 +218,13 @@ export default class PlayerController {
     box.clampPoint(capsuleTop, closestPoint);
     const distanceSquared = closestPoint.distanceToSquared(capsuleTop);
     return distanceSquared <= capsuleRadius * capsuleRadius;
+  }
+
+  toPresenter(id: string) {   
+    if (this.keyBoard["KeyP"]) {
+     promotePlayerToPresenter(id, roles.PRESENTER)
+     console.warn("Permissão concedida")
+    }    
   }
 
   toSit(obj: Object3D) {

@@ -513,4 +513,8 @@ function showMissionFinished(text: string) {
 
 }
 
+export function promotePlayerToPresenter(targetId: string, role: string) {
+    SocketManager.io.emit("role:set", { targetId, role });
+}
+
 export default elementos;

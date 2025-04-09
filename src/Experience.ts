@@ -411,7 +411,6 @@ export default class Experience{
     updatePlayers(delta: number){
       Object.keys(this.socket.players).forEach(i => {
         this.socket.players[i].update(delta)
-        //this.items.colliders.push(this.socket.players[i]) colisão
       })
     }
 

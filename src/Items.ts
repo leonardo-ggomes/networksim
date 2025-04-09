@@ -20,6 +20,7 @@ import Loading from "./Loading";
 import { gui } from "./GuiControl";
 import SlideShow from "./SlideShow";
 import SlideController from "./SlideControllers";
+import { colliders } from "./Colliders";
 
 export default class Items {
 
@@ -56,7 +57,6 @@ export default class Items {
         }
     ]
     lights: Mesh[] = []
-    colliders: Object3D[] = []
     raycasterView: Object3D[] = []
   
     constructor(scene: Scene, loading: Loading) {
@@ -113,19 +113,19 @@ export default class Items {
                 palcoChao.position.y = 0.8
 
                 this.scene.add(palcoChao)
-                this.colliders.push(palcoChao)
+                colliders.push(palcoChao)
 
                 let auxChaoPalco = palcoChao.clone()
                 auxChaoPalco.name = "aux_chao"
                 auxChaoPalco.position.x = -24.5
                 auxChaoPalco.position.z = 30
                 auxChaoPalco.position.y = 0
-                this.colliders.push(auxChaoPalco)
+                colliders.push(auxChaoPalco)
 
             }
 
             this.scene.add(degraus)
-            this.colliders.push(degraus)
+            colliders.push(degraus)
         }
     }
 
@@ -169,8 +169,7 @@ export default class Items {
 
                                 if (child.name !== "house_house_0004" && child.name !== "house_house_0005") //Chao e teto
                                 {
-                                    console.log(child.name)
-                                    this.colliders.push(child)
+                                    colliders.push(child)
                                     this.raycasterView.push(child)
                                 }
                             }
@@ -185,15 +184,13 @@ export default class Items {
                             if (child.name.includes("stage_stage2_0")) 
                             {
                                 child.name = "degrau"
-                                console.log(child.name)
-                                this.colliders.push(child)
+                                colliders.push(child)
                                                 
                             }
 
                             if (child.name == "screen1_screen1_0") 
                             {
                                 const mesh = child as Mesh;
-                                console.log(mesh)
                                 // Limpa a textura original do GLTF
                                 mesh.material = new MeshBasicMaterial({color: 0xffffff})
 
@@ -295,7 +292,7 @@ export default class Items {
 
                 // Adiciona ao cenário
                 this.scene.add(chair)
-                this.colliders.push(chair)
+                colliders.push(chair)
 
                 chairIndex++
             }

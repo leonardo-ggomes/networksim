@@ -1,10 +1,11 @@
+import { infoPlayer, roles } from "./InfoPlayer";
 import SlideShow from "./SlideShow";
 import SocketManager from "./SocketManager";
 
 export default class SlideController {
   private socket = SocketManager;
   private slideshow: SlideShow;
-  isPresenter = false
+  private isPresenter = false 
 
   constructor(slideshow: SlideShow) {
     this.slideshow = slideshow;
@@ -13,8 +14,8 @@ export default class SlideController {
       this.slideshow.loadSlidesFromBase64(slides);
       this.slideshow.setSlide(currentSlideIndex);
 
-      const isPresenter = this.socket.io.id === presenterId;
-      this.setPresenter(isPresenter);
+      this.isPresenter = infoPlayer.role == roles.ADMIN || infoPlayer.role == roles.PRESENTER;
+      this.setPresenter(this.isPresenter);
     });
 
     this.socket.io.on("presenter:set", (presenterId) => {
@@ -35,9 +36,9 @@ export default class SlideController {
 
     // Atalhos locais
     document.addEventListener("keydown", (e) => {
-
-      if (!this.isPresenter) return;
-
+      
+      if (infoPlayer.role != roles.ADMIN && infoPlayer.role != roles.PRESENTER) return;
+   
       if (e.key === "ArrowRight") {
         this.emitNextSlide();
       } else if (e.key === "ArrowLeft") {
@@ -65,13 +66,14 @@ export default class SlideController {
   }
 
   triggerSlideUpload() {
-    const maxSizeMB = 5;
-    const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
-    if (!this.isPresenter) {
+    if (infoPlayer.role != roles.ADMIN && infoPlayer.role != roles.PRESENTER) {
       console.warn("Você não é o apresentador!");
       return;
     }
+
+    const maxSizeMB = 5;
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
     const input = document.createElement("input");
     input.type = "file";

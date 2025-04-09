@@ -1,5 +1,7 @@
 import { AnimationAction, AnimationMixer, DoubleSide, Group, Mesh, MeshBasicMaterial, Object3D, PointLight, Quaternion, RingGeometry, SpotLight, Vector3 } from 'three'
 import Loading from './Loading'
+import { colliders } from './Colliders'
+
 
 
 export default class PlayerModel extends Group {
@@ -18,15 +20,19 @@ export default class PlayerModel extends Group {
     pointLight = new PointLight(0xFFD700, 0, 5);
     directionlanternLight = new Vector3();
     flashlightObj: Object3D = new Object3D()
+    isGuest: boolean
 
     isLoadedModel: Promise<void>
+    identity?: string
 
-    constructor(loading: Loading) {
+    constructor(loading: Loading, isGuest = true, identity?: string) {
         super()
         this.loading = loading
+        this.isGuest = isGuest
+        this.identity = identity
         this.isLoadedModel = this.loadModel()
         this.showAnelIndicator(this.isVisibleIndicator)
-
+        
         this.setFlashlight()
     }
 
@@ -81,6 +87,12 @@ export default class PlayerModel extends Group {
                 this.animationsAction["WalkRight"] = this.mixer.clipAction(walkRight.animations[0])
                 this.animationsAction["WalkLeft"] = this.mixer.clipAction(walkLeft.animations[0])
                 this.animationsAction["Idle"].play()
+        
+                if(this.isGuest)
+                {
+                    this.identity && (this.model.name = `guest.${this.identity}`)
+                    colliders.push(this.model)
+                }
 
                 resolve()
             })
