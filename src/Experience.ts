@@ -77,7 +77,7 @@ export default class Experience{
         this.voiceChatManager = new VoiceChatManager(this.listener);
         this.voiceChatManager.initMicrophone();
         const audioSourceObject = new Object3D();
-        audioSourceObject.position.set(0, 3, 0); // posição fixa na cena
+        audioSourceObject.position.set(0, 3, -5); // posição fixa na cena
         this.scene.add(audioSourceObject);
         this.voiceChatManager.handleIncomingAudio(audioSourceObject);
 

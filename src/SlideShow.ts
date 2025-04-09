@@ -16,16 +16,6 @@ import {
   
     constructor(telaMesh: Mesh) {
       this.telaMesh = telaMesh;
-  
-      document.addEventListener("keydown", (e) => {
-        if (this.slideTextures.length > 0) {
-          if (e.key === "ArrowRight") {
-            this.nextSlide();
-          } else if (e.key === "ArrowLeft") {
-            this.prevSlide();
-          }
-        }
-      });
     }
   
     // 🔤 Gera slides com textos via canvas
@@ -111,5 +101,37 @@ import {
         this.currentIndex = index % this.slideTextures.length;
         this.applyTexture(this.slideTextures[this.currentIndex]);
     }
+
+    loadSlidesFromBase64(base64Images: string[]) {
+      this.slideTextures = [];
+    
+      base64Images.forEach((dataUrl, index) => {
+        const img = new Image();
+        img.src = dataUrl;
+    
+        img.onload = () => {
+          const aspect = img.height / img.width;
+    
+          const canvas = document.createElement("canvas");
+          canvas.width = 1024;
+          canvas.height = canvas.width * aspect;
+    
+          const ctx = canvas.getContext("2d")!;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    
+          const texture = this.createTextureFromCanvas(canvas);
+          this.slideTextures[index] = texture;
+    
+          if (index === 0) {
+            this.applyTexture(texture);
+    
+            // 🧠 Atualiza o aspecto do mesh (importantíssimo!)
+            this.telaMesh.scale.set(1, aspect, 1);
+          }
+        };
+      });
+    }
+
+    
   }
   

@@ -37,10 +37,13 @@ export default class VoiceChatManager {
       buffer.copyToChannel(float32, 0);
   
       const positional = new THREE.PositionalAudio(this.listener);
-      positional.setBuffer(buffer);
-      positional.setRefDistance(10);
-      positional.setLoop(false);
-      positional.setVolume(1);
+        positional.setBuffer(buffer);
+        positional.setRefDistance(5);        // Distância onde o som ainda é alto
+        positional.setMaxDistance(50);       // Limite de alcance do som
+        positional.setRolloffFactor(1);      // Quão rápido o som diminui
+        positional.setDistanceModel('inverse'); // Modelo realista
+        positional.setLoop(false);
+        positional.setVolume(1);
   
       playAtObject.add(positional); // fixa no objeto estático
       positional.play();
@@ -57,7 +60,7 @@ export default class VoiceChatManager {
   }
 
   private int16ToFloat32(int16: Int16Array): Float32Array {
-    console.log(int16)
+    
     const float32 = new Float32Array(int16.length);
     for (let i = 0; i < int16.length; i++) {
       float32[i] = int16[i] / 0x7FFF;

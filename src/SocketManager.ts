@@ -17,8 +17,8 @@ class SocketManager{
     isConnected = false
 
     constructor(){
-        this.io = io('http://localhost:3000')
-        
+        this.io = io('http://192.168.5.46:3000')
+
         this.io.on('connect', () => {
             console.log('Conectado')
             this.isConnected = true

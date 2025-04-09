@@ -199,14 +199,14 @@ export default class Items {
 
                                 
                                 const slide = new SlideShow(mesh)
-                                slide.loadSlidesFromUrls([
-                                    'img/Slide1.PNG',
-                                    'img/Slide2.PNG',
-                                    'img/Slide3.PNG'
-                                  ]);
-
+                                // slide.loadSlidesFromUrls([
+                                //     'img/Slide1.PNG',
+                                //     'img/Slide2.PNG',
+                                //     'img/Slide3.PNG'
+                                //   ]);
+                           
                                 new SlideController(slide);
-                                
+                          
                                 this.raycasterView.push(child)
                             }
 
