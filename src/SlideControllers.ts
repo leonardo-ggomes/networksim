@@ -4,7 +4,7 @@ import SocketManager from "./SocketManager";
 export default class SlideController {
   private socket = SocketManager;
   private slideshow: SlideShow;
-  isPresenter = true
+  isPresenter = false
 
   constructor(slideshow: SlideShow) {
     this.slideshow = slideshow;

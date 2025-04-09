@@ -41,7 +41,7 @@ export class StateMachine {
         {
             const distance = this.owner.npcMesh.position.distanceTo(this.owner.player.position);
 
-            if(distance < 5)
+            if(distance < 3.5)
             {
                 if (!(this.currentState instanceof LookAtPlayerState)) {
                     this.changeState(this.states['lookAt']);

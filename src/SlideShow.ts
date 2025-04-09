@@ -4,17 +4,18 @@ import {
     Mesh,
     MeshBasicMaterial,
     SRGBColorSpace,
-    Texture,
-    TextureLoader
+    Texture
   } from "three";
+import Loading from "./Loading";
   
   export default class SlideShow {
     private telaMesh: Mesh;
     private slideTextures: Texture[] = [];
     private currentIndex = 0;
-    private textureLoader = new TextureLoader();
+    loading: Loading
   
-    constructor(telaMesh: Mesh) {
+    constructor(telaMesh: Mesh, loading: Loading) {
+      this.loading = loading
       this.telaMesh = telaMesh;
     }
   
@@ -37,7 +38,7 @@ import {
   
     private loadTexture(url: string): Promise<Texture> {
       return new Promise((resolve, reject) => {
-        this.textureLoader.load(
+        this.loading.textureLoader.load(
           url,
           (texture) => {
             texture.minFilter = LinearFilter;

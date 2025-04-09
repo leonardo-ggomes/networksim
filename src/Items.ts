@@ -198,12 +198,10 @@ export default class Items {
                                 mesh.material = new MeshBasicMaterial({color: 0xffffff})
 
                                 
-                                const slide = new SlideShow(mesh)
-                                // slide.loadSlidesFromUrls([
-                                //     'img/Slide1.PNG',
-                                //     'img/Slide2.PNG',
-                                //     'img/Slide3.PNG'
-                                //   ]);
+                                const slide = new SlideShow(mesh, this.loading)
+                                slide.loadSlidesFromUrls([
+                                    'img/Slide1.PNG'
+                                  ]);
                            
                                 new SlideController(slide);
                           
