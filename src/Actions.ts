@@ -513,6 +513,70 @@ function showMissionFinished(text: string) {
 
 }
 
+type RadialAction = {
+    label: string;
+    value: string;
+    onSelect: () => void;
+};  
+
+createRadialMenu([
+    { label: "Apresentador", value: "presenter", onSelect: () => console.log("Tornar apresentador") },
+    { label: "Jogador", value: "player", onSelect: () => console.log("Tornar jogador comum") },
+    { label: "Interagir", value: "interact", onSelect: () => console.log("Interação") },
+    { label: "Fechar", value: "close", onSelect: () => console.log("Fechando menu") },
+  ]);
+  
+
+function createRadialMenu(actions: RadialAction[]) {
+    let oldMenu = document.getElementById('radial-menu');
+    if (oldMenu) oldMenu.remove();
+  
+    const menu = document.createElement('div');
+    menu.id = 'radial-menu';
+    menu.classList.add('hidden');
+  
+    const center = document.createElement('div');
+    center.className = 'center-circle';
+    center.textContent = 'Ações';
+    menu.appendChild(center);
+  
+    const radius = 120;
+    const angleStep = (2 * Math.PI) / actions.length;
+  
+    actions.forEach((action, i) => {
+      const angle = i * angleStep;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+  
+      const item = document.createElement('div');
+      item.className = 'menu-item';
+      item.textContent = action.label;
+      item.dataset.action = action.value;
+  
+      item.style.left = `calc(50% + ${x}px)`;
+      item.style.top = `calc(50% + ${y}px)`;
+      item.style.transform = 'translate(-50%, -50%)';
+  
+      item.addEventListener('click', () => {
+        console.log("Selecionado:", action.value);
+        menu.classList.add('hidden');
+        action.onSelect();
+      });
+  
+      menu.appendChild(item);
+    });
+  
+    document.body.appendChild(menu);
+  
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        menu.classList.toggle('hidden');
+      }
+    });
+}
+  
+
 export function promotePlayerToPresenter(targetId: string, role: string) {
     SocketManager.io.emit("role:set", { targetId, role });
 }

@@ -36,6 +36,13 @@ class SocketManager{
                 delete this.players[this.io.id]
             }
             
+
+            //Remove do Collider
+            const index = colliders.indexOf(this.players[this.io.id as any]);
+            if (index !== -1) {
+                colliders.splice(index, 1);
+            }
+
             this.isConnected = false
             this.setHudStatus(false)
         })
