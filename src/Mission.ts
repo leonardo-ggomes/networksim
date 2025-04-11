@@ -149,16 +149,6 @@ export default class Mission {
         this.isComplete = true
     }
 
-    showInstruction(title: string, content: string){
-        const instruction = document.getElementById("instruction") as HTMLDivElement
-        instruction.innerHTML = `
-            <div class="inst-title">${title}</div>
-            <div class="inst-subtitle">
-                ${content}
-            </div>
-        `
-    }
-
     async addObject(position: Vector3, scale: number, name: string, scene: Scene){
         const [obj] = await Promise.all(
             [

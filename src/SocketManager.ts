@@ -183,6 +183,10 @@ class SocketManager{
             file
         })
     }
+
+    promotePlayerTo(targetId: string, role: string) {
+        this.io.emit("role:set", { targetId, role });
+    }
 }
 
 export default new SocketManager()

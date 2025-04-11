@@ -1,6 +1,5 @@
-import { infoPlayer } from "./InfoPlayer";
+import { infoPlayer, othersPlayers, roles } from "./InfoPlayer";
 import SocketManager from "./SocketManager";
-import { estructure } from './enums/estructure'
 
 //Compartilhado globalmente
 export const eventEmitter = new EventTarget();
@@ -9,15 +8,22 @@ let missionContent = ""
 
 //Processes
 const processes = [
-    { name: "apache", pid: 1234, memory: 145.6, cpu: 21 },
-    { name: "bash", pid: 5678, memory: 50.2, cpu: 0.2 },
-    { name: "mariadb", pid: 9012, memory: 293.4, cpu: 17 },
-    { name: "svchost", pid: 3456, memory: 20.8, cpu: 0.3 },
-    { name: "netns", pid: 1111, memory: 15.7, cpu: 3.7 }
+    { pid: 1234, user: "root", cpu: "0.3%", mem: "1.2%", command: "systemd" },
+    { pid: 5678, user: "me", cpu: "1.8%", mem: "0.9%", command: "node server.js" },
+    { pid: 9101, user: "me", cpu: "0.1%", mem: "0.5%", command: "bash" },
+    { pid: 1121, user: "me", cpu: "2.5%", mem: "1.1%", command: "firefox" },
+    { pid: 2233, user: "me", cpu: "0.7%", mem: "0.3%", command: "htop" },
 ];
 
 // Variáveis de estado
 let isCollided = false;
+
+
+type RadialAction = {
+    label: string;
+    value: string;
+    onSelect: () => void;
+};  
 
 export type file = {
     name: string,
@@ -69,12 +75,13 @@ let elementos = {
     },
     setIsCollided: (state: boolean) => { isCollided = state; },
     setCurrentMission: (currentMission: string) => { missionContent = currentMission; },
-    setProcesses: (name: string, pid: number, memoryInMB: number, cpu: number) => {
+    setProcesses: (name: string, pid: number, memory: number, cpu: number) => {
         processes.push({
-            name: name,
+            command: name,
             pid: pid,
-            memory: memoryInMB,
-            cpu: cpu
+            mem: memory.toString(),
+            cpu: cpu.toString(),
+            user: "default"
         })
     },
     setFilesInMission: (dirPath = rootPath, name: string, content: string) => {
@@ -120,14 +127,13 @@ function createTerminal() {
         // terminal.style.border = "1px solid gray";
         terminal.style.background = "transparent";
         terminal.style.color = "white";
-        terminal.style.fontFamily = "poppins";
+        terminal.style.fontFamily = "monospace";
         terminal.style.fontSize = "12px";
         terminal.style.overflowY = "auto";
         terminal.style.display = "flex";
         terminal.style.flexDirection = "column";
         terminal.style.justifyContent = "flex-start";
         // terminal.style.borderRadius = "4px";
-
 
         framescreen.appendChild(terminal)
         document.body.appendChild(framescreen);
@@ -190,17 +196,16 @@ const commands: Record<string, (args: string[]) => string> = {
     "ping": (args) => `  PING ${args[0] || "127.0.0.1"}: 56 data bytes\n64 bytes from ${args[0] || "127.0.0.1"}: icmp_seq=1 ttl=64 time=0.5 ms`,
     "pwd": () => currentDir,
     "ifconfig": () => `  eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n gateway 192.168.1.1`,
-    "help": () => `  Comandos disponíveis: 
-            ping [host] → Testa a conexão com um host.
-            ifconfig → Exibe informações de rede.
-            help → Lista os comandos disponíveis no terminal.
-            clear → Limpa o terminal.
-            cd [diretório] → Entra em um diretório válido.
-            cat [arquivo] → Exibe o conteúdo de um arquivo.
-            ls → Lista os arquivos disponíveis no diretório atual.
-            ps aux → Lista todos os processos.
-            ssh [user@address] → Realiza um conexão remota.
-            kill -9 [PID] → Elimina um processo forçadamente.`,
+    "help": () => `ping [host] → Testa a conexão com um host.
+ifconfig → Exibe informações de rede.
+help → Lista os comandos disponíveis no terminal.
+clear → Limpa o terminal.
+cd [diretório] → Entra em um diretório válido.
+cat [arquivo] → Exibe o conteúdo de um arquivo.
+ls → Lista os arquivos disponíveis no diretório atual.
+ps aux → Lista todos os processos.
+ssh [user@address] → Realiza um conexão remota.
+kill -9 [PID] → Elimina um processo forçadamente.`,
     "cd": (args) => {
 
         if (args[0] === "..") {
@@ -264,11 +269,32 @@ const commands: Record<string, (args: string[]) => string> = {
 
         return AllFilesAndDirs;
     },
-    "ps": () => {
-        return `
-        USUÁRIO     PID     %CPU     %MEM     COMANDO
-        --------------------------------------
-       ${processes.map(p => `user     ${p.pid}     ${p.cpu}     ${p.memory}     ${p.name}`).join("\n       ")}`;
+    "top": () => {
+        // Criar um elemento <pre> separado do estilo global
+            let terminal = document.getElementById("terminal") as HTMLDivElement;
+            
+            if(terminal)
+            {
+                const pre = document.createElement("pre");
+                pre.style.color = "#00ff00";
+                pre.style.fontFamily = "monospace";
+                pre.style.whiteSpace = "pre"; // Mantém formatação fixa
+                pre.style.margin = "0"; // Remove margens extras
+    
+                // Criar cabeçalho
+                let output = `PID     USER      %CPU    %MEM    COMMAND\n`;
+                output += `--------------------------------------------\n`;
+    
+                // Criar linhas formatadas
+                processes.forEach(p => {
+                    output += `${p.pid.toString().padEnd(7)} ${p.user.padEnd(9)} ${p.cpu.padEnd(7)} ${p.mem.padEnd(7)} ${p.command}\n`;
+                });
+    
+                pre.textContent = output; // Adicionar saída formatada no <pre>
+                terminal.appendChild(pre)
+            }
+
+            return ""
     },
     "kill": (args) => {
         if (args.length < 2 || args[0] !== "-9") {
@@ -513,18 +539,40 @@ function showMissionFinished(text: string) {
 
 }
 
-type RadialAction = {
-    label: string;
-    value: string;
-    onSelect: () => void;
-};  
-
 createRadialMenu([
-    { label: "Apresentador", value: "presenter", onSelect: () => console.log("Tornar apresentador") },
-    { label: "Jogador", value: "player", onSelect: () => console.log("Tornar jogador comum") },
+    {
+         label: "Apresentador", 
+         value: "presenter", 
+         onSelect: () => {
+            if(othersPlayers.collideId)
+            {
+                SocketManager.promotePlayerTo(othersPlayers.collideId, roles.PRESENTER)
+                showInstruction("Info ",`Agora ele é um ${roles.PRESENTER}`)
+            }
+            else
+            {
+                showInstruction("⚠️ Aviso!","Ninguém por perto.")
+            }
+        } 
+    },
+    { 
+        label: "Ouvinte",
+        value: "player", 
+        onSelect: () => {
+            if(othersPlayers.collideId)
+            {
+                SocketManager.promotePlayerTo(othersPlayers.collideId, roles.PLAYER)
+                showInstruction("Info ",`Agora ele é um ${roles.PLAYER}`)
+            }
+            else
+            {
+                showInstruction("⚠️ Aviso!","Ninguém por perto.")
+            }
+        } 
+    },
     { label: "Interagir", value: "interact", onSelect: () => console.log("Interação") },
     { label: "Fechar", value: "close", onSelect: () => console.log("Fechando menu") },
-  ]);
+]);
   
 
 function createRadialMenu(actions: RadialAction[]) {
@@ -550,7 +598,7 @@ function createRadialMenu(actions: RadialAction[]) {
   
       const item = document.createElement('div');
       item.className = 'menu-item';
-      item.textContent = action.label;
+      item.innerHTML = "<i class='bx bx-slideshow'></i> "+action.label;
       item.dataset.action = action.value;
   
       item.style.left = `calc(50% + ${x}px)`;
@@ -575,10 +623,15 @@ function createRadialMenu(actions: RadialAction[]) {
       }
     });
 }
-  
 
-export function promotePlayerToPresenter(targetId: string, role: string) {
-    SocketManager.io.emit("role:set", { targetId, role });
+export function showInstruction(title: string, content: string){
+    const instruction = document.getElementById("instruction") as HTMLDivElement
+    instruction.innerHTML = `
+        <div class="inst-title">${title}</div>
+        <div class="inst-subtitle">
+            ${content}
+        </div>
+    `
 }
 
 export default elementos;

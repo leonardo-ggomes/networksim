@@ -15,9 +15,9 @@ import FollowCamera from "./FollowCamera";
 import PlayerModel from "./PlayerModel";
 import { Octree } from "three/examples/jsm/math/Octree.js";
 import SocketManager from "./SocketManager";
-import elementos, { promotePlayerToPresenter } from "./Actions";
+import elementos from "./Actions";
 import Loading from "./Loading";
-import { infoPlayer, roles } from "./InfoPlayer";
+import { infoPlayer, othersPlayers, roles } from "./InfoPlayer";
 import Items from "./Items";
 import { colliders } from "./Colliders";
 
@@ -176,11 +176,12 @@ export default class PlayerController {
         }
         else if(obj.name.includes("guest.")){
           let id = obj.name.split(".")[1]
-          this.toPresenter(id)
+          this.toInteract(id)
         }
         else {
           this.toSit(obj);
           this.isFloor = true
+          othersPlayers.collideId = ''
         }
       }
 
@@ -220,11 +221,8 @@ export default class PlayerController {
     return distanceSquared <= capsuleRadius * capsuleRadius;
   }
 
-  toPresenter(id: string) {   
-    if (this.keyBoard["KeyP"]) {
-     promotePlayerToPresenter(id, roles.PRESENTER)
-     console.warn("Permissão concedida")
-    }    
+  toInteract(id: string) {   
+    othersPlayers.collideId = id
   }
 
   toSit(obj: Object3D) {

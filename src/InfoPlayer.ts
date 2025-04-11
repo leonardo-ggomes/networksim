@@ -14,5 +14,10 @@ export const infoPlayer = {
     hasTerminal: true,
     hasFlashlight: true,
     id: '',
-    role: 'player'   
+    role: 'player',
+    isRadialMenuActive: false
+}
+
+export const othersPlayers = {
+    collideId: ''
 }

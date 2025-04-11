@@ -28,7 +28,7 @@ import AudioStage from "./AudioStage";
 import MinMap from "./MiniMap";
 import MiniMap from "./MiniMap";
 import Mission from "./Mission";
-import elementos, { eventEmitter } from "./Actions";
+import elementos, { eventEmitter, showInstruction } from "./Actions";
 import { gui } from "./GuiControl";
 import Loading from "./Loading";
 import { infoPlayer } from "./InfoPlayer";
@@ -240,7 +240,7 @@ export default class Experience{
         )
         
         setTimeout(() => {
-            mission1.showInstruction(
+            showInstruction(
                 "Encontre o dispositivo",
                 "Você precisa de um computador para realizar as atividades"
             )
@@ -263,7 +263,7 @@ export default class Experience{
                 this.beep()
                 elementos.showMsg('✅ Dispositivo encontrado')
                 mission1.removeMissionPoint(mission1.missionPoint, this.scene)
-                mission1.showInstruction(
+                showInstruction(
                     "Dispositivo habilitado",
                     "Pressione a tecla T para usar o dispositivo."
                 )
@@ -309,7 +309,7 @@ export default class Experience{
         elementos.setProcesses(process.name, process.pid, process.memory, process.cpu)
         
         setTimeout(() => {
-            mission2.showInstruction(
+            showInstruction(
                 "Elimine o Malware",
                 "Há uma suspeita que o hacker executou um programa malicioso antes do blackout"
             )
@@ -326,7 +326,7 @@ export default class Experience{
                 mission2.rewardPlayer()
                 elementos.showMsg('✅ Missão Concluída')
                 mission2.removeMissionPoint(mission2.missionPoint, this.scene)
-                mission2.showInstruction(
+                showInstruction(
                     "Progresso",
                     "A energia parece que está voltando"
                 )
@@ -364,7 +364,7 @@ export default class Experience{
         )
 
         setTimeout(() => {
-            mission3.showInstruction(
+            showInstruction(
                 "Sistema parado",
                 "O hacker implantou uma falha no código, corrija o mais rápido possível."
             )
