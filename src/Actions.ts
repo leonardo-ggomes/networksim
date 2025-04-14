@@ -580,7 +580,15 @@ createRadialMenu([
         }
        
     }},
-    { label: "<i class='bx bx-window-close'></i> Fechar", value: "close", onSelect: () => console.log("Fechando menu") },
+    { label: "<i class='bx bxs-hand' ></i> Aplausos", value: "aplaudir", onSelect: () => {
+        if(infoPlayer.role === roles.ADMIN){
+            SocketManager.io.emit("music:interact", true)
+        }
+        else
+        {
+            showInstruction("⚠️ Aviso!","Fale com o administrador")
+        }
+    } },
 ]);
   
 

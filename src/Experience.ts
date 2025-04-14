@@ -69,6 +69,7 @@ export default class Experience{
         this.setAmbientLight()
         this.camera.add(this.listener)
         this.setAmbienceAudio()
+        this.setInteractionAudio()
         this.items = new Items(this.scene, this.loading)
         this.socket.scene = this.scene
         this.socket.loading = this.loading
@@ -185,6 +186,40 @@ export default class Experience{
             ? "audio/music_1.mp3" 
             : "audio/auditorio.mp3";
 
+            playSound(currentTrack);
+        })
+    }
+
+    setInteractionAudio() {
+        // Criando um objeto na cena que será a "caixa de som"
+        const soundSource = new Object3D();
+        soundSource.position.set(0, 1, 1); // Posição da fonte de som
+        this.scene.add(soundSource);
+    
+        // Criando som posicional e ligando ao objeto
+        const sound = new PositionalAudio(this.listener);
+        soundSource.add(sound); // Conecta o som ao objeto da cena
+    
+        const audioLoader = this.audioLoader;
+    
+        const playSound = (file: any) => {
+            audioLoader.load(file, (buffer) => {
+                sound.stop();
+                sound.setBuffer(buffer);               
+                sound.setVolume(0.5);
+    
+                // Parâmetros espaciais (opcional, mas recomendado)
+                sound.setRefDistance(5);   // Quanto mais longe, menor o volume
+                sound.setMaxDistance(30); // Máximo alcance do som
+                sound.setRolloffFactor(1); // Como o som decai com a distância
+    
+                sound.play();
+            });
+        };
+    
+        let currentTrack = "audio/aplausos.mp3";
+    
+        SocketManager.io.on("music:aplausos", () => {
             playSound(currentTrack);
         })
     }
