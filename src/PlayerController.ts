@@ -15,7 +15,7 @@ import FollowCamera from "./FollowCamera";
 import PlayerModel from "./PlayerModel";
 import { Octree } from "three/examples/jsm/math/Octree.js";
 import SocketManager from "./SocketManager";
-import elementos from "./Actions";
+import elementos, { eventEmitter } from "./Actions";
 import Loading from "./Loading";
 import { infoPlayer, othersPlayers, roles } from "./InfoPlayer";
 import Items from "./Items";
@@ -156,7 +156,7 @@ export default class PlayerController {
       .add(new Vector3(0, this.capsuleHeight / 6, 0));
 
     let isColliding = false;
-
+   
     // Verificar a colisão com cada objeto
     colliders.forEach((obj: Object3D) => {
 
@@ -169,10 +169,10 @@ export default class PlayerController {
         if (obj.name == "degrau") {
           this.upStair(obj)
           this.isFloor = false
-        }
-        else if (obj.name.includes("Object_102")) {
-          this.goUpStreet(obj)
-          this.isFloor = false
+
+          if(infoPlayer.role == roles.PRESENTER || infoPlayer.role == roles.ADMIN){
+            eventEmitter.dispatchEvent(new CustomEvent("init_micro", {detail: true}));
+          }
         }
         else if(obj.name.includes("guest.")){
           let id = obj.name.split(".")[1]
@@ -182,6 +182,12 @@ export default class PlayerController {
           this.toSit(obj);
           this.isFloor = true
           othersPlayers.collideId = ''
+
+          if(infoPlayer.role == roles.PRESENTER || infoPlayer.role == roles.ADMIN){
+            eventEmitter.dispatchEvent(new CustomEvent("init_micro", {detail: false}));
+          }
+         
+
         }
       }
 

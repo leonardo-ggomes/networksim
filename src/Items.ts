@@ -30,7 +30,7 @@ export default class Items {
         {
             instances: 1,
             name: "auditorio",
-            path: "models/auditorio_v3.glb",
+            path: "models/auditorio_v6.glb",
             positions: [
                 { x: 0, y: 0, z: 0 }
             ],
@@ -188,6 +188,18 @@ export default class Items {
                                                 
                             }
 
+                            if (child.name.includes("backwall_backwall")) 
+                            {
+                                colliders.push(child)
+                                this.raycasterView.push(child)       
+                            }
+
+                            if (child.name.includes("dec_dec")) 
+                            {
+                                colliders.push(child)
+                                this.raycasterView.push(child)       
+                            }
+
                             if (child.name == "screen1_screen1_0") 
                             {
                                 const mesh = child as Mesh;
@@ -205,7 +217,8 @@ export default class Items {
                                 this.raycasterView.push(child)
                             }
 
-
+                          
+                
                         }
                     })
 

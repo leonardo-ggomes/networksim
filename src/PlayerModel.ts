@@ -1,6 +1,7 @@
 import { AnimationAction, AnimationMixer, DoubleSide, Group, Mesh, MeshBasicMaterial, Object3D, PointLight, Quaternion, RingGeometry, SpotLight, Vector3 } from 'three'
 import Loading from './Loading'
 import { colliders } from './Colliders'
+import { gui } from './GuiControl'
 
 
 
@@ -16,10 +17,10 @@ export default class PlayerModel extends Group {
     model?: Object3D
 
     IsTurnOnFlashlight = false;
-    lanternLight = new SpotLight(0xFFD700, 0, 10)
-    pointLight = new PointLight(0xFFD700, 0, 5);
+    lanternLight = new SpotLight(0xF4F8FF, 0, 10)
+    pointLight = new PointLight(0xF4F8FF, 0, 5);
     directionlanternLight = new Vector3();
-    flashlightObj: Object3D = new Object3D()
+    handObject: Object3D = new Object3D()
     isGuest: boolean
 
     isLoadedModel: Promise<void>
@@ -169,13 +170,13 @@ export default class PlayerModel extends Group {
     }
 
     setFlashlight() {
-        this.lanternLight.angle = Math.PI / 6; // Ângulo do feixe
+        this.lanternLight.angle = Math.PI / 4; // Ângulo do feixe
         this.lanternLight.penumbra = 0.4; // Suavização da borda da luz
         this.lanternLight.decay = .5; // Diminuição da intensidade com a distância
         this.lanternLight.distance = 10; // Alcance da luz
         this.lanternLight.castShadow = true; // Ativar sombras
 
-        this.lanternLight.add(this.pointLight); //Vicula o feixe ao ponto de luz
+        //this.lanternLight.add(this.pointLight); //Vicula o feixe ao ponto de luz
 
         this.lanternLight.position.set(
             this.position.x,  // Posição X do jogador
@@ -185,28 +186,33 @@ export default class PlayerModel extends Group {
 
 
         this.isLoadedModel.then(async () => {
-            let gltf = await this.loading.loader.loadAsync("models/flashlight.glb")
+            let gltf = await this.loading.loader.loadAsync("models/iphone.glb")
             
-            this.flashlightObj = gltf.scene
-            this.flashlightObj.rotation.y = Math.PI / 2
+            this.handObject = gltf.scene
+            this.handObject.rotation.y = Math.PI / 2
             let handBone = this.model?.getObjectByName("mixamorigLeftHand")
             
             if (handBone) {
 
-                this.flashlightObj.position.set(0, 0, 0);
-                this.flashlightObj.rotation.set(0, 0, 0);
-                this.flashlightObj.scale.set(.08, .08, .08)
+                this.handObject.position.set(0, 0, 0);
+                this.handObject.rotation.set(0, 0, 0);
+                //this.handObject.scale.set(.08, .08, .08)
 
-                handBone.attach(this.flashlightObj)
-                this.flashlightObj.position.set(3.9, 8.1, 3.2);  // Alinhar na palma da mão
-                this.flashlightObj.rotation.set(
-                    -0.182212373908208,
-                    -2.80858383230928,
+                handBone.attach(this.handObject)
+                this.handObject.position.set(3.9, 8.1, 3.2);  // Alinhar na palma da mão
+                this.handObject.rotation.set(
+                    1.28805298797182,
+                    2.90911479722415,
                     -1.33831847042925
                 );       
-                
-                this.flashlightObj.add(this.lanternLight)
-                this.flashlightObj.visible = false
+
+                const f = gui.addFolder("Celular")
+
+                f .add(this.handObject.rotation,"x", -Math.PI, Math.PI)
+                f .add(this.handObject.rotation,"y", -Math.PI, Math.PI)
+                f .add(this.handObject.rotation,"z", -Math.PI, Math.PI)
+                this.handObject.add(this.lanternLight)
+                this.handObject.visible = false
             }
         })
 
@@ -216,11 +222,11 @@ export default class PlayerModel extends Group {
     turnFlashlight(isOn: boolean) {
         this.IsTurnOnFlashlight = isOn
         if (this.IsTurnOnFlashlight) {
-            this.flashlightObj.visible = true
+            this.handObject.visible = true
             this.lanternLight.intensity = 6; // Liga a luz 
             this.pointLight.intensity = 0.5;
         } else {
-            this.flashlightObj.visible = false
+            this.handObject.visible = false
             this.lanternLight.intensity = 0; // Desliga a luz 
             this.pointLight.intensity = 0;
         }

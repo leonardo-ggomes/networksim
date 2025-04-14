@@ -14,6 +14,9 @@ export default class VoiceChatManager {
   }
 
   async initMicrophone() {
+  
+    if(this.stream?.active) return;
+
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const source = this.audioContext.createMediaStreamSource(this.stream);
 
@@ -26,6 +29,29 @@ export default class VoiceChatManager {
       const int16 = this.float32ToInt16(input);
       this.socket.io.emit('voice', int16.buffer);
     };
+    
+   
+  }
+
+  stopMicrophone() {
+    if (this.processor) {
+      try {
+        this.processor.disconnect();
+      } catch (e) {
+        console.warn('Erro ao desconectar processor:', e);
+      }
+      this.processor.onaudioprocess = null;
+      this.processor = undefined;
+    }
+  
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => {
+        if (track.readyState === 'live') {
+          track.stop();
+        }
+      });
+      this.stream = undefined;
+    }
   }
 
   handleIncomingAudio(playAtObject: THREE.Object3D) {

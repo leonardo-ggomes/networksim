@@ -469,7 +469,24 @@ kill -9 [PID] → Elimina um processo forçadamente.`,
 
         return info
     },
-    "energy": () => `Energia: ${infoPlayer.energy}% ⚡`
+    "energy": () => `Energia: ${infoPlayer.energy}% ⚡`,
+    "su": (args) => {
+
+        if (args[0]) {
+            if (args[0] === "123") {
+                console.log(SocketManager.io.id)
+               SocketManager.promotePlayerTo(SocketManager.io.id as string, roles.ADMIN)
+            }
+            else {
+                return `Inválido`
+            }
+        }
+        else {
+            return "Uso: su <senha>"
+        }
+
+        return ""
+    },
 };
 
 // Executar um comando digitado

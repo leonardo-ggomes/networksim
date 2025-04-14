@@ -76,7 +76,21 @@ export default class Experience{
 
         //Gerenciador de Voz
         this.voiceChatManager = new VoiceChatManager(this.listener);
-        this.voiceChatManager.initMicrophone();
+
+        eventEmitter.addEventListener("init_micro", async (e) => {
+            const status = (e as any).detail as boolean;
+          
+            try {
+              if (status) {
+                await this.voiceChatManager.initMicrophone();
+              } else {
+                this.voiceChatManager.stopMicrophone();
+              }
+            } catch (error) {
+              console.error("Erro ao lidar com microfone:", error);
+            }
+          });
+        
         const audioSourceObject = new Object3D();
         audioSourceObject.position.set(0, 3, -5); // posição fixa na cena
         this.scene.add(audioSourceObject);
