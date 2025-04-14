@@ -63,11 +63,11 @@ export default class Items {
         this.loading = loading
         this.scene = scene
         this.setItems()
-        this.addLight(new Vector3(10.8, 9.5, -3)) //Adiciona luz
+        // this.addLight(new Vector3(10.8, 9.5, -3)) //Adiciona luz
       
-        const axes = new AxesHelper()
-        axes.position.set(0, 1, 0)
-        this.scene.add(axes)
+        // const axes = new AxesHelper()
+        // axes.position.set(0, 1, 0)
+        // this.scene.add(axes)
 
         // const axesFolder = gui.addFolder("Axes Folder")
 
@@ -88,8 +88,8 @@ export default class Items {
 
             degraus.name = "degrau"
 
-            const axes = new BoxHelper(degraus)
-            degraus.add(axes)
+            // const axes = new BoxHelper(degraus)
+            // degraus.add(axes)
 
             degraus.position.x = -24
             degraus.position.z = 21 + (0.53 * i)
@@ -105,8 +105,8 @@ export default class Items {
                 palcoChao.name = "degrau"
 
 
-                const chaoPalcoHelper = new BoxHelper(palcoChao)
-                palcoChao.add(chaoPalcoHelper)
+                // const chaoPalcoHelper = new BoxHelper(palcoChao)
+                // palcoChao.add(chaoPalcoHelper)
 
                 palcoChao.position.x = -24.5
                 palcoChao.position.z = 30
@@ -135,8 +135,8 @@ export default class Items {
             const obj = await this.loading.loader.loadAsync(item.path)
             obj.scene.name = item.name
 
-            const axes = new BoxHelper(obj.scene)
-            obj.scene.add(axes)
+            // const axes = new BoxHelper(obj.scene)
+            // obj.scene.add(axes)
 
             if (item.isGroup) {
 

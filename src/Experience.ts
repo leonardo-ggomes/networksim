@@ -267,7 +267,7 @@ export default class Experience{
         directionalLight.shadow.bias = - 0.00006;
         this.scene.add(directionalLight);
 
-        this.scene.add(new DirectionalLightHelper(directionalLight, 1));
+        // this.scene.add(new DirectionalLightHelper(directionalLight, 1));
     }
 
     setSoundStage(sound: PositionalAudio, object: Mesh){
