@@ -475,7 +475,8 @@ kill -9 [PID] → Elimina um processo forçadamente.`,
         if (args[0]) {
             if (args[0] === "123") {
                 console.log(SocketManager.io.id)
-               SocketManager.promotePlayerTo(SocketManager.io.id as string, roles.ADMIN)
+                infoPlayer.role = roles.ADMIN
+                SocketManager.promotePlayerTo(SocketManager.io.id as string, roles.ADMIN)
             }
             else {
                 return `Inválido`

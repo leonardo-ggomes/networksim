@@ -206,11 +206,12 @@ export default class PlayerModel extends Group {
                     -1.33831847042925
                 );       
 
-                const f = gui.addFolder("Celular")
+                // const f = gui.addFolder("Celular")
 
-                f .add(this.handObject.rotation,"x", -Math.PI, Math.PI)
-                f .add(this.handObject.rotation,"y", -Math.PI, Math.PI)
-                f .add(this.handObject.rotation,"z", -Math.PI, Math.PI)
+                // f .add(this.handObject.rotation,"x", -Math.PI, Math.PI)
+                // f .add(this.handObject.rotation,"y", -Math.PI, Math.PI)
+                // f .add(this.handObject.rotation,"z", -Math.PI, Math.PI)
+                
                 this.handObject.add(this.lanternLight)
                 this.handObject.visible = false
             }

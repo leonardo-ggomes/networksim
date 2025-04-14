@@ -3,8 +3,8 @@ import Experience from './Experience';
 import { Clock } from 'three';
 import Loading from './Loading';
 
-const stats = new Stats();
-document.body.appendChild(stats.dom);
+// const stats = new Stats();
+// document.body.appendChild(stats.dom);
 
 const clock = new Clock();
 
@@ -17,7 +17,7 @@ function startGame()
     const delta = clock.getDelta();
     requestAnimationFrame(update);
     
-    stats.update();
+    // stats.update();
     experience.update(delta);
   }
   

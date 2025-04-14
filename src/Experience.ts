@@ -114,14 +114,14 @@ export default class Experience{
         this.miniMap = new MiniMap(this.scene, this.renderer, this.playerController.playerModel.position)
 
         
-        const playerFolder = gui.addFolder("Player")
-        playerFolder.add(this.playerController.playerModel.rotation,"x", -Math.PI, Math.PI)
-        playerFolder.add(this.playerController.playerModel.rotation,"y", -Math.PI, Math.PI)
-        playerFolder.add(this.playerController.playerModel.rotation,"z", -Math.PI, Math.PI)
+        // const playerFolder = gui.addFolder("Player")
+        // playerFolder.add(this.playerController.playerModel.rotation,"x", -Math.PI, Math.PI)
+        // playerFolder.add(this.playerController.playerModel.rotation,"y", -Math.PI, Math.PI)
+        // playerFolder.add(this.playerController.playerModel.rotation,"z", -Math.PI, Math.PI)
         
-        playerFolder.add(this.playerController.playerModel.position,"x", 0, 10)
-        playerFolder.add(this.playerController.playerModel.position,"y", 0, 10)
-        playerFolder.add(this.playerController.playerModel.position,"z", 0, 10)
+        // playerFolder.add(this.playerController.playerModel.position,"x", 0, 10)
+        // playerFolder.add(this.playerController.playerModel.position,"y", 0, 10)
+        // playerFolder.add(this.playerController.playerModel.position,"z", 0, 10)
 
         this.setOctree()
         window.addEventListener('resize', this.onResize)

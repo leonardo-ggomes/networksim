@@ -31,11 +31,11 @@ export default class FollowCamera {
 
 
         
-        const playerFolder = gui.addFolder("Follow Camera")
+        // const playerFolder = gui.addFolder("Follow Camera")
              
-        playerFolder.add(this.offset,"x", -100, 100)
-        playerFolder.add(this.offset,"y", -100, 100)
-        playerFolder.add(this.offset,"z", -100, 100)
+        // playerFolder.add(this.offset,"x", -100, 100)
+        // playerFolder.add(this.offset,"y", -100, 100)
+        // playerFolder.add(this.offset,"z", -100, 100)
     }
 
     setFollowMode(walking: boolean) {
