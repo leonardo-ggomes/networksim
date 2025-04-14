@@ -541,7 +541,7 @@ function showMissionFinished(text: string) {
 
 createRadialMenu([
     {
-         label: "Apresentador", 
+         label: "<i class='bx bx-slideshow'></i> Exibidor", 
          value: "presenter", 
          onSelect: () => {
             if(othersPlayers.collideId)
@@ -556,7 +556,7 @@ createRadialMenu([
         } 
     },
     { 
-        label: "Ouvinte",
+        label: "<i class='bx bx-chair' ></i> Ouvinte",
         value: "player", 
         onSelect: () => {
             if(othersPlayers.collideId)
@@ -570,8 +570,17 @@ createRadialMenu([
             }
         } 
     },
-    { label: "Interagir", value: "interact", onSelect: () => console.log("Interação") },
-    { label: "Fechar", value: "close", onSelect: () => console.log("Fechando menu") },
+    { label: "<i class='bx bx-music' ></i> Música", value: "music", onSelect: () => {
+        if(infoPlayer.role === roles.ADMIN){
+            SocketManager.io.emit("music:change", true)
+        }
+        else
+        {
+            showInstruction("⚠️ Aviso!","Fale com o administrador")
+        }
+       
+    }},
+    { label: "<i class='bx bx-window-close'></i> Fechar", value: "close", onSelect: () => console.log("Fechando menu") },
 ]);
   
 
@@ -598,7 +607,7 @@ function createRadialMenu(actions: RadialAction[]) {
   
       const item = document.createElement('div');
       item.className = 'menu-item';
-      item.innerHTML = "<i class='bx bx-slideshow'></i> "+action.label;
+      item.innerHTML =  action.label;
       item.dataset.action = action.value;
   
       item.style.left = `calc(50% + ${x}px)`;

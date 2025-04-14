@@ -113,10 +113,10 @@ export default class Experience{
 
         //NPC
         this.entityManager = new EntityManager();
-        this.setNpc()
+        //this.setNpc()
 
         //Missão
-        this.startFirstMission()
+        //this.startFirstMission()
     }
   
     setScene(){      
@@ -149,15 +149,47 @@ export default class Experience{
         //this.scene.add(new GridHelper(100,100))
     }
 
-    setAmbienceAudio(){
-        const sound = new Audio(this.listener);
-        this.audioLoader.load("audio/auditorio.mp3", (buffer) => {
-            sound.setBuffer(buffer);
-            sound.setLoop(true); // Faz o som tocar continuamente
-            sound.setVolume(0.5); // Ajuste o volume (0.0 a 1.0)
-            sound.play(); // Começa a tocar
-        });
+    setAmbienceAudio() {
+        // Criando um objeto na cena que será a "caixa de som"
+        const soundSource = new Object3D();
+        soundSource.position.set(0, 2.5, -2.5); // Posição da fonte de som
+        this.scene.add(soundSource);
+    
+        // Criando som posicional e ligando ao objeto
+        const sound = new PositionalAudio(this.listener);
+        soundSource.add(sound); // Conecta o som ao objeto da cena
+    
+        const audioLoader = this.audioLoader;
+    
+        const playSound = (file: any) => {
+            audioLoader.load(file, (buffer) => {
+                sound.stop();
+                sound.setBuffer(buffer);
+                sound.setLoop(true);
+                sound.setVolume(0.5);
+    
+                // Parâmetros espaciais (opcional, mas recomendado)
+                sound.setRefDistance(5);   // Quanto mais longe, menor o volume
+                sound.setMaxDistance(30); // Máximo alcance do som
+                sound.setRolloffFactor(1); // Como o som decai com a distância
+    
+                sound.play();
+            });
+        };
+    
+        let currentTrack = "audio/auditorio.mp3";
+        playSound(currentTrack);
+    
+        SocketManager.io.on("music:play", () => {
+            currentTrack = (currentTrack === "audio/auditorio.mp3") 
+            ? "audio/music_1.mp3" 
+            : "audio/auditorio.mp3";
+
+            playSound(currentTrack);
+        })
     }
+    
+    
 
     beep(){     
         const sound = new Audio(this.listener);    
