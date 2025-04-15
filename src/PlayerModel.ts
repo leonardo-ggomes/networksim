@@ -82,6 +82,7 @@ export default class PlayerModel extends Group {
                     ]
                 )
 
+                
                 //Animação
                 this.mixer = new AnimationMixer(model.scene)                
                 
@@ -279,6 +280,17 @@ export default class PlayerModel extends Group {
           anims.position.set(0, anims.position.y, 0)
         }
 
+        if(this.activedClip == this.animationsAction["Sitting"])
+        {
+            if(anims)
+            {
+                anims.rotation.x = 0
+                anims.position.set(0, anims.position.y + 0.5, 0)
+            }
+          
+            console.log("está sentado")
+        }
+        
         if (this.isVisibleIndicator)
             this.animateRing()
     }
