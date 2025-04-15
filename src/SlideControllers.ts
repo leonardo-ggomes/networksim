@@ -10,7 +10,7 @@ export default class SlideController {
   constructor(slideshow: SlideShow) {
     this.slideshow = slideshow;
 
-    this.socket.io.on("slides:init", ({ currentSlideIndex, slides, presenterId }) => {
+    this.socket.io.on("slides:init", ({ currentSlideIndex, slides }) => {
       this.slideshow.loadSlidesFromBase64(slides);
       this.slideshow.setSlide(currentSlideIndex);
 

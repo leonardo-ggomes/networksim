@@ -18,7 +18,7 @@ export default class AudioStage{
         camera.add(this.listener)
         this.sound = new PositionalAudio(this.listener)
 
-        navigator.mediaDevices.getUserMedia({audio: true}).then((stream) => {
+        navigator.mediaDevices.getUserMedia({audio: true}).then(_ => {
       
             this.audioLoader.load('audio/music_1.mp3', (buffer) => {
                 this.sound.setBuffer(buffer);
