@@ -9,6 +9,11 @@ Um jogo multiplayer baseado em rede, desenvolvido com foco em apresentação de 
 
 ---
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/m-r-davari/github_readme_beautifier/master/assets/github_meme_dark.gif">
+  <img alt="Image changing depending on Dark/Light Github theme mode." src="https://raw.githubusercontent.com/m-r-davari/github_readme_beautifier/master/assets/github_meme_light.gif" width="100%">
+</picture>
+
 ## 🚀 Funcionalidades
 
 - 🎮 **Multiplayer em tempo real**: Conecte-se com outros jogadores através de uma arquitetura cliente-servidr.
