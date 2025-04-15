@@ -5,15 +5,12 @@ import {
     AudioLoader,
     Color, 
     DirectionalLight, 
-    DirectionalLightHelper, 
     Fog, 
-    Mesh, 
-    MeshBasicMaterial, 
+    Mesh,  
     Object3D, 
     PerspectiveCamera, 
     PositionalAudio, 
     Scene, 
-    SphereGeometry, 
     Vector3, 
     WebGLRenderer 
 } from "three";

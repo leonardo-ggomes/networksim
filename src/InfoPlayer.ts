@@ -18,6 +18,10 @@ export const infoPlayer = {
     isRadialMenuActive: false
 }
 
+export const Auditorio = {
+    chairs: [""]
+}
+
 export const othersPlayers = {
     collideId: ''
 }

@@ -1,10 +1,5 @@
 import {
-    AxesHelper,
     BoxGeometry,
-    BoxHelper,
-    BufferGeometry,
-    InstancedMesh,
-    Material,
     Mesh,
     MeshBasicMaterial,
     MeshStandardMaterial,

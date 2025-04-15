@@ -1,9 +1,9 @@
-import Stats from 'three/addons/libs/stats.module.js'
-import Experience from './Experience';
-import { Clock } from 'three';
-import Loading from './Loading';
+// import Stats from 'three/addons/libs/stats.module.js'
+// import Experience from './Experience';
+// import { Clock } from 'three';
+// import Loading from './Loading';
 
-const stats = new Stats();
+//const stats = new Stats();
 // document.body.appendChild(stats.dom);
 
 // const clock = new Clock();

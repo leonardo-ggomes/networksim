@@ -17,7 +17,7 @@ import { Octree } from "three/examples/jsm/math/Octree.js";
 import SocketManager from "./SocketManager";
 import elementos, { eventEmitter } from "./Actions";
 import Loading from "./Loading";
-import { infoPlayer, othersPlayers, roles } from "./InfoPlayer";
+import { Auditorio, infoPlayer, othersPlayers, roles } from "./InfoPlayer";
 import Items from "./Items";
 import { colliders } from "./Colliders";
 
@@ -60,6 +60,9 @@ export default class PlayerController {
   //Carregamento
   loading: Loading
   urlAvatar: string
+
+  //Chair
+  chair = ""
 
   constructor(
     scene: Scene,
@@ -135,8 +138,6 @@ export default class PlayerController {
     if (action != this.activedClip) {
       switch (action) {
         case this.playerModel.animationsAction["Sitting"]:
-          // this.playerModel.rotation.x = Math.PI / 2
-          // this.playerModel.position.y = .5
           this.activedClip?.fadeOut(0);
           action.reset().play();
           break;
@@ -240,36 +241,35 @@ export default class PlayerController {
   toSit(obj: Object3D) {
     if (obj.name.includes("poltrona")) {
       if (!this.isSitting && this.keyBoard["KeyF"]) {
-        this.prevPlayerPosition.copy(this.playerModel.position);
-        this.prevPlayerQuaternion.copy(this.playerModel.quaternion);
 
-        setTimeout(() => {
-          this.isSitting = true;
-          this.followCamera.mouseMoveActived = true
-          const direction = new Vector3();
-          obj.getWorldDirection(direction);
+        if(!Auditorio.chairs.includes(obj.name))
+        {
+          this.prevPlayerPosition.copy(this.playerModel.position);
+          this.prevPlayerQuaternion.copy(this.playerModel.quaternion);
+  
+          setTimeout(() => {
+            this.isSitting = true;
+            this.followCamera.mouseMoveActived = true
+            const direction = new Vector3();
+            obj.getWorldDirection(direction);
+  
+            this.playerModel.quaternion.copy(obj.quaternion);
+  
+            this.followCamera.setFollowMode(false)
+            this.playerModel.position.copy(
+              obj.position.clone().add(new Vector3(0, .17, -.4))
+            );
+  
+          
+            this.playerModel.rotation.y = -Math.PI;
+  
+            this.chair = obj.name
+            SocketManager.io.emit("chair:add", this.chair)
+  
+          }, 1000);
+  
+        }
 
-          this.playerModel.quaternion.copy(obj.quaternion);
-
-          this.followCamera.setFollowMode(false)
-          this.playerModel.position.copy(
-            obj.position.clone().add(new Vector3(0, .17, -.4))
-          );
-
-          // this.playerModel.rotation.x = -1.5707963267949;
-          this.playerModel.rotation.y = -Math.PI;
-
-
-
-          // this.playerModel.rotation.z == 0 &&
-          //   (this.playerModel.rotation.z = -Math.PI / 2);
-
-          // if (Math.sign(obj.rotation.y) != -1) {          
-          //   this.playerModel.rotation.z = Math.PI / 2;            
-          // }
-
-
-        }, 1000);
       }
     }
   }
@@ -452,6 +452,9 @@ export default class PlayerController {
           this.playerModel.position.copy(this.prevPlayerPosition);
           this.playerModel.quaternion.copy(this.prevPlayerQuaternion);
           this.followCamera.setFollowMode(true)
+
+          SocketManager.io.emit("chair:remove", this.chair)
+          this.chair = ""
         }, 1000);
       }
     }

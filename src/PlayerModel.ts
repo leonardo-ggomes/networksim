@@ -288,7 +288,7 @@ export default class PlayerModel extends Group {
                 anims.position.set(0, anims.position.y + 0.5, 0)
             }
           
-            console.log("está sentado")
+      
         }
         
         if (this.isVisibleIndicator)

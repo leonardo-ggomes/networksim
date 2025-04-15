@@ -6,7 +6,7 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { Faker, pt_BR } from '@faker-js/faker'
 import Loading from './Loading'
 import { addNewCommandLine, appendToTerminal, dir, file, isRemotelyConnected, remoteDiretories as rd } from './Actions'
-import { infoPlayer } from './InfoPlayer'
+import { Auditorio, infoPlayer } from './InfoPlayer'
 import { colliders } from './Colliders'
 
 class SocketManager{
@@ -20,8 +20,8 @@ class SocketManager{
 
 
     constructor(){
-        //https://networksim-server-production.up.railway.app
-        this.io = io('http://localhost:3000')
+       
+        this.io = io('https://networksim-server-production.up.railway.app')
 
         this.io.on('connect', () => {
             console.log('Conectado')
@@ -56,6 +56,11 @@ class SocketManager{
 
         this.io.on("player:info", this.getPlayerInfo);          
         this.io.on("players:update", this.updatePlayerInfo);
+        this.io.on("chair:list", this.updateChairs);
+    }
+
+    updateChairs(assentos: string[]){
+        Auditorio.chairs = assentos
     }
 
     getPlayerInfo = (data: any) => {
@@ -94,16 +99,15 @@ class SocketManager{
                     const nameGeometry = new TextGeometry(name, {
                         font: font,
                         size: 0.15 ,
-                        depth: 0                  
+                        depth: 0           
                     } );
             
                     const meshName = new Mesh(nameGeometry, textMaterial)
                     meshName.position.y = newPlayer.position.y + 2
                     meshName.position.z = newPlayer.position.z - 0.2
                     meshName.position.x = newPlayer.position.x - (name.length / 2 / 10 )
-                    
-                    // meshName.rotation.x = -Math.PI / 2
-                    newPlayer.add(meshName)
+                                        
+                    //newPlayer.add(meshName)
                   
                     if(this.io.id != undefined){                    
                         this.scene?.add(newPlayer)
