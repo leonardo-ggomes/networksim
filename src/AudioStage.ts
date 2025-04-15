@@ -25,7 +25,7 @@ export default class AudioStage{
                 this.sound.setRefDistance(10); // Distância mínima para o som ser ouvido claramente
                 this.sound.play(); // Tocar o som1
             });
-        })
+        })   
     }
 
     
