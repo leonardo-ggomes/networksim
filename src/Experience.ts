@@ -73,8 +73,11 @@ export default class Experience{
         this.setAmbienceAudio()
         this.setInteractionAudio()
         this.items = new Items(this.scene, this.loading)
+        
+        //Inicializa o socket e envia a url
         this.socket.scene = this.scene
         this.socket.loading = this.loading
+        this.socket.io.emit("avatar:set", this.urlAvatar)
 
         //Gerenciador de Voz
         this.voiceChatManager = new VoiceChatManager(this.listener);

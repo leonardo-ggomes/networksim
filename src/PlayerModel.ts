@@ -1,8 +1,9 @@
-import { AnimationAction, AnimationMixer, DoubleSide, Group, Mesh, MeshBasicMaterial, Object3D, PointLight, Quaternion, RingGeometry, SpotLight, Vector3 } from 'three'
+import { AnimationAction, AnimationClip, AnimationMixer, DoubleSide, Group, Mesh, MeshBasicMaterial, Object3D, PointLight, Quaternion, RingGeometry, SkinnedMesh, SpotLight, Vector3 } from 'three'
 import Loading from './Loading'
 import { colliders } from './Colliders'
 import { gui } from './GuiControl'
-
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 
 export default class PlayerModel extends Group {
@@ -68,9 +69,9 @@ export default class PlayerModel extends Group {
                         this.loading.loader.loadAsync("models/M_Standing_Idle_001.glb"),
                         this.loading.loader.loadAsync("models/M_Run_001.glb"),
 
-                        this.loading.loader.loadAsync("models/asian_male_animated@sitting.glb"),
+                        this.loading.loader.loadAsync("models/M_Sitting.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crounch_flashlight.glb"),
-                        this.loading.loader.loadAsync("models/asian_male_animated@crouch_idle.glb"),
+                        this.loading.loader.loadAsync("models/M_Standing_Idle_01.glb"),
                         this.loading.loader.loadAsync("models/M_Walk_Backwards_001.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_back.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_run.glb"),
@@ -80,6 +81,8 @@ export default class PlayerModel extends Group {
                         this.loading.loader.loadAsync("models/M_Walk_Strafe_Left_002.glb"),
                     ]
                 )
+
+                sitting.scene.name = "sitting"
 
                 //Animação
                 this.mixer = new AnimationMixer(model.scene)                
@@ -100,7 +103,7 @@ export default class PlayerModel extends Group {
                 this.animationsAction["CrouchLeft"] = this.mixer.clipAction(walkCrouchLeft.animations[0])
                 this.animationsAction["WalkRight"] = this.mixer.clipAction(walkRight.animations[0])
                 this.animationsAction["WalkLeft"] = this.mixer.clipAction(walkLeft.animations[0])
-
+                
                 this.animationsAction["Idle"].play()
         
                 if(this.isGuest)
@@ -271,6 +274,12 @@ export default class PlayerModel extends Group {
         this.mixer?.update(delta)
         this.updateFlashlight()
 
+        const anims = this.model?.getObjectByName("Hips")
+    
+        if(anims)
+        {
+          anims.position.set(0, anims.position.y, 0)
+        }
 
         if (this.isVisibleIndicator)
             this.animateRing()

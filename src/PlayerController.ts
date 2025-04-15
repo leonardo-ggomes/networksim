@@ -124,19 +124,13 @@ export default class PlayerController {
         this.actions['terminal'] = false
       }
     }
-    // else if (this.keyBoard["KeyL"] && infoPlayer.hasFlashlight) { //Liga a laterna
-    //   this.playerModel.turnFlashlight(!this.playerModel.IsTurnOnFlashlight)
-    // }
+    else if (this.keyBoard["KeyL"] && infoPlayer.hasFlashlight) { //Liga a laterna
+      this.playerModel.turnFlashlight(!this.playerModel.IsTurnOnFlashlight)
+    }
 
   }
 
   setAction(action: AnimationAction) {
-    const anims = this.playerModel.getObjectByName("Hips")
-    
-    if(anims)
-    {
-      anims.position.set(0, anims.position.y, 0)
-    }
 
     if (action != this.activedClip) {
       switch (action) {
@@ -342,7 +336,7 @@ export default class PlayerController {
         );
 
         this.playerImpulse.add(
-          this.playerDirection.clone().multiplyScalar(this.velocity * 2.2 * delta)
+          this.playerDirection.clone().multiplyScalar(this.velocity * 2.4 * delta)
         );
       }
       else if (this.keyBoard["KeyS"]) {
