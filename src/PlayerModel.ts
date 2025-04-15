@@ -48,6 +48,7 @@ export default class PlayerModel extends Group {
 
                 const [
                     walk,
+                    waving,
                     idle, 
                     running,
                     sitting, 
@@ -63,6 +64,7 @@ export default class PlayerModel extends Group {
                 ] = await Promise.all(
                     [
                         this.loading.loader.loadAsync("models/M_Walk_001.glb"),
+                        this.loading.loader.loadAsync("models/M_Dances_011.glb"),
                         this.loading.loader.loadAsync("models/M_Standing_Idle_001.glb"),
                         this.loading.loader.loadAsync("models/M_Run_001.glb"),
 
@@ -74,15 +76,15 @@ export default class PlayerModel extends Group {
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_run.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_walk_right.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_walk_left.glb"),
-                        this.loading.loader.loadAsync("models/asian_male_animated@walk_right.glb"),
-                        this.loading.loader.loadAsync("models/asian_male_animated@walk_left.glb"),
+                        this.loading.loader.loadAsync("models/M_Walk_Strafe_Right_002.glb"),
+                        this.loading.loader.loadAsync("models/M_Walk_Strafe_Left_002.glb"),
                     ]
                 )
 
                 //Animação
                 this.mixer = new AnimationMixer(model.scene)                
                 
-                // this.animationsAction["Waving"] = this.mixer.clipAction(model.animations[5])
+                this.animationsAction["Waving"] = this.mixer.clipAction(waving.animations[0])
 
                 this.animationsAction["Idle"] = this.mixer.clipAction(idle.animations[0])
                 this.animationsAction["Walk"] = this.mixer.clipAction(walk.animations[0])
