@@ -25,10 +25,12 @@ export default class PlayerModel extends Group {
 
     isLoadedModel: Promise<void>
     identity?: string
+    urlAvatar: string
 
-    constructor(loading: Loading, isGuest = true, identity?: string) {
+    constructor(loading: Loading, isGuest = true,  urlAvatar: string, identity?: string) {
         super()
         this.loading = loading
+        this.urlAvatar = urlAvatar || "models/asian_male_animated_v2.glb"
         this.isGuest = isGuest
         this.identity = identity
         this.isLoadedModel = this.loadModel()
@@ -39,12 +41,15 @@ export default class PlayerModel extends Group {
 
     async loadModel() {
         return await new Promise<void>((resolve) => {
-            this.loading.loader.load("models/asian_male_animated_v2.glb", async (model) => {
+            this.loading.loader.load(this.urlAvatar, async (model) => {
                 this.model = model.scene
                 this.add(this.model)
                 this.scale.set(1, 1, 1)
 
                 const [
+                    walk,
+                    idle, 
+                    running,
                     sitting, 
                     crouch, 
                     crouchIdle, 
@@ -57,10 +62,14 @@ export default class PlayerModel extends Group {
                     walkLeft
                 ] = await Promise.all(
                     [
+                        this.loading.loader.loadAsync("models/M_Walk_001.glb"),
+                        this.loading.loader.loadAsync("models/M_Standing_Idle_001.glb"),
+                        this.loading.loader.loadAsync("models/M_Run_001.glb"),
+
                         this.loading.loader.loadAsync("models/asian_male_animated@sitting.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crounch_flashlight.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_idle.glb"),
-                        this.loading.loader.loadAsync("models/asian_male_animated@backward.glb"),
+                        this.loading.loader.loadAsync("models/M_Walk_Backwards_001.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_back.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_run.glb"),
                         this.loading.loader.loadAsync("models/asian_male_animated@crouch_walk_right.glb"),
@@ -71,12 +80,14 @@ export default class PlayerModel extends Group {
                 )
 
                 //Animação
-                this.mixer = new AnimationMixer(model.scene)
+                this.mixer = new AnimationMixer(model.scene)                
+                
+                // this.animationsAction["Waving"] = this.mixer.clipAction(model.animations[5])
 
-                this.animationsAction["Idle"] = this.mixer.clipAction(model.animations[1])
-                this.animationsAction["Running"] = this.mixer.clipAction(model.animations[3])
-                this.animationsAction["Walk"] = this.mixer.clipAction(model.animations[4])
-                this.animationsAction["Waving"] = this.mixer.clipAction(model.animations[5])
+                this.animationsAction["Idle"] = this.mixer.clipAction(idle.animations[0])
+                this.animationsAction["Walk"] = this.mixer.clipAction(walk.animations[0])
+                this.animationsAction["Running"] = this.mixer.clipAction(running.animations[0])
+
                 this.animationsAction["Sitting"] = this.mixer.clipAction(sitting.animations[0])
                 this.animationsAction["Crouch"] = this.mixer.clipAction(crouch.animations[0])
                 this.animationsAction["CrouchIdle"] = this.mixer.clipAction(crouchIdle.animations[0])
@@ -87,6 +98,7 @@ export default class PlayerModel extends Group {
                 this.animationsAction["CrouchLeft"] = this.mixer.clipAction(walkCrouchLeft.animations[0])
                 this.animationsAction["WalkRight"] = this.mixer.clipAction(walkRight.animations[0])
                 this.animationsAction["WalkLeft"] = this.mixer.clipAction(walkLeft.animations[0])
+
                 this.animationsAction["Idle"].play()
         
                 if(this.isGuest)

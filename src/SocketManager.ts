@@ -20,7 +20,8 @@ class SocketManager{
 
 
     constructor(){
-        this.io = io('networksim-server-production.up.railway.app')
+        // networksim-server-production.up.railway.app
+        this.io = io('http://localhost:3000')
 
         this.io.on('connect', () => {
             console.log('Conectado')
@@ -82,7 +83,7 @@ class SocketManager{
             if(player != this.io.id && this.loading){
                 const name = this.faker.person.firstName()
 
-                const newPlayer = new PlayerModel(this.loading, true, player)
+                const newPlayer = new PlayerModel(this.loading, true, '',player)
                 const font = await loader.loadAsync( 'fonts/helvetiker_regular.typeface.json')
                
                 const nameGeometry = new TextGeometry(name, {

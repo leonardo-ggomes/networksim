@@ -59,22 +59,25 @@ export default class PlayerController {
 
   //Carregamento
   loading: Loading
+  urlAvatar: string
 
   constructor(
     scene: Scene,
     camera: PerspectiveCamera,
     octree: Octree,
     items: Items,
-    loading: Loading
+    loading: Loading,
+    urlAvatar: string
   ) {
     this.loading = loading
+    this.urlAvatar = urlAvatar
     this.camera = camera;
     this.followCamera = new FollowCamera(this.camera);
     this.octree = octree;
     this.items = items;
     this.scene = scene;
 
-    this.playerModel = new PlayerModel(this.loading, false);
+    this.playerModel = new PlayerModel(this.loading, false, this.urlAvatar);
     this.playerModel.position.set(0, 0, 0);
     this.scene.add(this.playerModel);
 
@@ -128,6 +131,13 @@ export default class PlayerController {
   }
 
   setAction(action: AnimationAction) {
+    const anims = this.playerModel.getObjectByName("Hips")
+    
+    if(anims)
+    {
+      anims.position.set(0, anims.position.y, 0)
+    }
+
     if (action != this.activedClip) {
       switch (action) {
         case this.playerModel.animationsAction["Sitting"]:
@@ -332,7 +342,7 @@ export default class PlayerController {
         );
 
         this.playerImpulse.add(
-          this.playerDirection.clone().multiplyScalar(this.velocity * 2 * delta)
+          this.playerDirection.clone().multiplyScalar(this.velocity * 2.2 * delta)
         );
       }
       else if (this.keyBoard["KeyS"]) {

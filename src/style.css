@@ -4,6 +4,17 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+.frame {
+    width: 100%;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans,
+        Droid Sans, Helvetica Neue, sans-serif;
+    border: none;
+}
+
+
 body {
   overflow: hidden;
   margin: 0;
@@ -134,4 +145,12 @@ body {
 
 .hidden {
   display: none;
+}
+
+
+.warning {
+  background-color: #df68a2;
+  padding: 3px;
+  border-radius: 5px;
+  color: white;
 }

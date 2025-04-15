@@ -56,9 +56,11 @@ export default class Experience{
     ambientLight = new AmbientLight(0xFFCC88, 2)
     entityManager: EntityManager 
     voiceChatManager: VoiceChatManager
+    urlAvatar: string
 
-    constructor(loading: Loading)
+    constructor(loading: Loading, avatarUrl: string)
     {
+        this.urlAvatar = avatarUrl
         this.loading = loading
         this.audioLoader = new AudioLoader(this.loading.manager)
         this.setScene()
@@ -102,7 +104,8 @@ export default class Experience{
             this.camera,
             this.octree,
             this.items,
-            this.loading
+            this.loading,
+            this.urlAvatar
         )
 
         //Inicia a posição do personagem

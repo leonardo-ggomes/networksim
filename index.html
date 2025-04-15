@@ -1,18 +1,103 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
+    <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="/src/style.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <title>Simulator - 3JS</title>
-  </head>
-  <body>  
+</head>
+
+<body>
     <div id="status-server"></div> 
-    <div id="instruction"></div> 
+    <div id="instruction"></div>  
+
+    <iframe id="frame" class="frame" allow="camera *; microphone *; clipboard-write" hidden></iframe>
 
     <script type="module" src="/src/main.ts"></script>    
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>      
-  </body>
+    <script type="module">
+        import Experience from './src/Experience';
+        import { Clock } from 'three';
+        import Loading from './src/Loading';
+
+        const clock = new Clock();
+        const loading = new Loading()
+
+        const subdomain = 'demo';
+        const frame = document.getElementById('frame');
+
+        frame.src = `https://${subdomain}.readyplayer.me/avatar?frameApi`;
+
+        window.addEventListener('message', subscribe);
+        document.addEventListener('message', subscribe);
+
+        function subscribe(event) {
+            const json = parse(event);
+
+            if (json?.source !== 'readyplayerme') {
+                return;
+            }
+
+            // Susbribe to all events sent from Ready Player Me once frame is ready
+            if (json.eventName === 'v1.frame.ready') {
+                frame.contentWindow.postMessage(
+                    JSON.stringify({
+                        target: 'readyplayerme',
+                        type: 'subscribe',
+                        eventName: 'v1.**'
+                    }),
+                    '*'
+                );
+            }
+
+            // Get avatar GLB URL
+            if (json.eventName === 'v1.avatar.exported') {     
+
+                document.getElementById('frame').hidden = true; 
+                const experience = new Experience(loading, json.data.url)
+
+                function startGame()
+                {
+                  function update() {
+                    const delta = clock.getDelta();
+                    requestAnimationFrame(update);
+                    
+                    // stats.update();
+                    experience.update(delta);
+                  }
+                  
+                  update();
+                }
+
+                loading.start(startGame)
+                
+            }
+
+            // Get user id
+            if (json.eventName === 'v1.user.set') {
+                console.log(`User with id ${json.data.id} set: ${JSON.stringify(json)}`);
+            }
+        }
+
+        function parse(event) {
+            try {
+                return JSON.parse(event.data);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function displayIframe() {
+            document.getElementById('frame').hidden = false;
+        }
+
+        displayIframe()
+    </script>
+</body>
+
 </html>
