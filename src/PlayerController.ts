@@ -135,6 +135,8 @@ export default class PlayerController {
     if (action != this.activedClip) {
       switch (action) {
         case this.playerModel.animationsAction["Sitting"]:
+          this.playerModel.rotation.x = Math.PI / 2
+          this.playerModel.position.y = .5
           this.activedClip?.fadeOut(0);
           action.reset().play();
           break;

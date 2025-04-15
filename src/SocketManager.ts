@@ -20,8 +20,8 @@ class SocketManager{
 
 
     constructor(){
-        // networksim-server-production.up.railway.app
-        this.io = io('http://10.111.9.216:3000')
+  
+        this.io = io('https://networksim-server-production.up.railway.app/')
 
         this.io.on('connect', () => {
             console.log('Conectado')
@@ -85,27 +85,33 @@ class SocketManager{
                 const name = Math.round(Math.random() * 1000).toString()
                 const urlAvatar = players[player].url
 
-                const newPlayer = new PlayerModel(this.loading, true, urlAvatar, player)
-                const font = await loader.loadAsync( 'fonts/helvetiker_regular.typeface.json')
-               
-                const nameGeometry = new TextGeometry(name, {
-                    font: font,
-                    size: 0.15 ,
-                    depth: 0                  
-                } );
-        
-                const meshName = new Mesh(nameGeometry, textMaterial)
-                meshName.position.y = newPlayer.position.y + 2
-                meshName.position.z = newPlayer.position.z - 0.2
-                meshName.position.x = newPlayer.position.x - (name.length / 2 / 10 )
-                
-                // meshName.rotation.x = -Math.PI / 2
-                newPlayer.add(meshName)
-              
-                if(this.io.id != undefined){                    
-                    this.scene?.add(newPlayer)
-                    this.players[player] = newPlayer
-                }                     
+
+                if(urlAvatar)
+                {
+                    const newPlayer = new PlayerModel(this.loading, true, urlAvatar, player)
+                    const font = await loader.loadAsync( 'fonts/helvetiker_regular.typeface.json')
+                   
+                    const nameGeometry = new TextGeometry(name, {
+                        font: font,
+                        size: 0.15 ,
+                        depth: 0                  
+                    } );
+            
+                    const meshName = new Mesh(nameGeometry, textMaterial)
+                    meshName.position.y = newPlayer.position.y + 2
+                    meshName.position.z = newPlayer.position.z - 0.2
+                    meshName.position.x = newPlayer.position.x - (name.length / 2 / 10 )
+                    
+                    // meshName.rotation.x = -Math.PI / 2
+                    newPlayer.add(meshName)
+                  
+                    if(this.io.id != undefined){                    
+                        this.scene?.add(newPlayer)
+                        this.players[player] = newPlayer
+                    }  
+                }
+
+                                   
             }
         })
 
