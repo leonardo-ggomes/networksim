@@ -82,8 +82,6 @@ export default class PlayerModel extends Group {
                     ]
                 )
 
-                sitting.scene.name = "sitting"
-
                 //Animação
                 this.mixer = new AnimationMixer(model.scene)                
                 

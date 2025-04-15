@@ -417,7 +417,7 @@ export default class Experience{
                     "Progresso",
                     "A energia parece que está voltando"
                 )
-                this.ambientLight.intensity = 0.4                
+                this.ambientLight.intensity = 0.7                
                 mission2.finished()
                 
                 this.startThirdMission()

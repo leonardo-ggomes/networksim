@@ -81,7 +81,8 @@ class SocketManager{
         Object.keys(players).forEach(async(player) => {            
             
             if(player != this.io.id && this.loading){
-                const name = this.faker.person.firstName()
+                //const name = this.faker.person.firstName()
+                const name = Math.round(Math.random() * 1000).toString()
                 const urlAvatar = players[player].url
 
                 const newPlayer = new PlayerModel(this.loading, true, urlAvatar, player)

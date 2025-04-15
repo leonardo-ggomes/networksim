@@ -124,9 +124,9 @@ export default class PlayerController {
         this.actions['terminal'] = false
       }
     }
-    else if (this.keyBoard["KeyL"] && infoPlayer.hasFlashlight) { //Liga a laterna
-      this.playerModel.turnFlashlight(!this.playerModel.IsTurnOnFlashlight)
-    }
+    // else if (this.keyBoard["KeyL"] && infoPlayer.hasFlashlight) { //Liga a laterna
+    //   this.playerModel.turnFlashlight(!this.playerModel.IsTurnOnFlashlight)
+    // }
 
   }
 
