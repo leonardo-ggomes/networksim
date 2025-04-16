@@ -21,7 +21,7 @@ class SocketManager{
 
     constructor(){
        
-        this.io = io('http://tecdevpp.com.br/')
+        this.io = io('https://networksim-server-production.up.railway.app')
 
         this.io.on('connect', () => {
             console.log('Conectado')
