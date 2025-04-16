@@ -21,7 +21,7 @@ class SocketManager{
 
     constructor(){
        
-        this.io = io('https://networksim-server-production.up.railway.app')
+        this.io = io('http://localhost:3000')
 
         this.io.on('connect', () => {
             console.log('Conectado')

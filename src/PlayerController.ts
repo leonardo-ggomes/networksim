@@ -63,6 +63,8 @@ export default class PlayerController {
 
   //Chair
   chair = ""
+  lastPosition = new Vector3();
+  lastClip = ""
 
   constructor(
     scene: Scene,
@@ -461,16 +463,29 @@ export default class PlayerController {
 
     this.followCamera.updateCamera(this.playerModel, this.items.raycasterView);
 
-    this.socket.io.emit('updatePosition', {
-      x: this.playerModel.position.x,
-      y: this.playerModel.position.y,
-      z: this.playerModel.position.z,
-      qx: this.playerModel.quaternion.x,
-      qy: this.playerModel.quaternion.y,
-      qz: this.playerModel.quaternion.z,
-      qw: this.playerModel.quaternion.w,
-      clip: this.clipName,
-      isLatern: this.playerModel.IsTurnOnFlashlight
-    })
+
+    if (
+      this.playerModel.position.distanceTo(this.lastPosition) > 0.2
+      || this.lastClip !== this.clipName
+    ) {
+    
+      this.socket.io.emit('updatePosition', {
+        x: this.playerModel.position.x,
+        y: this.playerModel.position.y,
+        z: this.playerModel.position.z,
+        qx: this.playerModel.quaternion.x,
+        qy: this.playerModel.quaternion.y,
+        qz: this.playerModel.quaternion.z,
+        qw: this.playerModel.quaternion.w,
+        clip: this.clipName,
+        isLatern: this.playerModel.IsTurnOnFlashlight
+      })      
+      
+      this.lastPosition.copy(this.playerModel.position);
+      this.lastClip = this.clipName
+
+  }
+
+    
   }
 }
