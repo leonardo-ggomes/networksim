@@ -23,15 +23,21 @@
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>      
     <script type="module">
         import Experience from './src/Experience';
-        import { Clock } from 'three';
+        import { Clock, Scene } from 'three';
         import Loading from './src/Loading';
+        import SocketManager from "./src/SocketManager";
+
         //import Stats from 'three/addons/libs/stats.module.js'
         
         //const stats = new Stats();
         //document.body.appendChild(stats.dom);
 
         const clock = new Clock();
-        const loading = new Loading()
+        const loading = new Loading();
+        const scene = new Scene();
+       
+        SocketManager.loading = loading
+        SocketManager.scene = scene
 
         const subdomain = 'demo';
         const frame = document.getElementById('frame');
@@ -64,7 +70,7 @@
             if (json.eventName === 'v1.avatar.exported') {     
 
                 document.getElementById('frame').hidden = true; 
-                const experience = new Experience(loading, json.data.url)
+                const experience = new Experience(loading, json.data.url, scene)
              
                 function startGame()
                 {

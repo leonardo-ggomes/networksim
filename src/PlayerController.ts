@@ -478,7 +478,7 @@ export default class PlayerController {
         qz: this.playerModel.quaternion.z,
         qw: this.playerModel.quaternion.w,
         clip: this.clipName,
-        isLatern: this.playerModel.IsTurnOnFlashlight
+        visible: true
       })      
       
       this.lastPosition.copy(this.playerModel.position);

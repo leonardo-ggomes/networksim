@@ -21,7 +21,6 @@ import PlayerController from "./PlayerController";
 import Items from "./Items";
 
 import SocketManager from "./SocketManager";
-import AudioStage from "./AudioStage";
 import MinMap from "./MiniMap";
 import MiniMap from "./MiniMap";
 import Mission from "./Mission";
@@ -39,7 +38,7 @@ import Guest from "./Guest";
 
 export default class Experience{
 
-    scene = new Scene()
+    scene: Scene
     renderer = new WebGLRenderer({antialias: true})
     camera = new PerspectiveCamera()
     octree = new Octree();
@@ -56,8 +55,9 @@ export default class Experience{
     voiceChatManager: VoiceChatManager
     urlAvatar: string
 
-    constructor(loading: Loading, avatarUrl: string)
+    constructor(loading: Loading, avatarUrl: string, scene: Scene)
     {
+        this.scene = scene
         this.urlAvatar = avatarUrl
         this.loading = loading
         this.audioLoader = new AudioLoader(this.loading.manager)
@@ -72,9 +72,7 @@ export default class Experience{
         this.setInteractionAudio()
         this.items = new Items(this.scene, this.loading)
         
-        //Inicializa o socket e envia a url
-        this.socket.scene = this.scene
-        this.socket.loading = this.loading
+        //Inicializa o socket e envia a url        
         this.socket.io.emit("avatar:set", this.urlAvatar)
 
         //Gerenciador de Voz
@@ -110,10 +108,13 @@ export default class Experience{
         )
 
         //Inicia a posição do personagem
-        this.playerController.playerModel.setPosition(
-            new Vector3(Math.round(Math.random() * (20 - 5) + 5), 0, -20)
-        )
 
+        const X = Math.random() * (20 - -10) + -10
+        const Y = 0
+        const Z = -(Math.random() * (20 - 15) + 15)
+        this.playerController.playerModel.setPosition(new Vector3(X,Y,Z))
+
+    
 
         this.miniMap = new MiniMap(this.scene, this.renderer, this.playerController.playerModel.position)
 

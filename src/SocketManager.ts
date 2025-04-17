@@ -1,8 +1,5 @@
 import {io, Socket} from 'socket.io-client'
-import PlayerModel from './PlayerModel'
-import { Mesh, MeshBasicMaterial, Object3D, Quaternion, Scene, Vector3 } from 'three'
-import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
+import { Object3D, Quaternion, Scene, Vector3 } from 'three'
 import { Faker, pt_BR } from '@faker-js/faker'
 import Loading from './Loading'
 import { addNewCommandLine, appendToTerminal, dir, file, isRemotelyConnected, remoteDiretories as rd } from './Actions'
@@ -52,7 +49,7 @@ class SocketManager{
         this.io.on('joinInRoom', this.joinInRoom)
         this.io.on('receivePlayerPosition', this.updatePosition)
         this.io.on('exitTheRoom', this.exitTheRoom)
-        this.io.on('didConnect', this.joinInRoom)       
+        this.io.on('players:loaded', this.loadPlayers)       
         this.io.on('receiveRemoteAccess', this.receiveRemoteAccess)
 
         this.io.on("player:info", this.getPlayerInfo);          
@@ -60,7 +57,29 @@ class SocketManager{
         this.io.on("chair:list", this.updateChairs);
     }
 
-    updateChairs(assentos: string[]){
+    loadPlayers = (players: any) => {
+       
+    
+        Object.keys(players).forEach(id => {
+           
+            if(id === this.io.id) return;
+       
+            const urlAvatar = players[id].url;
+            if(urlAvatar && this.loading){
+
+                Guest.loadModel(this.loading, urlAvatar, id).then(() => {
+                    this.scene?.add(Guest.models[id].obj);
+                    Guest.models[id].obj.visible = false
+                    this.players[id] = Guest.models[id].obj;
+                });
+
+            } else {
+                console.warn(`Sem avatar ou loading indefinido para ${id}`);
+            }
+        });
+    }
+
+    updateChairs = (assentos: string[]) => {
         Auditorio.chairs = assentos
     }
 
@@ -79,33 +98,30 @@ class SocketManager{
         });
     }
 
-    joinInRoom = (players: any) => {
+    joinInRoom = (player: any) => {
       
         console.log('-- Um novo player juntou a sala --')
-              
-        Object.keys(players).forEach(async(player) => {            
             
-            if(player != this.io.id && this.loading){
+        if(player.id != this.io.id && this.loading){
 
-                const urlAvatar = players[player].url
+            const urlAvatar = player.url
+           
+            if(urlAvatar)
+            {
+                const guestLoaded = Guest.loadModel(this.loading, urlAvatar, player.id)
 
-                if(urlAvatar)
-                {
-                    const guestLoaded = Guest.loadModel(this.loading, urlAvatar, player)
-
-                    guestLoaded.then(() => {
-                        if(this.io.id != undefined){          
-                            console.log(Guest.models)          
-                            this.scene?.add(Guest.models[player].obj)
-                            this.players[player] = Guest.models[player].obj
-                        }  
-                    })
-                    
-                }
-
-                                   
+                guestLoaded.then(() => {
+                    if(this.io.id != undefined){           
+                        this.scene?.add(Guest.models[player.id].obj)
+                        this.players[player.id] = Guest.models[player.id].obj
+                    }  
+                })
+                
             }
-        })
+
+                                
+        }
+     
 
     }
 
@@ -119,7 +135,9 @@ class SocketManager{
     updatePosition = (data: any) => {
        
         if( this.players[data.id]){
-            
+
+            Guest.models[data.id].obj.visible = true
+
             Guest.setPosition(
                 new Vector3(data.x, data.y, data.z),
                 data.id

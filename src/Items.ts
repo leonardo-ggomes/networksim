@@ -204,7 +204,7 @@ export default class Items {
                                 
                                 const slide = new SlideShow(mesh, this.loading)
                                 slide.loadSlidesFromUrls([
-                                    'img/Slide1.PNG'
+                                    'img/Slide1.png'
                                   ]);
                            
                                 new SlideController(slide);
