@@ -1,4 +1,4 @@
-import { LoadingManager, TextureLoader } from "three";
+import { AnimationClip, LoadingManager, TextureLoader } from "three";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -8,6 +8,7 @@ export default class Loading
     dracoLoader: DRACOLoader
     loader: GLTFLoader
     textureLoader: TextureLoader
+    globalAnimations: { [key: string]: AnimationClip } = {}
 
     constructor()
     {      
@@ -19,6 +20,8 @@ export default class Loading
         
         this.dracoLoader.setDecoderPath("draco/")
         this.loader.setDRACOLoader(this.dracoLoader)
+
+        this.loadGlobalAnimations()
 
     }
 
@@ -88,4 +91,48 @@ export default class Loading
             callback(); // Chama a função para iniciar o jogo
         };
     }
+
+    async loadGlobalAnimations() {
+
+        return await new Promise<void>(async (resolve) => {
+
+            const animations = await Promise.all([
+                this.loader.loadAsync("models/M_Walk_001.glb"),
+                this.loader.loadAsync("models/M_Dances_011.glb"),
+                this.loader.loadAsync("models/M_Standing_Idle_001.glb"),
+                this.loader.loadAsync("models/M_Run_001.glb"),
+                this.loader.loadAsync("models/M_Sitting.glb"),
+                this.loader.loadAsync("models/asian_male_animated@crounch_flashlight.glb"),
+                this.loader.loadAsync("models/M_Standing_Idle_01.glb"),
+                this.loader.loadAsync("models/M_Walk_Backwards_001.glb"),
+                this.loader.loadAsync("models/asian_male_animated@crouch_back.glb"),
+                this.loader.loadAsync("models/asian_male_animated@crouch_run.glb"),
+                this.loader.loadAsync("models/asian_male_animated@crouch_walk_right.glb"),
+                this.loader.loadAsync("models/asian_male_animated@crouch_walk_left.glb"),
+                this.loader.loadAsync("models/M_Walk_Strafe_Right_002.glb"),
+                this.loader.loadAsync("models/M_Walk_Strafe_Left_002.glb")
+            ]);
+    
+            this.globalAnimations = {
+                "Waving": animations[1].animations[0],
+                "Idle": animations[2].animations[0],
+                "Walk": animations[0].animations[0],
+                "Running": animations[3].animations[0],
+                "Sitting": animations[4].animations[0],
+                "Crouch": animations[5].animations[0],
+                "CrouchIdle": animations[6].animations[0],
+                "Backward": animations[7].animations[0],
+                "CrouchBack": animations[8].animations[0],
+                "CrouchRun": animations[9].animations[0],
+                "CrouchRight": animations[10].animations[0],
+                "CrouchLeft": animations[11].animations[0],
+                "WalkRight": animations[12].animations[0],
+                "WalkLeft": animations[13].animations[0]
+            };
+
+            resolve()
+        })
+       
+    }
+    
 }

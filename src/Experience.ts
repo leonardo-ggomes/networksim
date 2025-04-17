@@ -35,6 +35,7 @@ import { NPC } from "./NPC";
 import { EntityManager } from "yuka";
 import { npcPaths } from "./Path";
 import VoiceChatManager from "./VoiceChatManager";
+import Guest from "./Guest";
 
 export default class Experience{
 
@@ -492,16 +493,18 @@ export default class Experience{
         elementos.setCurrentMission(this.currentMission.title) 
     }
 
-    updatePlayers(delta: number){
-      Object.keys(this.socket.players).forEach(i => {
-        this.socket.players[i].update(delta)
-      })
-    }
+    // updatePlayers(delta: number){
+    //   Object.keys(this.socket.players).forEach(i => {
+    //     this.socket.players[i].update(delta)
+    //   })
+    // }
 
     update(delta: number){      
         this.playerController.update(delta)   
-        this.updatePlayers(delta)   
+        // this.updatePlayers(delta)   
 
+
+        Guest.update(delta)
 
         this.currentMission?.checkMissionZone(
             this.playerController.playerModel.position,

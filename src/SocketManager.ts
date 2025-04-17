@@ -1,6 +1,6 @@
 import {io, Socket} from 'socket.io-client'
 import PlayerModel from './PlayerModel'
-import { Mesh, MeshBasicMaterial, Quaternion, Scene, Vector3 } from 'three'
+import { Mesh, MeshBasicMaterial, Object3D, Quaternion, Scene, Vector3 } from 'three'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { Faker, pt_BR } from '@faker-js/faker'
@@ -8,12 +8,13 @@ import Loading from './Loading'
 import { addNewCommandLine, appendToTerminal, dir, file, isRemotelyConnected, remoteDiretories as rd } from './Actions'
 import { Auditorio, infoPlayer } from './InfoPlayer'
 import { colliders } from './Colliders'
+import Guest from './Guest'
 
 class SocketManager{
    
     loading?: Loading
     io: Socket
-    players: { [key: string] : PlayerModel } = {}
+    players: { [key: string] : Object3D } = {}
     scene?: Scene
     faker = new Faker({locale: pt_BR})
     isConnected = false
@@ -81,38 +82,25 @@ class SocketManager{
     joinInRoom = (players: any) => {
       
         console.log('-- Um novo player juntou a sala --')
-        const loader = new FontLoader()
-        const textMaterial = new MeshBasicMaterial()
+              
         Object.keys(players).forEach(async(player) => {            
             
             if(player != this.io.id && this.loading){
-                //const name = this.faker.person.firstName()
-                const name = Math.round(Math.random() * 1000).toString()
-                const urlAvatar = players[player].url
 
+                const urlAvatar = players[player].url
 
                 if(urlAvatar)
                 {
-                    const newPlayer = new PlayerModel(this.loading, true, urlAvatar, player)
-                    const font = await loader.loadAsync( 'fonts/helvetiker_regular.typeface.json')
-                   
-                    const nameGeometry = new TextGeometry(name, {
-                        font: font,
-                        size: 0.15 ,
-                        depth: 0           
-                    } );
-            
-                    const meshName = new Mesh(nameGeometry, textMaterial)
-                    meshName.position.y = newPlayer.position.y + 2
-                    meshName.position.z = newPlayer.position.z - 0.2
-                    meshName.position.x = newPlayer.position.x - (name.length / 2 / 10 )
-                                        
-                    //newPlayer.add(meshName)
-                  
-                    if(this.io.id != undefined){                    
-                        this.scene?.add(newPlayer)
-                        this.players[player] = newPlayer
-                    }  
+                    const guestLoaded = Guest.loadModel(this.loading, urlAvatar, player)
+
+                    guestLoaded.then(() => {
+                        if(this.io.id != undefined){          
+                            console.log(Guest.models)          
+                            this.scene?.add(Guest.models[player].obj)
+                            this.players[player] = Guest.models[player].obj
+                        }  
+                    })
+                    
                 }
 
                                    
@@ -132,19 +120,20 @@ class SocketManager{
        
         if( this.players[data.id]){
             
-            this.players[data.id].setPosition(
-                new Vector3(data.x, data.y, data.z)
+            Guest.setPosition(
+                new Vector3(data.x, data.y, data.z),
+                data.id
             )
     
-            this.players[data.id].setQuaternion(
-                new Quaternion(data.qx, data.qy, data.qz, data.qw)
+            Guest.setQuaternion(
+                new Quaternion(data.qx, data.qy, data.qz, data.qw),
+                data.id
             )   
             
-            this.players[data.id].setAnimation(
-                this.players[data.id].animationsAction[data.clip]
+            Guest.setAnimation(
+                Guest.animationsAction[data.clip],
+                data.id
             )   
-
-            this.players[data.id].turnFlashlight(data.isLatern)
                         
         }
 

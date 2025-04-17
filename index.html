@@ -24,6 +24,10 @@
         import Experience from './src/Experience';
         import { Clock } from 'three';
         import Loading from './src/Loading';
+        import Stats from 'three/addons/libs/stats.module.js'
+        
+        const stats = new Stats();
+        document.body.appendChild(stats.dom);
 
         const clock = new Clock();
         const loading = new Loading()
@@ -67,7 +71,7 @@
                     const delta = clock.getDelta();
                     requestAnimationFrame(update);
                     
-                    // stats.update();
+                    stats.update();
                     experience.update(delta);
                   }
                   
