@@ -98,49 +98,390 @@ let elementos = {
     }
 };
 
-// Criar o terminal
+// Criar o terminal — dispositivo estilo GTA V
 function createTerminal() {
-    let terminal = document.getElementById("terminal") as HTMLDivElement;
+    if (document.getElementById("framescreen")) return;
 
-    if (!terminal) {
-        let framescreen = document.createElement("div");
-        framescreen.id = "framescreen"
-        framescreen.style.background = "url(img/screenframe.png) no-repeat center center";
-        framescreen.style.position = "absolute";
-        framescreen.style.bottom = "10px";
-        framescreen.style.right = "10px";
-        framescreen.style.backgroundSize = "cover";
-        framescreen.style.width = "500px";
-        framescreen.style.height = "300px";
+    // ── Overlay de fundo ──────────────────────────────────────────────────────
+    const overlay = document.createElement("div");
+    overlay.id = "framescreen";
+    Object.assign(overlay.style, {
+        position: "fixed", inset: "0",
+        background: "rgba(0,0,0,0.55)",
+        // backdropFilter removido — cria stacking context que bloqueia radial-menu
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: "500",
+        animation: "deviceIn .3s cubic-bezier(.4,0,.2,1) both",
+    });
 
-
-        terminal = document.createElement("div");
-        terminal.id = "terminal";
-
-        terminal.style.position = "absolute";
-        terminal.style.bottom = "56px";
-        terminal.style.right = "44px";
-        terminal.style.width = "406px";
-        terminal.style.height = "207px";
-        terminal.style.whiteSpace = "pre-wrap";
-
-        // terminal.style.border = "1px solid gray";
-        terminal.style.background = "transparent";
-        terminal.style.color = "white";
-        terminal.style.fontFamily = "monospace";
-        terminal.style.fontSize = "12px";
-        terminal.style.overflowY = "auto";
-        terminal.style.display = "flex";
-        terminal.style.flexDirection = "column";
-        terminal.style.justifyContent = "flex-start";
-        // terminal.style.borderRadius = "4px";
-
-        framescreen.appendChild(terminal)
-        document.body.appendChild(framescreen);
+    // Injeta keyframe se ainda não existir
+    if (!document.getElementById("__device_kf")) {
+        const s = document.createElement("style");
+        s.id = "__device_kf";
+        s.textContent = `
+            @keyframes deviceIn {
+                from { opacity:0; transform:translateY(16px) scale(0.97); }
+                to   { opacity:1; transform:translateY(0) scale(1); }
+            }
+            @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap');
+            #device-root * { box-sizing: border-box; }
+            #device-root ::-webkit-scrollbar { width:4px; }
+            #device-root ::-webkit-scrollbar-track { background:transparent; }
+            #device-root ::-webkit-scrollbar-thumb { background:#0d2e1c; border-radius:2px; }
+        `;
+        document.head.appendChild(s);
     }
 
-    addNewCommandLine(terminal);
+    // ── Dispositivo ───────────────────────────────────────────────────────────
+    const device = document.createElement("div");
+    device.id = "device-root";
+    Object.assign(device.style, {
+        width: "720px",
+        background: "#0b0b0b",
+        border: "1px solid #1a1a1a",
+        borderRadius: "10px",
+        boxShadow: "0 0 0 1px #000, 0 30px 80px rgba(0,0,0,0.9), 0 0 40px rgba(0,255,157,0.04)",
+        overflow: "hidden",
+        fontFamily: "'Share Tech Mono', monospace",
+    });
+
+    const V = {
+        green: "#00ff9d", green2: "#00cc7a", bg: "#050e0a",
+        border: "#0d2e1c", text: "#b0ffd8", muted: "#3a6b52",
+        yellow: "#f0b90b", red: "#ff3c3c", blue: "#00cfff",
+    };
+
+    const css = (el: HTMLElement, s: Partial<CSSStyleDeclaration>) => Object.assign(el.style, s);
+
+    // ── Top bar ───────────────────────────────────────────────────────────────
+    const bar = document.createElement("div");
+    css(bar, { background:"#0d0d0d", borderBottom:`1px solid #1c1c1c`, padding:"9px 14px",
+               display:"flex", alignItems:"center", gap:"10px" });
+
+    const dots = document.createElement("div");
+    dots.style.display = "flex"; dots.style.gap = "6px";
+    ["#ff5f57","#febc2e","#28c840"].forEach(c => {
+        const d = document.createElement("span");
+        css(d, { width:"10px", height:"10px", borderRadius:"50%", background:c, display:"block" });
+        dots.appendChild(d);
+    });
+
+    const title = document.createElement("div");
+    css(title, { flex:"1", textAlign:"center", fontFamily:"'Rajdhani',sans-serif",
+                 fontSize:"11px", fontWeight:"600", letterSpacing:"0.3em",
+                 textTransform:"uppercase", color:V.muted });
+    title.textContent = "HackOS v2.4 — Terminal Seguro";
+
+    const statusDot = document.createElement("div");
+    css(statusDot, { display:"flex", alignItems:"center", gap:"5px",
+                     fontSize:"10px", color:V.muted, fontFamily:"'Rajdhani',sans-serif",
+                     letterSpacing:".1em" });
+    const blinkDot = document.createElement("span");
+    css(blinkDot, { width:"6px", height:"6px", borderRadius:"50%",
+                    background:V.green, boxShadow:`0 0 6px ${V.green}`,
+                    display:"inline-block",
+                    animation:"blink 2s ease-in-out infinite" });
+    if (!document.getElementById("__blink_kf")) {
+        const s = document.createElement("style");
+        s.id = "__blink_kf";
+        s.textContent = `@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}`;
+        document.head.appendChild(s);
+    }
+    statusDot.appendChild(blinkDot);
+    statusDot.append(" CONECTADO");
+
+    bar.appendChild(dots); bar.appendChild(title); bar.appendChild(statusDot);
+    device.appendChild(bar);
+
+    // ── Abas ──────────────────────────────────────────────────────────────────
+    const tabBar = document.createElement("div");
+    css(tabBar, { display:"flex", borderBottom:`1px solid ${V.border}`, background:V.bg });
+
+    const tabDefs = [
+        { id:"terminal",  label:"Terminal",  icon:"bx-terminal" },
+        { id:"processes", label:"Processos", icon:"bx-chip" },
+        { id:"files",     label:"Arquivos",  icon:"bx-folder" },
+    ];
+
+    const panels: Record<string, HTMLElement> = {};
+
+    tabDefs.forEach((t, i) => {
+        const tab = document.createElement("div");
+        css(tab, { padding:"10px 20px", fontFamily:"'Rajdhani',sans-serif",
+                   fontSize:"12px", fontWeight:"600", letterSpacing:".12em",
+                   textTransform:"uppercase", color:i===0?V.green:V.muted,
+                   cursor:"pointer", borderBottom: i===0?`2px solid ${V.green}`:"2px solid transparent",
+                   transition:"color .15s, border-color .15s",
+                   display:"flex", alignItems:"center", gap:"7px", userSelect:"none" });
+        tab.innerHTML = `<i class='bx ${t.icon}' style="font-size:15px"></i> ${t.label}`;
+
+        tab.addEventListener("click", () => {
+            tabBar.querySelectorAll("div").forEach((tb: any) => {
+                tb.style.color = V.muted;
+                tb.style.borderBottom = "2px solid transparent";
+            });
+            tab.style.color = V.green;
+            tab.style.borderBottom = `2px solid ${V.green}`;
+            Object.values(panels).forEach((p: HTMLElement) => p.style.display = "none");
+            panels[t.id].style.display = "flex";
+            if (t.id === "processes") renderProcs();
+            if (t.id === "files") renderFilesPanel();
+        });
+
+        tabBar.appendChild(tab);
+
+        // Painel
+        const panel = document.createElement("div");
+        css(panel, { display: i===0?"flex":"none", flexDirection:"column",
+                     background:V.bg, height:"340px" });
+        panels[t.id] = panel;
+    });
+
+    device.appendChild(tabBar);
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // PAINEL: TERMINAL
+    // ══════════════════════════════════════════════════════════════════════════
+    const termPanel = panels["terminal"];
+
+    const termHeader = document.createElement("div");
+    css(termHeader, { padding:"7px 14px", borderBottom:`1px solid ${V.border}`,
+                      display:"flex", alignItems:"center", gap:"8px",
+                      fontFamily:"'Rajdhani',sans-serif", fontSize:"10px",
+                      letterSpacing:".15em", color:V.muted });
+    termHeader.innerHTML = `<i class='bx bx-chevron-right' style="color:${V.green}"></i> SHELL`;
+    const pathSpan = document.createElement("span");
+    pathSpan.style.color = V.green;
+    pathSpan.textContent = `${currentPrefix}${currentDir} $`;
+    termHeader.appendChild(pathSpan);
+    termPanel.appendChild(termHeader);
+
+    // Área de output — este é o #terminal que o resto do código usa
+    const terminal = document.createElement("div");
+    terminal.id = "terminal";
+    css(terminal, { flex:"1", overflowY:"auto", padding:"12px 14px",
+                    fontSize:"12px", lineHeight:"1.7", color:V.text,
+                    display:"flex", flexDirection:"column",
+                    scrollbarWidth:"thin", background:"transparent" });
+    termPanel.appendChild(terminal);
+    device.appendChild(termPanel);
+
+    // Boot message
+    const bootLines = [
+        { t:`HackOS v2.4 — kernel 6.1.0-secure`, c:V.blue },
+        { t:`Montando sistema de arquivos... OK`,  c:V.muted },
+        { t:`Inicializando módulos de rede... OK`, c:V.muted },
+        { t:`Conexão: 192.168.1.100`, c:V.muted },
+        { t:``, c:"" },
+    ];
+    bootLines.forEach(({ t, c }, i) => {
+        setTimeout(() => {
+            if (t) {
+                const d = document.createElement("div");
+                d.style.color = c;
+                d.textContent = t;
+                terminal.appendChild(d);
+            }
+            if (i === bootLines.length - 1) addNewCommandLine(terminal);
+        }, i * 90);
+    });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // PAINEL: PROCESSOS
+    // ══════════════════════════════════════════════════════════════════════════
+    const procPanel = panels["processes"];
+
+    const procToolbar = document.createElement("div");
+    css(procToolbar, { padding:"8px 14px", borderBottom:`1px solid ${V.border}`,
+                       display:"flex", alignItems:"center", justifyContent:"space-between" });
+    const procCount = document.createElement("span");
+    css(procCount, { fontFamily:"'Rajdhani',sans-serif", fontSize:"10px",
+                     letterSpacing:".15em", color:V.muted, textTransform:"uppercase" });
+    const killBtn = document.createElement("button");
+    css(killBtn, { fontFamily:"'Rajdhani',sans-serif", fontSize:"11px", fontWeight:"700",
+                   letterSpacing:".1em", textTransform:"uppercase",
+                   padding:"4px 12px", background:"transparent",
+                   border:`1px solid ${V.red}`, color:V.red,
+                   borderRadius:"3px", cursor:"pointer" });
+    killBtn.innerHTML = `<i class='bx bx-x-circle'></i> Kill -9`;
+    procToolbar.appendChild(procCount);
+    procToolbar.appendChild(killBtn);
+    procPanel.appendChild(procToolbar);
+
+    const procScroll = document.createElement("div");
+    css(procScroll, { flex:"1", overflowY:"auto", padding:"0 14px 12px" });
+    const procTable = document.createElement("table");
+    procTable.style.cssText = "width:100%;border-collapse:collapse;font-size:12px;";
+    procTable.innerHTML = `<thead><tr>
+        ${["PID","USUÁRIO","%CPU","%MEM","COMANDO"].map(h =>
+            `<th style="padding:8px 6px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:${V.muted};border-bottom:1px solid ${V.border};text-align:left">${h}</th>`
+        ).join("")}
+    </tr></thead>`;
+    const procBody = document.createElement("tbody");
+    procTable.appendChild(procBody);
+    procScroll.appendChild(procTable);
+    procPanel.appendChild(procScroll);
+    device.appendChild(procPanel);
+
+    let selectedPid: number | null = null;
+
+    function renderProcs() {
+        procCount.textContent = `Processos ativos — ${processes.length}`;
+        procBody.innerHTML = "";
+        processes.forEach(p => {
+            const tr = document.createElement("tr");
+            tr.style.cursor = "pointer";
+            const highCpu = parseFloat(p.cpu) > 1.5;
+            tr.innerHTML = `
+                <td style="padding:7px 6px;color:${V.yellow};border-bottom:1px solid rgba(13,46,28,.5)">${p.pid}</td>
+                <td style="padding:7px 6px;color:${V.text};border-bottom:1px solid rgba(13,46,28,.5)">${p.user}</td>
+                <td style="padding:7px 6px;color:${highCpu?V.red:V.green};border-bottom:1px solid rgba(13,46,28,.5)">${p.cpu}%</td>
+                <td style="padding:7px 6px;color:${V.text};border-bottom:1px solid rgba(13,46,28,.5)">${p.mem}%</td>
+                <td style="padding:7px 6px;color:${V.text};border-bottom:1px solid rgba(13,46,28,.5)">${p.command}</td>
+            `;
+            tr.addEventListener("click", () => {
+                procBody.querySelectorAll("tr").forEach((r:any) => r.style.background="");
+                tr.style.background = "rgba(0,255,157,0.08)";
+                selectedPid = p.pid;
+            });
+            procBody.appendChild(tr);
+        });
+    }
+
+    killBtn.addEventListener("click", () => {
+        if (selectedPid === null) return;
+        const idx = processes.findIndex(p => p.pid === selectedPid);
+        if (idx !== -1) { processes.splice(idx, 1); selectedPid = null; renderProcs(); }
+    });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // PAINEL: ARQUIVOS
+    // ══════════════════════════════════════════════════════════════════════════
+    const filePanel = panels["files"];
+    css(filePanel, { flexDirection:"row" });
+
+    const sidebar = document.createElement("div");
+    css(sidebar, { width:"150px", borderRight:`1px solid ${V.border}`,
+                   padding:"12px 0", overflowY:"auto" });
+
+    const fileMain = document.createElement("div");
+    css(fileMain, { flex:"1", display:"flex", flexDirection:"column", overflow:"hidden" });
+
+    const fileToolbar = document.createElement("div");
+    css(fileToolbar, { padding:"8px 14px", borderBottom:`1px solid ${V.border}`,
+                       display:"flex", alignItems:"center", justifyContent:"space-between" });
+    const pathDisplay = document.createElement("span");
+    css(pathDisplay, { fontSize:"11px", color:V.green, fontFamily:"'Share Tech Mono',monospace" });
+    const newBtn = document.createElement("button");
+    css(newBtn, { fontFamily:"'Rajdhani',sans-serif", fontSize:"11px", fontWeight:"700",
+                  letterSpacing:".1em", textTransform:"uppercase",
+                  padding:"4px 10px", background:"transparent",
+                  border:`1px solid ${V.green2}`, color:V.green2,
+                  borderRadius:"3px", cursor:"pointer" });
+    newBtn.textContent = "+ Novo";
+    fileToolbar.appendChild(pathDisplay);
+    fileToolbar.appendChild(newBtn);
+
+    const fileList = document.createElement("div");
+    css(fileList, { flex:"1", overflowY:"auto", padding:"10px 14px" });
+
+    fileMain.appendChild(fileToolbar);
+    fileMain.appendChild(fileList);
+    filePanel.appendChild(sidebar);
+    filePanel.appendChild(fileMain);
+    device.appendChild(filePanel);
+
+    let fileViewDir = "/";
+
+    function renderFilesPanel() {
+        sidebar.innerHTML = "";
+        Object.keys(diretories).forEach(path => {
+            const d = document.createElement("div");
+            css(d, { padding:"7px 14px", fontSize:"10px",
+                     color: path===fileViewDir ? V.green : V.muted,
+                     background: path===fileViewDir ? "rgba(0,255,157,0.06)" : "transparent",
+                     cursor:"pointer", display:"flex", alignItems:"center",
+                     gap:"6px", transition:"color .12s" });
+            d.innerHTML = `<i class='bx bx-folder' style="font-size:13px"></i>${path}`;
+            d.addEventListener("click", () => { fileViewDir = path; renderFilesPanel(); });
+            sidebar.appendChild(d);
+        });
+
+        pathDisplay.textContent = fileViewDir;
+        fileList.innerHTML = "";
+        const dir = diretories[fileViewDir];
+        if (!dir) return;
+
+        dir.contentDir.forEach(name => {
+            const item = document.createElement("div");
+            css(item, { display:"flex", alignItems:"center", gap:"8px",
+                        padding:"7px 8px", borderRadius:"4px", cursor:"pointer",
+                        color:V.text, fontSize:"12px", transition:"background .12s" });
+            item.innerHTML = `<i class='bx bx-folder' style="color:${V.green};font-size:15px"></i>${name}/ <span style="color:${V.muted};font-size:10px;margin-left:auto">DIR</span>`;
+            item.addEventListener("click", () => { fileViewDir += name+"/"; renderFilesPanel(); });
+            fileList.appendChild(item);
+        });
+
+        dir.contentFile.forEach(f => {
+            const ext = f.name.split(".").pop()?.toUpperCase() || "";
+            const item = document.createElement("div");
+            css(item, { display:"flex", alignItems:"center", gap:"8px",
+                        padding:"7px 8px", borderRadius:"4px",
+                        color:V.text, fontSize:"12px", transition:"background .12s" });
+            item.innerHTML = `<i class='bx bx-file' style="color:${V.green};font-size:15px"></i>${f.name} <span style="color:${V.muted};font-size:10px;margin-left:auto">${ext}</span>`;
+            fileList.appendChild(item);
+        });
+
+        if (!dir.contentDir.length && !dir.contentFile.length) {
+            fileList.innerHTML = `<div style="color:${V.muted};font-size:11px;padding:20px 8px;text-align:center">Diretório vazio</div>`;
+        }
+    }
+
+    newBtn.addEventListener("click", () => {
+        const name = prompt("Nome do arquivo (ex: script.js):");
+        if (!name) return;
+        const content = prompt("Conteúdo:") || "";
+        diretories[fileViewDir]?.contentFile.push({ name, content });
+        renderFilesPanel();
+    });
+
+    // ── Status bar ────────────────────────────────────────────────────────────
+    const statusBar = document.createElement("div");
+    css(statusBar, { background:"#060606", borderTop:`1px solid ${V.border}`,
+                     padding:"5px 14px", display:"flex", alignItems:"center",
+                     gap:"16px", fontFamily:"'Rajdhani',sans-serif",
+                     fontSize:"10px", letterSpacing:".1em", textTransform:"uppercase" });
+
+    const mkStatus = (label: string, val: string) => {
+        const s = document.createElement("span");
+        s.style.color = V.muted;
+        s.innerHTML = `${label} <span style="color:${V.green}">${val}</span>`;
+        return s;
+    };
+    const sep = () => { const s = document.createElement("span"); s.style.color = V.border; s.textContent = "|"; return s; };
+
+    statusBar.appendChild(mkStatus("USER", "player@local"));
+    statusBar.appendChild(sep());
+    const sbDir = mkStatus("DIR", currentDir);
+    statusBar.appendChild(sbDir);
+    statusBar.appendChild(sep());
+    const sbProcs = mkStatus("PROCS", String(processes.length));
+    statusBar.appendChild(sbProcs);
+
+    device.appendChild(statusBar);
+
+    // Fechar clicando fora
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+            overlay.remove();
+            document.getElementById("framescreen")?.remove();
+        }
+    });
+
+    overlay.appendChild(device);
+    document.body.appendChild(overlay);
 }
+
 
 // Adicionar uma nova linha de comando ao terminal
 export function addNewCommandLine(terminal: HTMLDivElement) {
@@ -610,41 +951,35 @@ createRadialMenu([
 ]);
   
 
-// ═══════════════════════════════════════════════════════════════
-// createRadialMenu — Estilo GTA V
-// Substitui a função createRadialMenu atual no Actions.ts
-// ═══════════════════════════════════════════════════════════════
-//
-// Como funciona:
-//   - SVG com <path> em forma de fatia de pizza para cada item
-//   - Labels HTML posicionados pelo ângulo médio de cada fatia
-//   - Overlay com backdrop-blur escurece a cena ao abrir
-//   - Hover no segmento SVG sincroniza highlight da label via JS
-//   - Animação de entrada via classe CSS (opacity + scale)
-
 function createRadialMenu(actions: RadialAction[]) {
     document.getElementById('radial-menu')?.remove();
     document.getElementById('radial-overlay')?.remove();
 
-    const count   = actions.length;
-    const SIZE    = 320;
-    const cx      = SIZE / 2;
-    const cy      = SIZE / 2;
-    const outerR  = 140;
-    const innerR  = 44;
-    const labelR  = 96;
-    const GAP_DEG = 3;
+    const count     = actions.length;
+    const SIZE      = 320;
+    const cx        = SIZE / 2;
+    const cy        = SIZE / 2;
+    const outerR    = 140;
+    const innerR    = 44;
+    const labelR    = 96;
+    const GAP_DEG   = 3;
     const angleStep = 360 / count;
 
-    // ── Overlay ──────────────────────────────────────────────────
+    // Overlay — z-index alto para ficar acima do terminal (500)
+    // SEM backdropFilter para não criar stacking context
     const overlay = document.createElement('div');
     overlay.id = 'radial-overlay';
     overlay.classList.add('hidden');
+    Object.assign(overlay.style, {
+        position: 'fixed', inset: '0',
+        background: 'rgba(0,0,0,0.35)',
+        backdropFilter: 'blur(3px)',   // ok aqui pois o radial está em z:9999 fora deste elemento
+        zIndex: '9998',
+        transition: 'opacity .18s ease',
+    });
     document.body.appendChild(overlay);
 
-    // ── Container fixo, centralizado ─────────────────────────────
-    // position:fixed + transform:translate já centraliza na tela.
-    // O SVG e as labels usam coordenadas relativas a este container.
+    // Container — position:fixed centralizado, z-index acima de tudo
     const menu = document.createElement('div');
     menu.id = 'radial-menu';
     menu.classList.add('hidden');
@@ -656,37 +991,34 @@ function createRadialMenu(actions: RadialAction[]) {
         width:     SIZE + 'px',
         height:    SIZE + 'px',
         pointerEvents: 'none',
-        zIndex:    '1000',
+        zIndex:    '9999',
     });
 
-    // ── SVG ocupa 100% do container ───────────────────────────────
+    // SVG — ocupa 100% do container
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', `0 0 ${SIZE} ${SIZE}`);
     svg.setAttribute('width',  '100%');
     svg.setAttribute('height', '100%');
-    svg.style.position = 'absolute';
-    svg.style.inset    = '0';
-    svg.style.overflow = 'visible';
+    svg.style.cssText = 'position:absolute;inset:0;overflow:visible;';
 
-    // anel decorativo
+    // Anel decorativo
     const ringEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     ringEl.setAttribute('cx', String(cx));
     ringEl.setAttribute('cy', String(cy));
     ringEl.setAttribute('r',  String(outerR + 7));
-    ringEl.setAttribute('fill',         'none');
-    ringEl.setAttribute('stroke',       'rgba(240,185,11,0.12)');
+    ringEl.setAttribute('fill', 'none');
+    ringEl.setAttribute('stroke', 'rgba(240,185,11,0.12)');
     ringEl.setAttribute('stroke-width', '1');
     svg.appendChild(ringEl);
-
     menu.appendChild(svg);
 
-    // ── Centro HTML (position:absolute relativo ao container) ─────
+    // Centro
     const center = document.createElement('div');
     center.className = 'radial-center';
     center.innerHTML = '<span class="center-key">TAB</span><span class="center-label">Ações</span>';
     menu.appendChild(center);
 
-    // ── Helpers ───────────────────────────────────────────────────
+    // Helpers
     const polar = (deg: number, r: number) => {
         const rad = (deg - 90) * Math.PI / 180;
         return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
@@ -699,42 +1031,21 @@ function createRadialMenu(actions: RadialAction[]) {
         return `M${p3.x} ${p3.y} L${p1.x} ${p1.y} A${outerR} ${outerR} 0 ${lg} 1 ${p2.x} ${p2.y} L${p4.x} ${p4.y} A${innerR} ${innerR} 0 ${lg} 0 ${p3.x} ${p3.y}Z`;
     };
 
-    // ── Fatias + labels ───────────────────────────────────────────
+    // Fatias + labels
     actions.forEach((action, i) => {
         const startDeg = i * angleStep + GAP_DEG / 2;
         const endDeg   = startDeg + angleStep - GAP_DEG;
         const midDeg   = startDeg + (angleStep - GAP_DEG) / 2;
 
-        // Segmento SVG
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', slicePath(startDeg, endDeg));
-        path.style.fill            = 'rgba(10,10,10,0.80)';
-        path.style.stroke          = 'rgba(255,255,255,0.07)';
-        path.style.strokeWidth     = '1.5';
-        path.style.cursor          = 'pointer';
-        path.style.transition      = 'fill 0.13s ease';
-        path.style.pointerEvents   = 'auto';
+        path.style.cssText = 'fill:rgba(10,10,10,0.80);stroke:rgba(255,255,255,0.07);stroke-width:1.5;cursor:pointer;transition:fill .13s ease;pointer-events:auto;';
         svg.appendChild(path);
 
-        // Label: position:absolute em px relativos ao container (SIZE×SIZE)
-        // polar() já retorna coordenadas dentro do espaço 0..SIZE
         const lp = polar(midDeg, labelR);
         const label = document.createElement('div');
-        label.style.position  = 'absolute';
-        label.style.left      = lp.x + 'px';
-        label.style.top       = lp.y + 'px';
-        label.style.transform = 'translate(-50%, -50%)';
-        label.style.display   = 'flex';
-        label.style.flexDirection  = 'column';
-        label.style.alignItems     = 'center';
-        label.style.justifyContent = 'center';
-        label.style.gap            = '4px';
-        label.style.pointerEvents  = 'auto';
-        label.style.cursor         = 'pointer';
-        label.style.userSelect     = 'none';
-        label.style.textAlign      = 'center';
+        label.style.cssText = `position:absolute;left:${lp.x}px;top:${lp.y}px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:auto;cursor:pointer;user-select:none;text-align:center;`;
 
-        // Separa ícone do texto
         const tmp = document.createElement('div');
         tmp.innerHTML = action.label;
         const iconEl   = tmp.querySelector('i');
@@ -743,60 +1054,36 @@ function createRadialMenu(actions: RadialAction[]) {
 
         const iconSpan = document.createElement('span');
         iconSpan.innerHTML  = iconHTML;
-        iconSpan.style.fontSize   = '20px';
-        iconSpan.style.color      = 'rgba(255,255,255,0.88)';
-        iconSpan.style.lineHeight = '1';
-        iconSpan.style.transition = 'color 0.13s';
+        iconSpan.style.cssText = 'font-size:20px;color:rgba(255,255,255,0.88);line-height:1;transition:color .13s;display:block;';
 
         const textSpan = document.createElement('span');
-        textSpan.textContent        = txt;
-        textSpan.style.fontFamily   = 'Poppins, sans-serif';
-        textSpan.style.fontSize     = '9px';
-        textSpan.style.fontWeight   = '600';
-        textSpan.style.letterSpacing = '0.07em';
-        textSpan.style.textTransform = 'uppercase';
-        textSpan.style.color         = 'rgba(255,255,255,0.65)';
-        textSpan.style.whiteSpace    = 'nowrap';
-        textSpan.style.transition    = 'color 0.13s';
+        textSpan.textContent    = txt;
+        textSpan.style.cssText  = 'font-family:Poppins,sans-serif;font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,0.65);white-space:nowrap;transition:color .13s;';
 
         label.appendChild(iconSpan);
         label.appendChild(textSpan);
         menu.appendChild(label);
 
-        // Hover: sincroniza segmento ↔ label
-        const hi = () => {
-            path.style.fill        = 'rgba(240,185,11,0.92)';
-            iconSpan.style.color   = '#111';
-            textSpan.style.color   = '#111';
-        };
-        const lo = () => {
-            path.style.fill        = 'rgba(10,10,10,0.80)';
-            iconSpan.style.color   = 'rgba(255,255,255,0.88)';
-            textSpan.style.color   = 'rgba(255,255,255,0.65)';
-        };
+        const hi = () => { path.style.fill='rgba(240,185,11,0.92)'; iconSpan.style.color='#111'; textSpan.style.color='#111'; };
+        const lo = () => { path.style.fill='rgba(10,10,10,0.80)'; iconSpan.style.color='rgba(255,255,255,0.88)'; textSpan.style.color='rgba(255,255,255,0.65)'; };
 
         [path, label].forEach(el => {
             el.addEventListener('mouseenter', hi);
             el.addEventListener('mouseleave', lo);
-            el.addEventListener('click', () => {
-                toggle(false);
-                action.onSelect();
-            });
+            el.addEventListener('click', () => { toggle(false); action.onSelect(); });
         });
     });
 
     document.body.appendChild(menu);
 
-    // ── Toggle ────────────────────────────────────────────────────
     const toggle = (force?: boolean) => {
         const open = force !== undefined ? force : menu.classList.contains('hidden');
         if (open) {
             menu.classList.remove('hidden');
             overlay.classList.remove('hidden');
-            menu.style.opacity      = '0';
-            menu.style.scale        = '0.85';
-            menu.style.transition   = 'opacity 0.18s ease, scale 0.18s ease';
-            // Força reflow para a animação funcionar
+            menu.style.opacity    = '0';
+            menu.style.scale      = '0.85';
+            menu.style.transition = 'opacity .18s ease, scale .18s ease';
             menu.getBoundingClientRect();
             menu.style.opacity = '1';
             menu.style.scale   = '1';
@@ -811,10 +1098,7 @@ function createRadialMenu(actions: RadialAction[]) {
     overlay.addEventListener('click', () => toggle(false));
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            toggle();
-        }
+        if (e.key === 'Tab') { e.preventDefault(); toggle(); }
         if (e.key === 'Escape') toggle(false);
     });
 }
