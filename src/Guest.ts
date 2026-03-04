@@ -195,14 +195,12 @@ export default class Guest {
     }
 
     // ── Ajusta escala dos sprites por distância ───────────────────────────────
-    private static updateSprites(camera: Camera) {
-        camera.getWorldPosition(Guest._tmpVec);
-
+    private static updateSprites(camPos: Vector3) {
         for (const id in Guest.models) {
             const { obj, nameSprite } = Guest.models[id];
             if (!nameSprite) continue;
 
-            const dist = obj.position.distanceTo(Guest._tmpVec);
+            const dist = obj.position.distanceTo(camPos);
 
             // Oculta se muito perto (câmera passando pelo modelo) ou longe demais
             if (dist < 1.2 || dist > 28) {
@@ -239,10 +237,34 @@ export default class Guest {
         inst.activeClip = action;
     }
 
+    // Distância máxima para renderizar guests (além disso: invisible + mixer pausado)
+    static CULL_DISTANCE = 60;
+
     // Aceita camera opcional — sem ela os sprites não ajustam escala
     static update(delta: number, camera?: Camera) {
+        const camPos = new Vector3();
+        if (camera) camera.getWorldPosition(camPos);
+
         for (const id in Guest.models) {
             const { mixer, obj, activeClip, animationsAction } = Guest.models[id];
+
+            // ── Culling por distância ──────────────────────────────────────
+            if (camera) {
+                const dist = obj.position.distanceTo(camPos);
+                const visible = dist < Guest.CULL_DISTANCE;
+
+                if (obj.visible !== visible) obj.visible = visible;
+
+                // Pausa o mixer quando culled — economiza CPU de skinning
+                if (!visible) {
+                    mixer.timeScale = 0;
+                    continue;
+                }
+                // Retoma e escala o mixer pela distância:
+                // longe → atualiza mais devagar (menos precisão, menos CPU)
+                mixer.timeScale = dist > 30 ? 0.5 : 1;
+            }
+
             mixer.update(delta);
 
             const hips = obj.getObjectByName('Hips');
@@ -254,7 +276,8 @@ export default class Guest {
                 }
             }
         }
-        if (camera) Guest.updateSprites(camera);
+
+        if (camera) Guest.updateSprites(camPos);
     }
 
     static dispose(socketId: string) {
