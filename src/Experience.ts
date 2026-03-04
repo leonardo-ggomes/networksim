@@ -53,12 +53,14 @@ export default class Experience{
     ambientLight = new AmbientLight(0xFFCC88, 2)
     entityManager: EntityManager 
     voiceChatManager: VoiceChatManager
-    urlAvatar: string
+    urlAvatar:   string
+    playerName: string
 
-    constructor(loading: Loading, avatarUrl: string, scene: Scene)
+    constructor(loading: Loading, avatarUrl: string, scene: Scene, playerName = 'Agente')
     {
         this.scene = scene
-        this.urlAvatar = avatarUrl
+        this.urlAvatar  = avatarUrl
+        this.playerName = playerName
         this.loading = loading
         this.audioLoader = new AudioLoader(this.loading.manager)
         this.setScene()
@@ -72,8 +74,26 @@ export default class Experience{
         this.setInteractionAudio()
         this.items = new Items(this.scene, this.loading)
         
-        //Inicializa o socket e envia a url        
-        this.socket.io.emit("avatar:set", this.urlAvatar)
+        // Registra avatar + nome — persiste para reconexões
+        this.socket.setAvatar(this.urlAvatar, this.playerName)
+
+        // Inicializa o HUD com os dados do jogador local
+        if (typeof (window as any).HUD !== 'undefined') {
+            (window as any).HUD.setPlayer(this.playerName, this.urlAvatar, 'player')
+        }
+
+        // Atualiza o role no HUD quando o servidor confirmar
+        this.socket.io.on('player:info', (data: any) => {
+            if (typeof (window as any).HUD !== 'undefined') {
+                (window as any).HUD.setPlayer(this.playerName, this.urlAvatar, data.role)
+            }
+        })
+        this.socket.io.on('players:update', (players: any) => {
+            const me = players[this.socket.io.id as string]
+            if (me && typeof (window as any).HUD !== 'undefined') {
+                (window as any).HUD.setPlayer(this.playerName, this.urlAvatar, me.role)
+            }
+        })
 
         //Gerenciador de Voz
         this.voiceChatManager = new VoiceChatManager(this.listener);
@@ -174,68 +194,87 @@ export default class Experience{
     }
 
     setAmbienceAudio() {
-        // Criando um objeto na cena que será a "caixa de som"
         const soundSource = new Object3D();
-        soundSource.position.set(0, 2.5, -2.5); // Posição da fonte de som
+        soundSource.position.set(0, 2.5, -2.5);
         this.scene.add(soundSource);
-    
-        // Criando som posicional e ligando ao objeto
+
         const sound = new PositionalAudio(this.listener);
-        soundSource.add(sound); // Conecta o som ao objeto da cena
-    
+        soundSource.add(sound);
+
         const audioLoader = this.audioLoader;
-    
-        const playSound = (file: any) => {
-            audioLoader.load(file, (buffer) => {
-                sound.stop();
+
+        // Causa 1 do bug: AudioContext fica suspended até um gesto do usuário.
+        // Solução: resumir o contexto antes de qualquer play(), e só chamar
+        // play() dentro do .then() para garantir que está running.
+        const resumeAndPlay = async () => {
+            const ctx = this.listener.context;
+            if (ctx.state === "suspended") {
+                await ctx.resume();
+            }
+        };
+
+        const playSound = (file: string) => {
+            audioLoader.load(file, async (buffer) => {
+                if (sound.isPlaying) sound.stop();
                 sound.setBuffer(buffer);
                 sound.setLoop(true);
                 sound.setVolume(0.5);
-    
-                // Parâmetros espaciais (opcional, mas recomendado)
-                sound.setRefDistance(5);   // Quanto mais longe, menor o volume
-                sound.setMaxDistance(30); // Máximo alcance do som
-                sound.setRolloffFactor(1); // Como o som decai com a distância
-    
+                sound.setRefDistance(5);
+                sound.setMaxDistance(30);
+                sound.setRolloffFactor(1);
+
+                await resumeAndPlay();
                 sound.play();
             });
         };
-    
-        let currentTrack = "audio/auditorio.mp3";
-        playSound(currentTrack);
-    
-        SocketManager.io.on("music:play", () => {
-            currentTrack = (currentTrack === "audio/auditorio.mp3") 
-            ? "audio/music_1.mp3" 
-            : "audio/auditorio.mp3";
 
+        // Causa 2 do bug: playSound() chamado imediatamente na construção,
+        // antes de qualquer interação do usuário — AudioContext ainda suspended.
+        // Solução: aguardar o primeiro clique/tecla antes de iniciar o áudio.
+        let currentTrack = "audio/auditorio.mp3";
+        let started = false;
+
+        const startOnInteraction = () => {
+            if (started) return;
+            started = true;
             playSound(currentTrack);
-        })
+            window.removeEventListener("click",   startOnInteraction);
+            window.removeEventListener("keydown", startOnInteraction);
+        };
+
+        window.addEventListener("click",   startOnInteraction, { once: true });
+        window.addEventListener("keydown", startOnInteraction, { once: true });
+
+        SocketManager.io.on("music:play", () => {
+            currentTrack = (currentTrack === "audio/auditorio.mp3")
+                ? "audio/music_1.mp3"
+                : "audio/auditorio.mp3";
+            playSound(currentTrack);
+        });
     }
 
     setInteractionAudio() {
-        // Criando um objeto na cena que será a "caixa de som"
         const soundSource = new Object3D();
-        soundSource.position.set(0, 1, 1); // Posição da fonte de som
+        soundSource.position.set(0, 1, 1);
         this.scene.add(soundSource);
-    
-        // Criando som posicional e ligando ao objeto
+
         const sound = new PositionalAudio(this.listener);
-        soundSource.add(sound); // Conecta o som ao objeto da cena
-    
+        soundSource.add(sound);
+
         const audioLoader = this.audioLoader;
-    
-        const playSound = (file: any) => {
+
+        const playSound = async (file: string) => {
+            const ctx = this.listener.context;
+            if (ctx.state === "suspended") {
+                await ctx.resume();
+            }
             audioLoader.load(file, (buffer) => {
-                sound.stop();
-                sound.setBuffer(buffer);               
+                if (sound.isPlaying) sound.stop();
+                sound.setBuffer(buffer);
                 sound.setVolume(0.5);
-    
-                // Parâmetros espaciais (opcional, mas recomendado)
-                sound.setRefDistance(5);   // Quanto mais longe, menor o volume
-                sound.setMaxDistance(30); // Máximo alcance do som
-                sound.setRolloffFactor(1); // Como o som decai com a distância
-    
+                sound.setRefDistance(5);
+                sound.setMaxDistance(30);
+                sound.setRolloffFactor(1);
                 sound.play();
             });
         };
@@ -249,14 +288,18 @@ export default class Experience{
     
     
 
-    beep(){     
-        const sound = new Audio(this.listener);    
+    async beep() {
+        const ctx = this.listener.context;
+        if (ctx.state === "suspended") {
+            await ctx.resume();
+        }
 
+        const sound = new Audio(this.listener);
         this.audioLoader.load("audio/beep.mp3", (buffer) => {
             sound.setBuffer(buffer);
-            sound.setLoop(false); // Toca apenas 1 vez
-            sound.setVolume(0.8); 
-            sound.play(); 
+            sound.setLoop(false);
+            sound.setVolume(0.8);
+            sound.play();
         });
     }
   
@@ -509,7 +552,7 @@ export default class Experience{
         // this.updatePlayers(delta)   
 
 
-        Guest.update(delta)
+        Guest.update(delta, this.camera)  // passa câmera para ajuste de escala dos nomes
 
         this.currentMission?.checkMissionZone(
             this.playerController.playerModel.position,

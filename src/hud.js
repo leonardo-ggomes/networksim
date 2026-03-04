@@ -216,13 +216,44 @@
 
     // ── Jogador ──────────────────────────────────────────────────────────────
     setPlayer(name, avatarUrl, role) {
-      DOM.name.textContent = name || 'Jogador';
-      DOM.role.textContent = role || 'Ouvinte';
-      if (avatarUrl) {
+      const displayName = (name || 'Jogador').toUpperCase();
+      DOM.name.textContent = displayName;
+
+      // Traduz role para PT-BR
+      const roleMap = {
+        player:    'Ouvinte',
+        presenter: 'Apresentador',
+        moderator: 'Moderador',
+        admin:     'Admin',
+      };
+      DOM.role.textContent = roleMap[role] || role || 'Ouvinte';
+
+      // Modelos GLB não são imagens — gera avatar com a inicial do nome via Canvas
+      if (avatarUrl && !avatarUrl.endsWith('.glb')) {
         DOM.avatar.src = avatarUrl;
-        DOM.avatar.onerror = () => {
-          DOM.avatar.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><circle cx="18" cy="18" r="18" fill="%23333"/><text x="18" y="24" text-anchor="middle" font-size="18" fill="%23aaa">?</text></svg>';
-        };
+        DOM.avatar.onerror = () => generateInitialAvatar(displayName);
+      } else {
+        generateInitialAvatar(displayName);
+      }
+
+      function generateInitialAvatar(n) {
+        const c   = document.createElement('canvas');
+        c.width   = c.height = 72;
+        const ctx = c.getContext('2d');
+        // Fundo escuro
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, 72, 72);
+        // Borda amarela
+        ctx.strokeStyle = '#f0b90b';
+        ctx.lineWidth   = 3;
+        ctx.strokeRect(1.5, 1.5, 69, 69);
+        // Inicial
+        ctx.fillStyle    = '#f0b90b';
+        ctx.font         = 'bold 34px "Rajdhani", Arial, sans-serif';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText((n || '?')[0], 36, 38);
+        DOM.avatar.src = c.toDataURL();
       }
     },
 

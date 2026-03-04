@@ -32,7 +32,7 @@ export default class PlayerModel extends Group {
     constructor(loading: Loading, isGuest = true,  urlAvatar: string, identity?: string) {
         super()
         this.loading = loading
-        this.urlAvatar = urlAvatar || "models/asian_male_animated_v2.glb"
+        this.urlAvatar = urlAvatar || "models/asian_male_animated@base.glb"
         this.isGuest = isGuest
         this.identity = identity
         this.isLoadedModel = this.loadModel()

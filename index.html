@@ -1,116 +1,721 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="pt">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport"
-        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="stylesheet" href="/src/style.css">
-    <link rel="stylesheet" href="/src/hud.css">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <title>Simulator - 3JS</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<link rel="stylesheet" href="/src/style.css">
+<link rel="stylesheet" href="/src/hud.css">
+<link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<title>Simulator - 3JS</title>
+
+<style>
+/* ═══════════════════════════════════════════════
+   CHARACTER SELECT — Estilo GTA V
+   ═══════════════════════════════════════════════ */
+
+#char-select-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Rajdhani', sans-serif;
+}
+
+/* ── Fundo com grade e gradiente ── */
+#char-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(240,185,11,0.06) 0%, transparent 60%),
+    linear-gradient(180deg, #000 0%, #050a06 40%, #0a0f0a 100%);
+}
+
+#char-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 100% 100% at 50% 50%, black 20%, transparent 75%);
+}
+
+#char-bg::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(240,185,11,0.25), transparent);
+}
+
+/* Linha vertical de luz esquerda */
+#char-lightleak {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 8%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent 0%, rgba(240,185,11,0.08) 30%, rgba(240,185,11,0.12) 50%, rgba(240,185,11,0.08) 70%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ── Header ── */
+#char-header {
+  position: relative;
+  z-index: 2;
+  padding: 40px 60px 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  animation: fadeDown .55s cubic-bezier(.4,0,.2,1) both;
+}
+
+#char-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .35em;
+  text-transform: uppercase;
+  color: rgba(240,185,11,0.65);
+  margin-bottom: 8px;
+}
+
+#char-title {
+  font-size: clamp(38px, 5vw, 68px);
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: .88;
+}
+
+#char-title span { color: #f0b90b; }
+
+#char-subtitle {
+  font-size: 11px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  margin-top: 12px;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+#char-server-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+  padding-bottom: 6px;
+}
+
+#char-server-badge .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #00ff9d;
+  box-shadow: 0 0 8px #00ff9d;
+  animation: blink 2s ease-in-out infinite;
+}
+
+/* ── Stage ── */
+#char-stage {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 60px 0;
+  gap: 0;
+}
+
+/* ── Card ── */
+.char-card {
+  position: relative;
+  width: 270px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  animation: cardRise .65s cubic-bezier(.4,0,.2,1) both;
+}
+
+.char-card:nth-child(1) { animation-delay: .08s; }
+.char-card:nth-child(3) { animation-delay: .2s; }
+
+.char-card:hover    { transform: translateY(-8px); }
+.char-card.selected { transform: translateY(-16px); }
+
+/* Spotlight no chão do personagem */
+.char-spotlight {
+  position: absolute;
+  bottom: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160px;
+  height: 16px;
+  background: radial-gradient(ellipse, rgba(240,185,11,0.22) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity .3s;
+}
+
+.char-card:hover    .char-spotlight,
+.char-card.selected .char-spotlight { opacity: 1; }
+
+/* Preview silhuete */
+.char-preview {
+  width: 200px;
+  height: 310px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+}
+
+.char-silhouette {
+  width: 150px;
+  height: 275px;
+}
+
+.char-silhouette svg {
+  width: 100%;
+  height: 100%;
+  transition: filter .35s;
+}
+
+.char-card:hover    .char-silhouette svg,
+.char-card.selected .char-silhouette svg {
+  filter: drop-shadow(0 0 20px rgba(240,185,11,0.3));
+}
+
+/* Borda de seleção lateral — estilo GTA V */
+.char-border-left {
+  position: absolute;
+  left: 0; top: 20%; bottom: 20%;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, #f0b90b, transparent);
+  opacity: 0;
+  transition: opacity .25s;
+}
+
+.char-card.selected .char-border-left { opacity: 1; }
+
+/* Badge selecionado */
+.char-selected-badge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: #000;
+  background: #f0b90b;
+  padding: 3px 14px;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  opacity: 0;
+  transition: opacity .2s;
+  white-space: nowrap;
+}
+
+.char-card.selected .char-selected-badge { opacity: 1; }
+
+/* Info */
+.char-info { margin-top: 14px; text-align: center; padding: 0 8px; }
+
+.char-number {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: rgba(240,185,11,0.45);
+  letter-spacing: .22em;
+  margin-bottom: 5px;
+}
+
+.char-name {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: #fff;
+  transition: color .2s;
+  line-height: 1;
+}
+
+.char-card:hover    .char-name,
+.char-card.selected .char-name { color: #f0b90b; }
+
+.char-desc {
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  margin-top: 6px;
+  line-height: 1.5;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.char-tags {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.char-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.3);
+  transition: border-color .2s, color .2s;
+}
+
+.char-card:hover    .char-tag,
+.char-card.selected .char-tag {
+  border-color: rgba(240,185,11,0.3);
+  color: rgba(240,185,11,0.6);
+}
+
+/* Linha inferior de destaque */
+.char-underline {
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #f0b90b, transparent);
+  transition: width .3s cubic-bezier(.4,0,.2,1);
+  margin-top: 6px;
+  align-self: stretch;
+}
+
+.char-card:hover    .char-underline,
+.char-card.selected .char-underline { width: 100%; }
+
+/* Separador entre cards */
+.char-separator {
+  width: 1px;
+  height: 180px;
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.07), transparent);
+  align-self: center;
+  flex-shrink: 0;
+  margin: 0 16px;
+}
+
+/* ── Footer ── */
+#char-footer {
+  position: relative;
+  z-index: 2;
+  padding: 20px 60px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  animation: fadeUp .55s .25s cubic-bezier(.4,0,.2,1) both;
+}
+
+#char-hint {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.18);
+  letter-spacing: .1em;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hint-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(255,255,255,0.35);
+}
+
+.hint-key kbd {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  padding: 2px 6px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 2px;
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.5);
+}
+
+#char-confirm-btn {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: #000;
+  background: #f0b90b;
+  border: none;
+  padding: 14px 44px;
+  cursor: pointer;
+  clip-path: polygon(14px 0%, 100% 0%, calc(100% - 14px) 100%, 0% 100%);
+  transition: background .18s, transform .15s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#char-confirm-btn:disabled {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.2);
+  cursor: not-allowed;
+  clip-path: polygon(14px 0%, 100% 0%, calc(100% - 14px) 100%, 0% 100%);
+}
+
+#char-confirm-btn:not(:disabled):hover  { background: #ffe066; transform: scale(1.03); }
+#char-confirm-btn:not(:disabled):active { transform: scale(0.97); }
+
+#char-confirm-btn.loading {
+  background: rgba(240,185,11,0.25);
+  color: rgba(240,185,11,0.7);
+  pointer-events: none;
+}
+
+.btn-spinner {
+  width: 13px; height: 13px;
+  border: 2px solid rgba(0,0,0,0.25);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  display: none;
+  flex-shrink: 0;
+}
+
+#char-confirm-btn.loading .btn-spinner { display: block; }
+#char-confirm-btn.loading #btn-icon    { display: none; }
+
+/* ── Transição de saída ── */
+#char-select-overlay.exit {
+  animation: overlayExit .55s cubic-bezier(.4,0,.2,1) forwards;
+}
+
+@keyframes fadeDown   { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp     { from{opacity:0;transform:translateY(18px)}  to{opacity:1;transform:translateY(0)} }
+@keyframes cardRise   { from{opacity:0;transform:translateY(36px)}  to{opacity:1;transform:translateY(0)} }
+@keyframes overlayExit{ 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(1.05);pointer-events:none} }
+@keyframes blink      { 0%,100%{opacity:1} 50%{opacity:.35} }
+@keyframes spin       { to{transform:rotate(360deg)} }
+
+/* ── Campo de nome ── */
+#char-name-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  animation: fadeUp .55s .15s cubic-bezier(.4,0,.2,1) both;
+}
+
+#char-name-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(240,185,11,0.55);
+}
+
+#char-name-input {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  text-align: center;
+  color: #fff;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 2px solid rgba(240,185,11,0.5);
+  border-radius: 4px 4px 0 0;
+  padding: 10px 24px;
+  width: 260px;
+  outline: none;
+  transition: border-color .2s, background .2s;
+  caret-color: #f0b90b;
+}
+
+#char-name-input::placeholder {
+  color: rgba(255,255,255,0.18);
+  font-size: 14px;
+  letter-spacing: .08em;
+}
+
+#char-name-input:focus {
+  background: rgba(240,185,11,0.05);
+  border-bottom-color: #f0b90b;
+  border-color: rgba(240,185,11,0.2);
+  border-bottom-color: #f0b90b;
+}
+
+#char-name-counter {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,0.18);
+  letter-spacing: .1em;
+  align-self: flex-end;
+  padding-right: 4px;
+}
+
+</style>
 </head>
 
 <body>
-    <div id="status-server"></div> 
-    <div id="instruction"></div>  
+  <div id="status-server"></div>
+  <div id="instruction"></div>
 
-    <iframe id="frame" class="frame" allow="camera *; microphone *; clipboard-write" hidden></iframe>
+  <!-- ══════════════════════════════════════════════════════════
+       CHARACTER SELECT — substitui o iframe do Ready Player Me
+       ══════════════════════════════════════════════════════════ -->
+  <div id="char-select-overlay">
+    <div id="char-bg"></div>
+    <div id="char-lightleak"></div>
 
-    <script type="module" src="/src/main.ts"></script>    
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>      
-    <script type="module">
-        import Experience from './src/Experience';
-        import { Clock, Scene } from 'three';
-        import Loading from './src/Loading';
-        import SocketManager from "./src/SocketManager";
+    <!-- Header -->
+    <div id="char-header">
+      <div>
+        <div id="char-eyebrow">Simulador Multiplayer · Sessão ativa</div>
+        <div id="char-title">Escolha seu<br><span>Agente</span></div>
+        <div id="char-subtitle">// Selecione a identidade para esta operação</div>
+      </div>
+      <div id="char-server-badge">
+        <span class="dot"></span>
+        Servidor online
+      </div>
+    </div>
 
-        import Stats from 'three/addons/libs/stats.module.js'
-        
-        const stats = new Stats();
-        document.body.appendChild(stats.dom);
+    <!-- Stage com os 2 personagens -->
+    <div id="char-stage">
 
-        const clock = new Clock();
-        const loading = new Loading();
-        const scene = new Scene();
-       
-        SocketManager.loading = loading
-        SocketManager.scene = scene
+      <!-- ── Agente 01 ── -->
+      <div class="char-card" data-model="models/asian_male_animated@base.glb">
+        <div class="char-selected-badge">✓ Selecionado</div>
+        <div class="char-border-left"></div>
+        <div class="char-spotlight"></div>
 
-        const subdomain = 'demo';
-        const frame = document.getElementById('frame');
+        <div class="char-preview">
+          <div class="char-silhouette">
+            <!-- Silhuete SVG — substitua por <img src="preview_kenji.png"> se tiver sprites -->
+            <svg viewBox="0 0 100 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="50" cy="22" rx="15" ry="17" fill="#c8956c"/>
+              <path d="M36 16 Q50 3 64 16 Q64 6 50 4 Q36 6 36 16Z" fill="#1a0a02"/>
+              <rect x="44" y="37" width="12" height="10" fill="#c8956c"/>
+              <path d="M18 47 Q50 42 82 47 L85 115 Q50 121 15 115Z" fill="#1c2340"/>
+              <path d="M50 47 L50 115" stroke="#f0b90b" stroke-width="1.2" opacity=".5"/>
+              <path d="M18 47 Q34 51 50 49 Q66 51 82 47" stroke="#f0b90b" stroke-width=".8" opacity=".35"/>
+              <path d="M18 49 Q8 71 10 97 L19 96 Q21 73 26 57Z" fill="#1c2340"/>
+              <path d="M82 49 Q92 71 90 97 L81 96 Q79 73 74 57Z" fill="#1c2340"/>
+              <ellipse cx="14" cy="100" rx="6" ry="7" fill="#c8956c"/>
+              <ellipse cx="86" cy="100" rx="6" ry="7" fill="#c8956c"/>
+              <path d="M22 115 L16 210 L38 210 L50 158 L62 210 L84 210 L78 115Z" fill="#2c3e50"/>
+              <rect x="16" y="202" width="22" height="14" rx="3" fill="#111"/>
+              <rect x="62" y="202" width="22" height="14" rx="3" fill="#111"/>
+              <circle cx="50" cy="74" r="5" fill="none" stroke="#f0b90b" stroke-width="1.3" opacity=".7"/>
+              <text x="50" y="78" text-anchor="middle" font-size="6" fill="#f0b90b" opacity=".85" font-family="monospace">K</text>
+            </svg>
+          </div>
+        </div>
 
-        frame.src = `https://${subdomain}.readyplayer.me/avatar?frameApi`;
+        <div class="char-underline"></div>
+        <div class="char-info">
+          <div class="char-number">AGENTE · 01</div>
+          <div class="char-name">Kenji</div>
+          <div class="char-desc">Especialista em sistemas.<br>Ágil e discreto em campo.</div>
+          <div class="char-tags">
+            <span class="char-tag">Infiltração</span>
+            <span class="char-tag">Técnico</span>
+            <span class="char-tag">Ágil</span>
+          </div>
+        </div>
+      </div>
 
-        window.addEventListener('message', subscribe);
-        document.addEventListener('message', subscribe);
+      <div class="char-separator"></div>
 
-        function subscribe(event) {
-            const json = parse(event);
+      <!-- ── Agente 02 ── -->
+      <div class="char-card" data-model="models/asian_male_animated@base.glb">
+        <div class="char-selected-badge">✓ Selecionado</div>
+        <div class="char-border-left"></div>
+        <div class="char-spotlight"></div>
 
-            if (json?.source !== 'readyplayerme') {
-                return;
-            }
+        <div class="char-preview">
+          <div class="char-silhouette">
+            <svg viewBox="0 0 100 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="50" cy="22" rx="16" ry="18" fill="#7d4e2d"/>
+              <path d="M34 17 Q50 3 66 17 Q66 7 50 5 Q34 7 34 17Z" fill="#0a0500"/>
+              <rect x="44" y="38" width="12" height="10" fill="#7d4e2d"/>
+              <path d="M16 47 Q50 42 84 47 L87 116 Q50 122 13 116Z" fill="#2f3640"/>
+              <path d="M28 49 Q50 45 72 49 L74 98 Q50 101 26 98Z" fill="#353b48"/>
+              <rect x="31" y="62" width="13" height="9" rx="1" fill="#2a2f38"/>
+              <rect x="56" y="62" width="13" height="9" rx="1" fill="#2a2f38"/>
+              <path d="M16 49 Q6 72 8 99 L17 98 Q19 74 23 57Z" fill="#2f3640"/>
+              <path d="M84 49 Q94 72 92 99 L83 98 Q81 74 77 57Z" fill="#2f3640"/>
+              <ellipse cx="12" cy="102" rx="6" ry="7" fill="#7d4e2d"/>
+              <ellipse cx="88" cy="102" rx="6" ry="7" fill="#7d4e2d"/>
+              <path d="M18 116 L12 208 L36 208 L50 162 L64 208 L88 208 L82 116Z" fill="#1e272e"/>
+              <rect x="13" y="140" width="13" height="16" rx="1" fill="#2f3640"/>
+              <rect x="74" y="140" width="13" height="16" rx="1" fill="#2f3640"/>
+              <rect x="12" y="200" width="24" height="14" rx="3" fill="#111"/>
+              <rect x="64" y="200" width="24" height="14" rx="3" fill="#111"/>
+              <path d="M16 47 Q8 50 8 61 L18 59Z" fill="#f0b90b" opacity=".75"/>
+              <text x="50" y="80" text-anchor="middle" font-size="6" fill="#f0b90b" opacity=".8" font-family="monospace">M</text>
+            </svg>
+          </div>
+        </div>
 
-            // Susbribe to all events sent from Ready Player Me once frame is ready
-            if (json.eventName === 'v1.frame.ready') {
-                frame.contentWindow.postMessage(
-                    JSON.stringify({
-                        target: 'readyplayerme',
-                        type: 'subscribe',
-                        eventName: 'v1.**'
-                    }),
-                    '*'
-                );
-            }
+        <div class="char-underline"></div>
+        <div class="char-info">
+          <div class="char-number">AGENTE · 02</div>
+          <div class="char-name">Marcus</div>
+          <div class="char-desc">Operativo de campo.<br>Força e resistência superiores.</div>
+          <div class="char-tags">
+            <span class="char-tag">Combate</span>
+            <span class="char-tag">Tático</span>
+            <span class="char-tag">Resiliente</span>
+          </div>
+        </div>
+      </div>
 
-            // Get avatar GLB URL
-            if (json.eventName === 'v1.avatar.exported') {     
+    </div><!-- /char-stage -->
 
-                document.getElementById('frame').hidden = true; 
-                const experience = new Experience(loading, json.data.url, scene)
-             
-                function startGame()
-                {
-                  function update() {
-                    const delta = clock.getDelta();
-                    requestAnimationFrame(update);
-                    
-                    stats.update();
-                    experience.update(delta);
-                  }
-                  
-                  update();
-                }
 
-                loading.start(startGame)
-                
-            }
+    <!-- Campo de nome do jogador -->
+    <div id="char-name-wrap">
+      <label id="char-name-label" for="char-name-input">Identificação do agente</label>
+      <input
+        id="char-name-input"
+        type="text"
+        maxlength="18"
+        placeholder="Digite seu nome..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <span id="char-name-counter">0 / 18</span>
+    </div>
 
-            // Get user id
-            if (json.eventName === 'v1.user.set') {
-                console.log(`User with id ${json.data.id} set: ${JSON.stringify(json)}`);
-            }
+    <!-- Footer -->
+    <div id="char-footer">
+      <div id="char-hint">
+        <span class="hint-key"><kbd>←</kbd><kbd>→</kbd> Navegar</span>
+        <span class="hint-key"><kbd>Enter</kbd> Confirmar</span>
+        <span class="hint-key">Nome: até 18 caracteres</span>
+        <span class="hint-key"><kbd>Click</kbd> Selecionar</span>
+      </div>
+      <button id="char-confirm-btn" disabled>
+        <span class="btn-spinner"></span>
+        <span id="btn-label">Selecione um agente</span>
+        <i id="btn-icon" class='bx bx-right-arrow-alt' style="font-size:17px"></i>
+      </button>
+    </div>
+
+  </div><!-- /char-select-overlay -->
+
+  <script type="module" src="/src/main.ts"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+  <script type="module">
+    import Experience  from './src/Experience';
+    import { Clock, Scene } from 'three';
+    import Loading     from './src/Loading';
+    import SocketManager from './src/SocketManager';
+    import Stats       from 'three/addons/libs/stats.module.js';
+
+    const stats  = new Stats();
+    document.body.appendChild(stats.dom);
+
+    const clock   = new Clock();
+    const loading = new Loading();
+    const scene   = new Scene();
+
+    SocketManager.loading = loading;
+    SocketManager.scene   = scene;
+
+    // ── Lógica do menu de seleção ──────────────────────────────────────────
+    const cards      = [...document.querySelectorAll('.char-card')];
+    const confirmBtn = document.getElementById('char-confirm-btn');
+    const btnLabel   = document.getElementById('btn-label');
+    const overlay    = document.getElementById('char-select-overlay');
+
+    let selectedCard  = null;
+    let selectedModel = null;
+
+    function selectCard(card) {
+      if (selectedCard) selectedCard.classList.remove('selected');
+      selectedCard  = card;
+      selectedModel = card.dataset.model;
+      card.classList.add('selected');
+      confirmBtn.disabled = false;
+      btnLabel.textContent = `Entrar como ${card.querySelector('.char-name').textContent}`;
+    }
+
+    cards.forEach(card => card.addEventListener('click', () => selectCard(card)));
+
+    document.addEventListener('keydown', (e) => {
+      const cur = selectedCard ? cards.indexOf(selectedCard) : -1;
+      if (e.key === 'ArrowRight') selectCard(cards[(cur + 1) % cards.length]);
+      if (e.key === 'ArrowLeft')  selectCard(cards[(cur - 1 + cards.length) % cards.length]);
+      if (e.key === 'Enter' && selectedModel) launchGame();
+    });
+
+    confirmBtn.addEventListener('click', launchGame);
+
+    // Contador de caracteres do nome
+    const nameInput   = document.getElementById('char-name-input');
+    const nameCounter = document.getElementById('char-name-counter');
+    nameInput.addEventListener('input', () => {
+      const len = nameInput.value.length;
+      nameCounter.textContent = len + ' / 18';
+      nameCounter.style.color = len >= 16 ? 'rgba(240,185,11,0.6)' : 'rgba(255,255,255,0.18)';
+    });
+
+    // Enter no campo de nome confirma se já tiver personagem selecionado
+    nameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && selectedModel) launchGame();
+      e.stopPropagation(); // evita mudar card com seta enquanto digita
+    });
+
+    function launchGame() {
+      if (!selectedModel || confirmBtn.classList.contains('loading')) return;
+
+      const playerName = (nameInput.value.trim() || 'Agente').substring(0, 18).toUpperCase();
+
+      confirmBtn.classList.add('loading');
+      btnLabel.textContent = 'Carregando agente...';
+      overlay.classList.add('exit');
+
+      setTimeout(() => {
+        overlay.remove();
+
+        // ── Inicia o jogo ────────────────────────────────────────────────
+        // playerName é passado ao construtor → Experience chama setAvatar internamente
+        const experience = new Experience(loading, selectedModel, scene, playerName);
+
+        function startGame() {
+          (function update() {
+            const delta = clock.getDelta();
+            requestAnimationFrame(update);
+            stats.update();
+            experience.update(delta);
+          })();
         }
 
-        function parse(event) {
-            try {
-                return JSON.parse(event.data);
-            } catch (error) {
-                return null;
-            }
-        }
+        loading.start(startGame);
 
-        function displayIframe() {
-            document.getElementById('frame').hidden = false;
-        }
+      }, 580);
+    }
+  </script>
 
-        displayIframe()
-    </script>
-    <script src="/src/hud.js"></script>
+  <script src="/src/hud.js"></script>
 </body>
-
 </html>

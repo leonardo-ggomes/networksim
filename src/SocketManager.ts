@@ -7,6 +7,35 @@ import { Auditorio, infoPlayer } from './InfoPlayer'
 import { colliders } from './Colliders'
 import Guest from './Guest'
 
+
+/**
+ * Normaliza o dado de avatar recebido do servidor.
+ * Suporta 3 formatos para garantir compatibilidade:
+ *   1. string pura:        'models/asian_male_animated@base.glb'  (servidor antigo)
+ *   2. objeto novo:        { url: '...', name: '...' }            (servidor atualizado)
+ *   3. objeto aninhado:    { url: { url: '...', name: '...' } }   (bug de transição)
+ */
+function extractAvatarData(data: any): { url: string; name: string } {
+    if (!data) return { url: '', name: 'Jogador' }
+
+    // Formato 1: string pura
+    if (typeof data === 'string') return { url: data, name: 'Jogador' }
+
+    // Formato 3: objeto aninhado (servidor repassou o objeto inteiro como url)
+    if (typeof data.url === 'object' && data.url !== null) {
+        return {
+            url:  data.url.url  || '',
+            name: data.url.name || data.name || 'Jogador',
+        }
+    }
+
+    // Formato 2: objeto correto
+    return {
+        url:  typeof data.url === 'string' ? data.url : '',
+        name: typeof data.name === 'string' ? data.name : 'Jogador',
+    }
+}
+
 class SocketManager{
    
     loading?: Loading
@@ -15,16 +44,23 @@ class SocketManager{
     scene?: Scene
     faker = new Faker({locale: pt_BR})
     isConnected = false
+    avatarUrl:   string = ''  // URL do modelo — persistida para reconexão
+    playerName: string = ''  // Nome escolhido — reemitido ao reconectar
 
 
     constructor(){
        
-        this.io = io('https://networksim-server-production.up.railway.app/')
+        this.io = io('http://localhost:3000') //io('https://networksim-server-production.up.railway.app/')
 
         this.io.on('connect', () => {
             console.log('Conectado')
             this.isConnected = true
             this.setHudStatus(true)
+            // Reenvia o avatar ao reconectar (garante que o servidor
+            // sempre tem a URL mesmo após quedas de conexão)
+            if (this.avatarUrl) {
+                this.io.emit('avatar:set', { url: this.avatarUrl, name: this.playerName })
+            }
         })
 
         this.io.on('disconnect', () => {
@@ -58,16 +94,15 @@ class SocketManager{
     }
 
     loadPlayers = (players: any) => {
-       
-    
+
         Object.keys(players).forEach(id => {
-           
+
             if(id === this.io.id) return;
-       
-            const urlAvatar = players[id].url;
+
+            const { url: urlAvatar, name: playerName } = extractAvatarData(players[id]);
             if(urlAvatar && this.loading){
 
-                Guest.loadModel(this.loading, urlAvatar, id).then(() => {
+                Guest.loadModel(this.loading, urlAvatar, id, playerName).then(() => {
                     this.scene?.add(Guest.models[id].obj);
                     Guest.models[id].obj.visible = false
                     this.players[id] = Guest.models[id].obj;
@@ -99,36 +134,32 @@ class SocketManager{
     }
 
     joinInRoom = (player: any) => {
-      
+
         console.log('-- Um novo player juntou a sala --')
-            
+
         if(player.id != this.io.id && this.loading){
 
-            const urlAvatar = player.url
-           
+            const { url: urlAvatar, name: playerName } = extractAvatarData(player)
+
             if(urlAvatar)
             {
-                const guestLoaded = Guest.loadModel(this.loading, urlAvatar, player.id)
+                const guestLoaded = Guest.loadModel(this.loading, urlAvatar, player.id, playerName)
 
                 guestLoaded.then(() => {
-                    if(this.io.id != undefined){           
+                    if(this.io.id != undefined){
                         this.scene?.add(Guest.models[player.id].obj)
                         this.players[player.id] = Guest.models[player.id].obj
-                    }  
+                    }
                 })
-                
             }
-
-                                
         }
-     
-
     }
 
 
     exitTheRoom = (id: any) => {
         console.log('exit the room')
         this.scene?.remove(this.players[id])
+        Guest.dispose(id)          // libera geometria, material e collider
         delete this.players[id]
     }
 
@@ -148,8 +179,10 @@ class SocketManager{
                 data.id
             )   
             
+            // Usa as animações da instância específica (não o estático compartilhado)
+            const instanceAnims = Guest.models[data.id]?.animationsAction
             Guest.setAnimation(
-                Guest.animationsAction[data.clip],
+                instanceAnims?.[data.clip],
                 data.id
             )   
                         
@@ -202,6 +235,13 @@ class SocketManager{
             currentDir,
             file
         })
+    }
+
+    // Registra avatar e nome, avisa o servidor
+    setAvatar(url: string, name: string) {
+        this.avatarUrl  = url
+        this.playerName = name
+        this.io.emit('avatar:set', { url, name })
     }
 
     promotePlayerTo(targetId: string, role: string) {
