@@ -30,6 +30,7 @@ import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import Loading from './Loading';
 import { colliders } from './Colliders';
+import PlayerController from './PlayerController';
 
 const GUEST_COLORS = [
     '#4fc3f7', '#81c784', '#ffb74d', '#f06292',
@@ -159,6 +160,9 @@ export default class Guest {
 
         cloned.name = `guest.${socketId}`;
         colliders.push(cloned);
+
+        // Reconstrói o BVH para incluir o novo guest na colisão física
+        PlayerController.instance?.refreshBVH();
 
         Guest.addRing(cloned, colorIdx);
         cloned.add(sprite);
@@ -301,7 +305,11 @@ export default class Guest {
         });
 
         const idx = colliders.indexOf(inst.obj);
-        if (idx !== -1) colliders.splice(idx, 1);
+        if (idx !== -1) {
+            colliders.splice(idx, 1);
+            // Reconstrói o BVH para remover o guest da colisão física
+            PlayerController.instance?.refreshBVH();
+        }
 
         delete Guest.models[socketId];
         console.log(`[Guest] ${socketId} removido`);

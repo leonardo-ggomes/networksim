@@ -20,6 +20,10 @@ import { colliders } from "./Colliders";
 import { BVHCollision } from "./BVHCollision"; // ← NOVO
 
 export default class PlayerController {
+  // Referência estática — permite que Guest.ts reconstrua o BVH
+  // quando um jogador remoto entra ou sai da cena
+  static instance: PlayerController | null = null;
+
   playerImpulse = new Vector3(0, 0, 0);
   playerDirection = new Vector3(0, 0, 0);
   playerModel: PlayerModel;
@@ -108,6 +112,7 @@ export default class PlayerController {
     document.addEventListener("keydown", this.onKeydown);
     document.addEventListener("keyup", this.onKeydown);
     this.actions["terminal"] = false;
+    PlayerController.instance = this;
   }
 
   /**
@@ -145,6 +150,7 @@ export default class PlayerController {
       } else {
         elementos.hideTerminal();
         this.actions["terminal"] = false;
+    PlayerController.instance = this;
       }
     }
   }
@@ -180,7 +186,24 @@ export default class PlayerController {
   toSit(chair: ChairInstance) {
     if (this.isSitting) return;
     if (!this.keyBoard["KeyF"]) return;
-    if (Auditorio.chairs.includes(chair.name)) return; // cadeira ocupada no servidor
+
+    // Cadeira ocupada — verifica lista do servidor (atualizada via socket chair:list)
+    if (Auditorio.chairs.includes(chair.name)) {
+      console.log(`[PlayerController] Cadeira "${chair.name}" já está ocupada.`);
+      return;
+    }
+
+    // Segurança extra: verifica se há algum guest sentado na mesma posição
+    const SEAT_RADIUS = 0.6;
+    for (const obj of colliders) {
+      if (!obj.name.startsWith('guest.')) continue;
+      const guestPos = new Vector3();
+      obj.getWorldPosition(guestPos);
+      if (guestPos.distanceTo(chair.position) < SEAT_RADIUS) {
+        console.log(`[PlayerController] Guest detectado na cadeira "${chair.name}".`);
+        return;
+      }
+    }
 
     this.prevPlayerPosition.copy(this.playerModel.position);
     this.prevPlayerQuaternion.copy(this.playerModel.quaternion);
@@ -257,6 +280,33 @@ export default class PlayerController {
 
   toInteract(id: string) {
     othersPlayers.collideId = id;
+  }
+
+  /**
+   * Separa o player local de guests que estejam sobrepostos.
+   * Roda após a física BVH — aplica um impulso de separação suave.
+   */
+  private resolvePlayerCollisions() {
+    const PLAYER_RADIUS = 0.45; // raio da cápsula do player em metros
+    const myPos = this.playerModel.position;
+
+    for (const obj of colliders) {
+      if (!obj.name.startsWith('guest.')) continue;
+
+      const guestPos = new Vector3();
+      obj.getWorldPosition(guestPos);
+      guestPos.y = myPos.y; // compara só no plano XZ
+
+      const dist = myPos.distanceTo(guestPos);
+      const minDist = PLAYER_RADIUS * 2;
+
+      if (dist < minDist && dist > 0.001) {
+        // Vetor de separação: empurra o player local para longe do guest
+        const push = myPos.clone().sub(guestPos).normalize();
+        const overlap = (minDist - dist) * 0.5; // divide separação entre os dois
+        this.playerModel.position.addScaledVector(push, overlap);
+      }
+    }
   }
 
   // ── Update principal ─────────────────────────────────────────────────────
@@ -348,7 +398,6 @@ export default class PlayerController {
       const clip = isCrouch ? "CrouchLeft" : "WalkLeft";
       this.setAction(this.playerModel.animationsAction[clip]);
       this.clipName = clip;
-      this.smoothRotate(delta);
       this.playerImpulse.add(
         left.clone().multiplyScalar((this.velocity - 1) * delta)
       );
@@ -357,7 +406,6 @@ export default class PlayerController {
       const clip = isCrouch ? "CrouchRight" : "WalkRight";
       this.setAction(this.playerModel.animationsAction[clip]);
       this.clipName = clip;
-      this.smoothRotate(delta);
       this.playerImpulse.add(
         right.clone().multiplyScalar((this.velocity - 1) * delta)
       );
@@ -449,8 +497,9 @@ export default class PlayerController {
     this.playerImpulse.set(0, 0, 0);
 
     // ── Colisão com poltronas / guests (mantida por nome, sem Box3) ────
-    // O BVH cuida da física; esta parte apenas dispara eventos de interação.
+    // O BVH cuida da física; esta parte dispara interações E separação entre players.
     this.checkInteractionByProximity();
+    this.resolvePlayerCollisions();
   }
 
   /**
