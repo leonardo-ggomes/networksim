@@ -143,7 +143,7 @@ export default class Items {
                     if (mesh.name === "screen1_screen1_0") {
                         mesh.material = new MeshBasicMaterial({ color: 0xffffff });
                         const slide = new SlideShow(mesh, this.loading);
-                        slide.loadSlidesFromUrls(["img/Slide1.png"]);
+                        slide.loadSlidesFromUrls(["img/Slide1.jpg"]);
                         new SlideController(slide);
                     }
                 });
