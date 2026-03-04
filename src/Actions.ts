@@ -610,54 +610,215 @@ createRadialMenu([
 ]);
   
 
+// ═══════════════════════════════════════════════════════════════
+// createRadialMenu — Estilo GTA V
+// Substitui a função createRadialMenu atual no Actions.ts
+// ═══════════════════════════════════════════════════════════════
+//
+// Como funciona:
+//   - SVG com <path> em forma de fatia de pizza para cada item
+//   - Labels HTML posicionados pelo ângulo médio de cada fatia
+//   - Overlay com backdrop-blur escurece a cena ao abrir
+//   - Hover no segmento SVG sincroniza highlight da label via JS
+//   - Animação de entrada via classe CSS (opacity + scale)
+
 function createRadialMenu(actions: RadialAction[]) {
-    let oldMenu = document.getElementById('radial-menu');
-    if (oldMenu) oldMenu.remove();
-  
+    document.getElementById('radial-menu')?.remove();
+    document.getElementById('radial-overlay')?.remove();
+
+    const count   = actions.length;
+    const SIZE    = 320;
+    const cx      = SIZE / 2;
+    const cy      = SIZE / 2;
+    const outerR  = 140;
+    const innerR  = 44;
+    const labelR  = 96;
+    const GAP_DEG = 3;
+    const angleStep = 360 / count;
+
+    // ── Overlay ──────────────────────────────────────────────────
+    const overlay = document.createElement('div');
+    overlay.id = 'radial-overlay';
+    overlay.classList.add('hidden');
+    document.body.appendChild(overlay);
+
+    // ── Container fixo, centralizado ─────────────────────────────
+    // position:fixed + transform:translate já centraliza na tela.
+    // O SVG e as labels usam coordenadas relativas a este container.
     const menu = document.createElement('div');
     menu.id = 'radial-menu';
     menu.classList.add('hidden');
-  
-    const center = document.createElement('div');
-    center.className = 'center-circle';
-    center.textContent = 'Ações';
-    menu.appendChild(center);
-  
-    const radius = 120;
-    const angleStep = (2 * Math.PI) / actions.length;
-  
-    actions.forEach((action, i) => {
-      const angle = i * angleStep;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-  
-      const item = document.createElement('div');
-      item.className = 'menu-item';
-      item.innerHTML =  action.label;
-      item.dataset.action = action.value;
-  
-      item.style.left = `calc(50% + ${x}px)`;
-      item.style.top = `calc(50% + ${y}px)`;
-      item.style.transform = 'translate(-50%, -50%)';
-  
-      item.addEventListener('click', () => {
-        console.log("Selecionado:", action.value);
-        menu.classList.add('hidden');
-        action.onSelect();
-      });
-  
-      menu.appendChild(item);
+    Object.assign(menu.style, {
+        position:  'fixed',
+        top:       '50%',
+        left:      '50%',
+        transform: 'translate(-50%, -50%)',
+        width:     SIZE + 'px',
+        height:    SIZE + 'px',
+        pointerEvents: 'none',
+        zIndex:    '1000',
     });
-  
+
+    // ── SVG ocupa 100% do container ───────────────────────────────
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', `0 0 ${SIZE} ${SIZE}`);
+    svg.setAttribute('width',  '100%');
+    svg.setAttribute('height', '100%');
+    svg.style.position = 'absolute';
+    svg.style.inset    = '0';
+    svg.style.overflow = 'visible';
+
+    // anel decorativo
+    const ringEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    ringEl.setAttribute('cx', String(cx));
+    ringEl.setAttribute('cy', String(cy));
+    ringEl.setAttribute('r',  String(outerR + 7));
+    ringEl.setAttribute('fill',         'none');
+    ringEl.setAttribute('stroke',       'rgba(240,185,11,0.12)');
+    ringEl.setAttribute('stroke-width', '1');
+    svg.appendChild(ringEl);
+
+    menu.appendChild(svg);
+
+    // ── Centro HTML (position:absolute relativo ao container) ─────
+    const center = document.createElement('div');
+    center.className = 'radial-center';
+    center.innerHTML = '<span class="center-key">TAB</span><span class="center-label">Ações</span>';
+    menu.appendChild(center);
+
+    // ── Helpers ───────────────────────────────────────────────────
+    const polar = (deg: number, r: number) => {
+        const rad = (deg - 90) * Math.PI / 180;
+        return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    };
+
+    const slicePath = (s: number, e: number) => {
+        const p1 = polar(s, outerR), p2 = polar(e, outerR);
+        const p3 = polar(s, innerR), p4 = polar(e, innerR);
+        const lg = (e - s) > 180 ? 1 : 0;
+        return `M${p3.x} ${p3.y} L${p1.x} ${p1.y} A${outerR} ${outerR} 0 ${lg} 1 ${p2.x} ${p2.y} L${p4.x} ${p4.y} A${innerR} ${innerR} 0 ${lg} 0 ${p3.x} ${p3.y}Z`;
+    };
+
+    // ── Fatias + labels ───────────────────────────────────────────
+    actions.forEach((action, i) => {
+        const startDeg = i * angleStep + GAP_DEG / 2;
+        const endDeg   = startDeg + angleStep - GAP_DEG;
+        const midDeg   = startDeg + (angleStep - GAP_DEG) / 2;
+
+        // Segmento SVG
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', slicePath(startDeg, endDeg));
+        path.style.fill            = 'rgba(10,10,10,0.80)';
+        path.style.stroke          = 'rgba(255,255,255,0.07)';
+        path.style.strokeWidth     = '1.5';
+        path.style.cursor          = 'pointer';
+        path.style.transition      = 'fill 0.13s ease';
+        path.style.pointerEvents   = 'auto';
+        svg.appendChild(path);
+
+        // Label: position:absolute em px relativos ao container (SIZE×SIZE)
+        // polar() já retorna coordenadas dentro do espaço 0..SIZE
+        const lp = polar(midDeg, labelR);
+        const label = document.createElement('div');
+        label.style.position  = 'absolute';
+        label.style.left      = lp.x + 'px';
+        label.style.top       = lp.y + 'px';
+        label.style.transform = 'translate(-50%, -50%)';
+        label.style.display   = 'flex';
+        label.style.flexDirection  = 'column';
+        label.style.alignItems     = 'center';
+        label.style.justifyContent = 'center';
+        label.style.gap            = '4px';
+        label.style.pointerEvents  = 'auto';
+        label.style.cursor         = 'pointer';
+        label.style.userSelect     = 'none';
+        label.style.textAlign      = 'center';
+
+        // Separa ícone do texto
+        const tmp = document.createElement('div');
+        tmp.innerHTML = action.label;
+        const iconEl   = tmp.querySelector('i');
+        const iconHTML = iconEl ? iconEl.outerHTML : '';
+        const txt      = (tmp.textContent || '').trim();
+
+        const iconSpan = document.createElement('span');
+        iconSpan.innerHTML  = iconHTML;
+        iconSpan.style.fontSize   = '20px';
+        iconSpan.style.color      = 'rgba(255,255,255,0.88)';
+        iconSpan.style.lineHeight = '1';
+        iconSpan.style.transition = 'color 0.13s';
+
+        const textSpan = document.createElement('span');
+        textSpan.textContent        = txt;
+        textSpan.style.fontFamily   = 'Poppins, sans-serif';
+        textSpan.style.fontSize     = '9px';
+        textSpan.style.fontWeight   = '600';
+        textSpan.style.letterSpacing = '0.07em';
+        textSpan.style.textTransform = 'uppercase';
+        textSpan.style.color         = 'rgba(255,255,255,0.65)';
+        textSpan.style.whiteSpace    = 'nowrap';
+        textSpan.style.transition    = 'color 0.13s';
+
+        label.appendChild(iconSpan);
+        label.appendChild(textSpan);
+        menu.appendChild(label);
+
+        // Hover: sincroniza segmento ↔ label
+        const hi = () => {
+            path.style.fill        = 'rgba(240,185,11,0.92)';
+            iconSpan.style.color   = '#111';
+            textSpan.style.color   = '#111';
+        };
+        const lo = () => {
+            path.style.fill        = 'rgba(10,10,10,0.80)';
+            iconSpan.style.color   = 'rgba(255,255,255,0.88)';
+            textSpan.style.color   = 'rgba(255,255,255,0.65)';
+        };
+
+        [path, label].forEach(el => {
+            el.addEventListener('mouseenter', hi);
+            el.addEventListener('mouseleave', lo);
+            el.addEventListener('click', () => {
+                toggle(false);
+                action.onSelect();
+            });
+        });
+    });
+
     document.body.appendChild(menu);
-  
+
+    // ── Toggle ────────────────────────────────────────────────────
+    const toggle = (force?: boolean) => {
+        const open = force !== undefined ? force : menu.classList.contains('hidden');
+        if (open) {
+            menu.classList.remove('hidden');
+            overlay.classList.remove('hidden');
+            menu.style.opacity      = '0';
+            menu.style.scale        = '0.85';
+            menu.style.transition   = 'opacity 0.18s ease, scale 0.18s ease';
+            // Força reflow para a animação funcionar
+            menu.getBoundingClientRect();
+            menu.style.opacity = '1';
+            menu.style.scale   = '1';
+        } else {
+            menu.style.opacity = '0';
+            menu.style.scale   = '0.85';
+            overlay.classList.add('hidden');
+            setTimeout(() => menu.classList.add('hidden'), 180);
+        }
+    };
+
+    overlay.addEventListener('click', () => toggle(false));
+
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        menu.classList.toggle('hidden');
-      }
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            toggle();
+        }
+        if (e.key === 'Escape') toggle(false);
     });
 }
+
 
 export function showInstruction(title: string, content: string){
     const instruction = document.getElementById("instruction") as HTMLDivElement

@@ -8,22 +8,23 @@ import {
   Mesh,
   MeshBasicMaterial,
   CapsuleGeometry,
-  Box3,
-  Raycaster
 } from "three";
 import FollowCamera from "./FollowCamera";
 import PlayerModel from "./PlayerModel";
-import { Octree } from "three/examples/jsm/math/Octree.js";
 import SocketManager from "./SocketManager";
 import elementos, { eventEmitter } from "./Actions";
 import Loading from "./Loading";
 import { Auditorio, infoPlayer, othersPlayers, roles } from "./InfoPlayer";
-import Items from "./Items";
+import Items, { ChairInstance } from "./Items";
 import { colliders } from "./Colliders";
+import { BVHCollision } from "./BVHCollision";
+
+// Eixo Y global — reutilizado para evitar alocações
+const UP = new Vector3(0, 1, 0);
 
 export default class PlayerController {
   playerImpulse = new Vector3(0, 0, 0);
-  playerDirection = new Vector3(0, 0, 0);
+  playerDirection = new Vector3(0, 0, 0); // forward (câmera, sem Y)
   playerModel: PlayerModel;
   keyBoard: any = {};
   camera: PerspectiveCamera;
@@ -32,53 +33,49 @@ export default class PlayerController {
   quaternion = new Quaternion();
   activedClip?: AnimationAction;
   items: Items;
-  octree: Octree;
-  scene: Scene
+  scene: Scene;
 
   isSitting = false;
-  isCollided = false
-  isFloor = true
 
   prevPlayerPosition = new Vector3();
   prevPlayerQuaternion = new Quaternion();
 
-  velocityY = 0
-  gravity = -9.81
-  raycaster = new Raycaster()
-  downVector = new Vector3(0, -1, 0);
+  // ── Física ───────────────────────────────────────────────────────────────
+  velocityY = 0;
+  gravity = -18;
+  groundSnapSpeed = 12;
+  isOnGround = false;
 
-  //Adicionando cápsula para colisão
+  // ── Cápsula (visual debug) ───────────────────────────────────────────────
   playerCapsule: Mesh;
-  capsuleHeight = 1.5; // altura da cápsula
-  capsuleRadius = 0.3; // raio da cápsula
-  socket = SocketManager
-  clipName = "Idle"
+  capsuleHeight = 1.5;
+  capsuleRadius = 0.3;
 
-  //Ações
-  actions: any = {}
+  // ── BVH ─────────────────────────────────────────────────────────────────
+  bvh: BVHCollision;
+  private bvhReady = false;
 
-  //Carregamento
-  loading: Loading
-  urlAvatar: string
+  socket = SocketManager;
+  clipName = "Idle";
+  actions: any = {};
+  loading: Loading;
+  urlAvatar: string;
 
-  //Chair
-  chair = ""
+  chair = "";
   lastPosition = new Vector3();
-  lastClip = ""
+  lastClip = "";
 
   constructor(
     scene: Scene,
     camera: PerspectiveCamera,
-    octree: Octree,
     items: Items,
     loading: Loading,
     urlAvatar: string
   ) {
-    this.loading = loading
-    this.urlAvatar = urlAvatar
+    this.loading = loading;
+    this.urlAvatar = urlAvatar;
     this.camera = camera;
     this.followCamera = new FollowCamera(this.camera);
-    this.octree = octree;
     this.items = items;
     this.scene = scene;
 
@@ -86,7 +83,6 @@ export default class PlayerController {
     this.playerModel.position.set(0, 0, 0);
     this.scene.add(this.playerModel);
 
-    //Criando cápsula para representar o bounding volume do jogador
     const capsuleGeometry = new CapsuleGeometry(
       this.capsuleRadius,
       this.capsuleHeight - 2 * this.capsuleRadius,
@@ -97,379 +93,331 @@ export default class PlayerController {
       color: 0xff0000,
       wireframe: true,
       visible: false,
-    }); // Wireframe para debug
+    });
     this.playerCapsule = new Mesh(capsuleGeometry, capsuleMaterial);
+    this.playerCapsule.position.set(0, this.capsuleHeight / 2, 0);
+    this.playerModel.add(this.playerCapsule);
 
-    //Posicionando a cápsula no jogador
-    this.playerCapsule.position.set(0, this.capsuleHeight / 2, 0); // Ajustando a altura da cápsula
-    this.playerModel.add(this.playerCapsule); // Adiciona a cápsula como parte do modelo do jogador
+    this.bvh = new BVHCollision(scene);
+    this.initBVH();
 
-    //Escutando o teclado
     document.addEventListener("keydown", this.onKeydown);
     document.addEventListener("keyup", this.onKeydown);
-
-    this.actions['terminal'] = false
+    this.actions["terminal"] = false;
   }
 
+  private async initBVH() {
+    await new Promise((r) => setTimeout(r, 3000));
+    this.bvh.buildFromColliders(colliders);
+    this.bvhReady = true;
+    console.log("[PlayerController] BVH pronto.");
+  }
+
+  refreshBVH() {
+    this.bvh.rebuild(colliders);
+  }
+
+  // ── Teclado ──────────────────────────────────────────────────────────────
+
   onKeydown = (e: KeyboardEvent) => {
-    this.keyBoard[e.code] = e.type === 'keydown';
-    this.callAction(e)
+    this.keyBoard[e.code] = e.type === "keydown";
+    this.callAction(e);
   };
 
   callAction(event: KeyboardEvent) {
-
     if (this.keyBoard["KeyT"]) {
-      if (!this.actions['terminal'] && infoPlayer.hasTerminal) {
+      if (!this.actions["terminal"] && infoPlayer.hasTerminal) {
         event.preventDefault();
-        elementos.showTerminal()
-        this.actions['terminal'] = true
-      }
-      else {
-        elementos.hideTerminal()
-        this.actions['terminal'] = false
+        elementos.showTerminal();
+        this.actions["terminal"] = true;
+      } else {
+        elementos.hideTerminal();
+        this.actions["terminal"] = false;
       }
     }
-    // else if (this.keyBoard["KeyL"] && infoPlayer.hasFlashlight) { //Liga a laterna
-    //   this.playerModel.turnFlashlight(!this.playerModel.IsTurnOnFlashlight)
-    // }
-
   }
 
+  // ── Animações ────────────────────────────────────────────────────────────
+
   setAction(action: AnimationAction) {
-
-    if (action != this.activedClip) {
-      switch (action) {
-        case this.playerModel.animationsAction["Sitting"]:
-          this.activedClip?.fadeOut(0);
-          action.reset().play();
-          break;
-        default:
-
-          if (this.activedClip == this.playerModel.animationsAction["Sitting"]) {
-            this.activedClip?.fadeOut(0);
-          }
-          else {
-            this.activedClip?.fadeOut(0.2);
-          }
-
-          action.reset().fadeIn(0.1).play();
+    if (action !== this.activedClip) {
+      if (this.activedClip === this.playerModel.animationsAction["Sitting"]) {
+        this.activedClip?.fadeOut(0);
+      } else {
+        this.activedClip?.fadeOut(0.2);
       }
+
+      if (action === this.playerModel.animationsAction["Sitting"]) {
+        this.activedClip?.fadeOut(0);
+        action.reset().play();
+      } else {
+        action.reset().fadeIn(0.1).play();
+      }
+
       this.activedClip = action;
     }
   }
 
-  checkCollision(newPosition: Vector3): boolean {
-    // Novo: Calculando a posição da cápsula do jogador  
-    const playerCapsuleTop = newPosition
-      .clone()
-      .add(new Vector3(0, this.capsuleHeight / 6, 0));
+  // ── Cadeira ──────────────────────────────────────────────────────────────
 
-    let isColliding = false;
-   
-    // Verificar a colisão com cada objeto
-    colliders.forEach((obj: Object3D) => {
+  toSit(chair: ChairInstance) {
+    if (this.isSitting) return;
+    if (!this.keyBoard["KeyF"]) return;
+    if (Auditorio.chairs.includes(chair.name)) return; // cadeira ocupada no servidor
 
-      const objectBoundingBox = new Box3().setFromObject(obj);
+    this.prevPlayerPosition.copy(this.playerModel.position);
+    this.prevPlayerQuaternion.copy(this.playerModel.quaternion);
 
-      // Novo: Verificando colisão entre a cápsula e a caixa de cada objeto
-      if (this.checkCapsuleCollisionWithBox(playerCapsuleTop, this.capsuleRadius, objectBoundingBox)) {
-        isColliding = true;
-  
-        if (obj.name == "degrau") {
-          this.upStair(obj)
-          this.isFloor = false
+    setTimeout(() => {
+      this.isSitting = true;
+      this.followCamera.mouseMoveActived = true;
 
-          if(infoPlayer.role == roles.PRESENTER || infoPlayer.role == roles.ADMIN){
-            eventEmitter.dispatchEvent(new CustomEvent("init_micro", {detail: true}));
-          }
-        }
-        else if(obj.name.includes("guest.")){
-          let id = obj.name.split(".")[1]
-          this.toInteract(id)
-        }
-        else {
-          this.toSit(obj);
-          this.isFloor = true
-          othersPlayers.collideId = ''
+      // Copia a rotação da cadeira (já está virada para o palco)
+      this.playerModel.quaternion.copy(chair.quaternion);
+      this.followCamera.setFollowMode(false);
 
-          if(infoPlayer.role == roles.PRESENTER || infoPlayer.role == roles.ADMIN){
-            eventEmitter.dispatchEvent(new CustomEvent("init_micro", {detail: false}));
-          }
-         
+      // Offset no espaço local da cadeira → world space
+      const seatOffset = new Vector3(0, 0.17, 0.2).applyQuaternion(chair.quaternion);
+      this.playerModel.position.copy(chair.position.clone().add(seatOffset));
 
-        }
-      }
-
-    });
-
-    return isColliding;
+      this.chair = chair.name;
+      SocketManager.io.emit("chair:add", this.chair);
+    }, 300);
   }
 
-  goUpStreet(obj: Object3D) {
-    const origin = new Vector3(this.playerModel.position.x, this.playerModel.position.y + 2, this.playerModel.position.z);
+  private leaveSit() {
+    setTimeout(() => {
+      this.isSitting = false;
+      this.followCamera.mouseMoveActived = false;
+      this.playerModel.position.copy(this.prevPlayerPosition);
+      this.playerModel.quaternion.copy(this.prevPlayerQuaternion);
+      this.followCamera.setFollowMode(true);
+      SocketManager.io.emit("chair:remove", this.chair);
+      this.chair = "";
+    }, 300);
+  }
 
-    this.raycaster.set(
-      origin,
-      this.downVector
-    )
+  private checkInteractionByProximity() {
+    const pos = this.playerModel.position;
 
-    const intersects = this.raycaster.intersectObject(obj, true); // true para checar filhos
-
-    if (intersects.length > 0) {
-      // Obter o primeiro ponto de colisão (mais próximo)
-      const groundY = intersects[0].point.y;
-
-      // Ajustar a posição do personagem para ficar sobre o solo
-      this.playerModel.position.y = groundY + 0.1; // 0.5 é um ajuste para não ficar "afundado"
+    // Cadeira mais próxima — O(n) mas sem alocar objetos
+    const nearestChair = this.items.getNearestChair(pos, 1.0);
+    if (nearestChair) {
+      this.toSit(nearestChair);
+      return;
     }
-  }
 
-  checkCapsuleCollisionWithBox(
-    capsuleTop: Vector3,
-    capsuleRadius: number,
-    box: Box3
-  ): boolean {
-    // Novo: Colisão cápsula vs caixa
-    const closestPoint = new Vector3();
-    box.clampPoint(capsuleTop, closestPoint);
-    const distanceSquared = closestPoint.distanceToSquared(capsuleTop);
-    return distanceSquared <= capsuleRadius * capsuleRadius;
-  }
-
-  toInteract(id: string) {   
-    othersPlayers.collideId = id
-  }
-
-  toSit(obj: Object3D) {
-    if (obj.name.includes("poltrona")) {
-      if (!this.isSitting && this.keyBoard["KeyF"]) {
-
-        if(!Auditorio.chairs.includes(obj.name))
-        {
-          this.prevPlayerPosition.copy(this.playerModel.position);
-          this.prevPlayerQuaternion.copy(this.playerModel.quaternion);
-  
-          setTimeout(() => {
-            this.isSitting = true;
-            this.followCamera.mouseMoveActived = true
-            const direction = new Vector3();
-            obj.getWorldDirection(direction);
-  
-            this.playerModel.quaternion.copy(obj.quaternion);
-  
-            this.followCamera.setFollowMode(false)
-            this.playerModel.position.copy(
-              obj.position.clone().add(new Vector3(0, .17, -.4))
-            );
-  
-          
-            this.playerModel.rotation.y = -Math.PI;
-  
-            this.chair = obj.name
-            SocketManager.io.emit("chair:add", this.chair)
-  
-          }, 1000);
-  
-        }
-
+    // Outros players (guests)
+    for (const obj of colliders) {
+      if (!obj.name.includes("guest.")) continue;
+      const objPos = new Vector3();
+      obj.getWorldPosition(objPos);
+      if (pos.distanceTo(objPos) <= 1.5) {
+        this.toInteract(obj.name.split(".")[1]);
+        return;
       }
     }
+
+    othersPlayers.collideId = "";
   }
 
-  upStair(degrau: Object3D) {
-    this.playerModel.position.y = degrau.position.y + 0.78
+  toInteract(id: string) {
+    othersPlayers.collideId = id;
   }
 
-  lerp(a: number, b: number, t: number) {
-    return a + (b - a) * t
-  }
+  // ── Update principal ─────────────────────────────────────────────────────
 
   update(delta: number) {
-
-    if (!this.isSitting) {
-
-      if (this.isFloor || this.playerModel.position.y <= 0) {
-        this.velocityY += this.gravity * delta; // Aplica a gravidade
-        this.playerModel.position.y += this.velocityY * delta; // Atualiza a posição Y do jogador
-
-        if (this.playerModel.position.y <= 0) { // Verifica se está no chão
-          this.playerModel.position.y = 0;
-          this.velocityY = 0; // Reseta a velocidade Y
-        }
-      }
+    if (this.isSitting) {
+      this.updateSitting();
+    } else {
+      this.updateMovement(delta);
     }
 
     this.playerModel.update(delta);
+    this.followCamera.updateCamera(this.playerModel, this.items.raycasterView);
+    this.emitPositionIfChanged();
+  }
 
-    // Movimentação do jogador
+  // ── Movimento ────────────────────────────────────────────────────────────
+
+  private updateMovement(delta: number) {
+
+    // ── Vetores de direção derivados da câmera ──────────────────────────────
+    //
+    //   forward  =  direção para onde a câmera aponta, projetada no plano XZ
+    //   right    =  forward × UP  (produto vetorial)
+    //               → sempre perpendicular ao forward,
+    //                 independente de qualquer rotação da câmera
+    //   left     =  −right
+    //
+    //   Regra de ouro: NUNCA troque os componentes X/Z manualmente.
+    //   Use sempre crossVectors — é a única forma correta de calcular
+    //   a direção lateral no espaço 3D.
+
     this.camera.getWorldDirection(this.playerDirection);
     this.playerDirection.y = 0;
     this.playerDirection.normalize();
 
+    //  right = forward × UP
+    //  Em Three.js com Y para cima: right = ( fz, 0, −fx )
+    const right = new Vector3().crossVectors(this.playerDirection, UP).normalize();
+
+    // Quaternion alvo: personagem vira para onde a câmera aponta
     const angle = Math.atan2(this.playerDirection.x, this.playerDirection.z);
-    this.quaternion.setFromAxisAngle(new Vector3(0, 1, 0), angle);
+    this.quaternion.setFromAxisAngle(UP, angle);
 
-    if (!this.isSitting) {
+    const isCrouch = this.playerModel.IsTurnOnFlashlight;
+    let moveInput = false;
 
-      let animationName = !this.playerModel.IsTurnOnFlashlight ? "Walk" : "Crouch"
+    // ── Input ───────────────────────────────────────────────────────────────
 
-      if (this.keyBoard["KeyW"] && !this.keyBoard["ShiftLeft"]) {
-        this.setAction(this.playerModel.animationsAction[animationName]);
+    if (this.keyBoard["KeyW"] && !this.keyBoard["ShiftLeft"]) {
+      const clip = isCrouch ? "Crouch" : "Walk";
+      this.setAction(this.playerModel.animationsAction[clip]);
+      this.clipName = clip;
+      this.smoothRotate(delta);
+      this.playerImpulse.addScaledVector(this.playerDirection, this.velocity * delta);
+      moveInput = true;
 
-        this.clipName = animationName
-        this.playerModel.quaternion.slerpQuaternions(
-          this.playerModel.quaternion,
-          this.quaternion,
-          delta * 4
-        );
+    } else if (this.keyBoard["KeyW"] && this.keyBoard["ShiftLeft"]) {
+      const clip = isCrouch ? "CrouchRun" : "Running";
+      this.setAction(this.playerModel.animationsAction[clip]);
+      this.clipName = clip;
+      this.smoothRotate(delta);
+      this.playerImpulse.addScaledVector(this.playerDirection, this.velocity * 2.4 * delta);
+      moveInput = true;
 
-        this.playerImpulse.add(
-          this.playerDirection.clone().multiplyScalar(this.velocity * delta)
-        );
+    } else if (this.keyBoard["KeyS"]) {
+      const clip = isCrouch ? "CrouchBack" : "Backward";
+      this.setAction(this.playerModel.animationsAction[clip]);
+      this.clipName = clip;
+      this.smoothRotate(delta);
+      // Backward = −forward
+      this.playerImpulse.addScaledVector(this.playerDirection, -(this.velocity - 1) * delta);
+      moveInput = true;
 
-      }
-      else if (this.keyBoard["KeyW"] && this.keyBoard["ShiftLeft"]) {
-        let runOrCrouch = !this.playerModel.IsTurnOnFlashlight ? "Running" : "CrouchRun"
-        this.setAction(this.playerModel.animationsAction[runOrCrouch]);
-        this.clipName = runOrCrouch
+    } else if (this.keyBoard["KeyA"]) {
+      const clip = isCrouch ? "CrouchLeft" : "WalkLeft";
+      this.setAction(this.playerModel.animationsAction[clip]);
+      this.clipName = clip;
+      this.smoothRotate(delta);
+      // Strafe esquerda = −right  (sempre correto independente da câmera)
+      this.playerImpulse.addScaledVector(right, -(this.velocity - 1) * delta);
+      moveInput = true;
 
-        this.playerModel.quaternion.slerpQuaternions(
-          this.playerModel.quaternion,
-          this.quaternion,
-          delta * 4
-        );
+    } else if (this.keyBoard["KeyD"]) {
+      const clip = isCrouch ? "CrouchRight" : "WalkRight";
+      this.setAction(this.playerModel.animationsAction[clip]);
+      this.clipName = clip;
+      this.smoothRotate(delta);
+      // Strafe direita = +right  (sempre correto independente da câmera)
+      this.playerImpulse.addScaledVector(right, (this.velocity - 1) * delta);
+      moveInput = true;
 
-        this.playerImpulse.add(
-          this.playerDirection.clone().multiplyScalar(this.velocity * 2.4 * delta)
-        );
-      }
-      else if (this.keyBoard["KeyS"]) {
-        let isCrouchBack = !this.playerModel.IsTurnOnFlashlight ? "Backward" : "CrouchBack"
-        this.setAction(this.playerModel.animationsAction[isCrouchBack]);
-        this.clipName = isCrouchBack
-        this.playerModel.quaternion.slerpQuaternions(
-          this.playerModel.quaternion,
-          this.quaternion,
-          delta * 4
-        );
+    } else if (this.keyBoard["KeyV"]) {
+      this.playerModel.turnFlashlight(false);
+      this.setAction(this.playerModel.animationsAction["Waving"]);
+      this.clipName = "Waving";
 
-        this.playerImpulse.add(
-          this.playerDirection.clone().multiplyScalar(-(this.velocity - 1) * delta)
-        );
+    } else {
+      const clip = isCrouch ? "CrouchIdle" : "Idle";
+      this.setAction(this.playerModel.animationsAction[clip]);
+      this.clipName = clip;
+    }
 
-      }
-      else if (this.keyBoard["KeyA"]) {
+    // ── Física BVH ──────────────────────────────────────────────────────────
 
-        animationName = animationName === "Crouch" ? "CrouchLeft" : "WalkLeft"
+    if (!this.bvhReady) {
+      this.playerModel.position.add(this.playerImpulse);
+      if (this.playerModel.position.y < 0) this.playerModel.position.y = 0;
+      this.playerImpulse.set(0, 0, 0);
+      return;
+    }
 
-        this.setAction(this.playerModel.animationsAction[animationName]);
-        this.clipName = animationName
+    const candidatePos = this.playerModel.position.clone().add(this.playerImpulse);
+    const moveDir = this.playerImpulse.clone().normalize();
 
-        this.playerModel.quaternion.slerpQuaternions(
-          this.playerModel.quaternion,
-          this.quaternion,
-          delta * 4
-        );
+    const result = this.bvh.check(candidatePos, moveDir);
 
-        this.playerDirection.set(
-          -this.playerDirection.z,
-          0,
-          this.playerDirection.x,
-        )        
+    // ── Y: snap suave ao chão ────────────────────────────────────────────────
+    if (result.onGround && result.groundY !== null) {
+      const targetY = result.groundY + this.bvh.skinWidth;
+      this.playerModel.position.y = this.lerp(
+        this.playerModel.position.y,
+        targetY,
+        Math.min(1, this.groundSnapSpeed * delta)
+      );
+      this.velocityY = 0;
+      this.isOnGround = true;
 
-        this.playerImpulse.add(
-          this.playerDirection.clone().multiplyScalar(-(this.velocity - 1) * delta)
-        );      
-      } else if (this.keyBoard["KeyD"]) {
-
-        animationName = animationName === "Crouch" ? "CrouchRight" : "WalkRight"
-
-        this.setAction(this.playerModel.animationsAction[animationName]);
-        this.clipName = animationName
-
-        this.playerModel.quaternion.slerpQuaternions(
-          this.playerModel.quaternion,
-          this.quaternion,
-          delta * 4
-        );
-
-        this.playerDirection.set(
-          this.playerDirection.z,
-          0,
-          -this.playerDirection.x,
-        )      
-
-        this.playerImpulse.add(
-          this.playerDirection.clone().multiplyScalar(-(this.velocity - 1) * delta)
-        );
-
-      } else if (this.keyBoard["KeyV"]) {
-        this.playerModel.turnFlashlight(false)
-        this.setAction(this.playerModel.animationsAction["Waving"]);
-        this.clipName = "Waving"
+      if (targetY > 0.5) {
+        if (infoPlayer.role === roles.PRESENTER || infoPlayer.role === roles.ADMIN) {
+          eventEmitter.dispatchEvent(new CustomEvent("init_micro", { detail: true }));
+        }
       } else {
-
-        let animationName = !this.playerModel.IsTurnOnFlashlight ? "Idle" : "CrouchIdle"
-        this.setAction(this.playerModel.animationsAction[animationName]);
-        this.clipName = animationName
-
-      }
-
-      const newPosition = this.playerModel.position
-        .clone()
-        .add(this.playerImpulse);
-
-
-      if (!this.playerImpulse.equals(new Vector3(0, 0, 0))) {
-
-        this.isCollided = this.checkCollision(newPosition)
-
-        if (!this.isCollided) {
-          this.playerModel.position.copy(newPosition)
-          this.isFloor = true
+        othersPlayers.collideId = "";
+        if (infoPlayer.role === roles.PRESENTER || infoPlayer.role === roles.ADMIN) {
+          eventEmitter.dispatchEvent(new CustomEvent("init_micro", { detail: false }));
         }
-        else if (!this.isFloor && this.isCollided) {
-          this.playerModel.position.x = newPosition.x
-          this.playerModel.position.z = newPosition.z
-        }
+      }
+    } else {
+      this.velocityY += this.gravity * delta;
+      this.playerModel.position.y += this.velocityY * delta;
+      this.isOnGround = false;
 
-        this.playerImpulse.set(0, 0, 0); // Reseta o impulso  
-      }
-      else if (this.isCollided) {  //Verifica se ainda há colisão mesmo parado 
-        this.checkCollision(newPosition.clone().add(
-          this.playerDirection.clone().multiplyScalar(this.velocity * delta)
-        ))
-      }
-      else {
-        this.isFloor = true
-      }
-    }
-    else {
-      this.setAction(this.playerModel.animationsAction["Sitting"]);
-      this.clipName = "Sitting"
-      if (this.isSitting && this.keyBoard["KeyF"]) {
-        setTimeout(() => {
-          this.isSitting = false;
-          this.followCamera.mouseMoveActived = false
-          this.playerModel.position.copy(this.prevPlayerPosition);
-          this.playerModel.quaternion.copy(this.prevPlayerQuaternion);
-          this.followCamera.setFollowMode(true)
-
-          SocketManager.io.emit("chair:remove", this.chair)
-          this.chair = ""
-        }, 1000);
+      if (this.playerModel.position.y <= 0) {
+        this.playerModel.position.y = 0;
+        this.velocityY = 0;
+        this.isOnGround = true;
       }
     }
 
-    this.followCamera.updateCamera(this.playerModel, this.items.raycasterView);
+    // ── XZ: movimento ou wall-slide ──────────────────────────────────────────
+    if (!result.wallBlocked || !moveInput) {
+      this.playerModel.position.x = candidatePos.x;
+      this.playerModel.position.z = candidatePos.z;
+    } else {
+      const slideX = this.playerModel.position.clone().add(new Vector3(this.playerImpulse.x, 0, 0));
+      const slideZ = this.playerModel.position.clone().add(new Vector3(0, 0, this.playerImpulse.z));
 
+      const rx = this.bvh.check(slideX, new Vector3(Math.sign(this.playerImpulse.x), 0, 0));
+      const rz = this.bvh.check(slideZ, new Vector3(0, 0, Math.sign(this.playerImpulse.z)));
 
+      if (!rx.wallBlocked) this.playerModel.position.x = slideX.x;
+      if (!rz.wallBlocked) this.playerModel.position.z = slideZ.z;
+    }
+
+    this.playerImpulse.set(0, 0, 0);
+    this.checkInteractionByProximity();
+  }
+
+  private updateSitting() {
+    this.setAction(this.playerModel.animationsAction["Sitting"]);
+    this.clipName = "Sitting";
+    if (this.keyBoard["KeyF"]) {
+      this.leaveSit();
+    }
+  }
+
+  private smoothRotate(delta: number) {
+    this.playerModel.quaternion.slerpQuaternions(
+      this.playerModel.quaternion,
+      this.quaternion,
+      delta * 4
+    );
+  }
+
+  private lerp(a: number, b: number, t: number) {
+    return a + (b - a) * t;
+  }
+
+  private emitPositionIfChanged() {
     if (
-      this.playerModel.position.distanceTo(this.lastPosition) > 0.2
-      || this.lastClip !== this.clipName
+      this.playerModel.position.distanceTo(this.lastPosition) > 0.2 ||
+      this.lastClip !== this.clipName
     ) {
-    
-      this.socket.io.emit('updatePosition', {
+      this.socket.io.emit("updatePosition", {
         x: this.playerModel.position.x,
         y: this.playerModel.position.y,
         z: this.playerModel.position.z,
@@ -478,14 +426,10 @@ export default class PlayerController {
         qz: this.playerModel.quaternion.z,
         qw: this.playerModel.quaternion.w,
         clip: this.clipName,
-        visible: true
-      })      
-      
+        visible: true,
+      });
       this.lastPosition.copy(this.playerModel.position);
-      this.lastClip = this.clipName
-
-  }
-
-    
+      this.lastClip = this.clipName;
+    }
   }
 }

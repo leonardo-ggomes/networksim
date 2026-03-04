@@ -1,310 +1,384 @@
 import {
-    BoxGeometry,
+    AxesHelper,
+    BufferGeometry,
+    Euler,
+    InstancedMesh,
+    Matrix4,
     Mesh,
     MeshBasicMaterial,
     MeshStandardMaterial,
-    MeshToonMaterial,
     Object3D,
     PointLight,
+    Quaternion,
     Scene,
     SphereGeometry,
     SpotLight,
-    Vector3
+    Vector3,
 } from "three";
+import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import Loading from "./Loading";
-import { gui } from "./GuiControl";
 import SlideShow from "./SlideShow";
 import SlideController from "./SlideControllers";
 import { colliders } from "./Colliders";
+import { SceneObjectUpdate } from "./types/EditorTypes";
+
+// ─── Rotação da cadeira ───────────────────────────────────────────────────────
+// Se a cadeira aparecer de cabeça para baixo, o modelo tem o eixo Y invertido.
+// Corrigimos com uma rotação em X de 180° (Math.PI) junto com a rotação Y.
+//
+// Combinações para testar caso ainda não fique certo:
+//   Caso A — só virada (padrão):       rotX=0,        rotY=Math.PI
+//   Caso B — de cabeça para baixo:     rotX=Math.PI,  rotY=0
+//   Caso C — de cabeça para baixo + virada (mais comum em GLTFs exportados do Blender):
+//             rotX=Math.PI,  rotY=Math.PI   ← começa por este
+const CHAIR_ROT_X = 0 //Math.PI; // corrige cabeça para baixo
+const CHAIR_ROT_Y = Math.PI; // vira para o palco
+
+
+export interface ChairInstance {
+    name: string;
+    instanceIndex: number;
+    position: Vector3;
+    quaternion: Quaternion;
+}
 
 export default class Items {
+    loading: Loading;
+    scene: Scene;
 
-    loading: Loading
-    scene: Scene
     items = [
         {
-            instances: 1,
             name: "auditorio",
-            path: "models/auditorio_v6.glb",
-            positions: [
-                { x: 0, y: 0, z: 0 }
-            ],
-            scales: [...new Array(1).fill(1)],
-            rotations: [
-                { x: 0, y: 0, z: 0 }
-            ],
+            path: "models/stage.glb",
+            scales: [1],
+            rotations: [{ x: 0, y: 0, z: 0 }],
+            positions: [{ x: 0, y: 0, z: 0 }],
             isCollider: true,
-            isGroup: true
+            isGroup: true,
         },
         {
-            instances: 1,
             name: "poltrona",
-            path: "models/poltrona_v2.glb",
-            positions: [
-                { x: 0, y: 0, z: 0 }
-            ],
-            scales: [...new Array(1).fill(1.5)],
-            rotations: [
-                { x: 0, y: 0, z: 0 }
-            ],
+            path: "models/theater_chair.glb",
+            scales: [2],
+            rotations: [{ x: 0, y: 0, z: 0 }],
+            positions: [{ x: 0, y: 0, z: 0 }],
             isCollider: true,
-            isGroup: true
-        }
-    ]
-    lights: Mesh[] = []
-    raycasterView: Object3D[] = []
-  
+            isGroup: true,
+        },
+    ];
+
+    lights: Mesh[] = [];
+    raycasterView: Object3D[] = [];
+    chairInstances: Map<string, ChairInstance> = new Map();
+    chairInstancedMesh?: InstancedMesh;
+
+    private editorObjects: Map<string, Object3D> = new Map();
+    itemsLoaded: Promise<void>;
+    private resolveItemsLoaded!: () => void;
+
     constructor(scene: Scene, loading: Loading) {
-        this.loading = loading
-        this.scene = scene
-        this.setItems()
-        // this.addLight(new Vector3(10.8, 9.5, -3)) //Adiciona luz
-      
-        // const axes = new AxesHelper()
-        // axes.position.set(0, 1, 0)
-        // this.scene.add(axes)
+        this.itemsLoaded = new Promise((r) => (this.resolveItemsLoaded = r));
+        this.loading = loading;
+        this.scene = scene;
+        this.setItems();
 
-        // const axesFolder = gui.addFolder("Axes Folder")
-
-        // axesFolder.add(axes.position, "x", -100, 100)
-        // axesFolder.add(axes.position, "y", -100, 100)
-        // axesFolder.add(axes.position, "z", -100, 100)
+        const axes = new AxesHelper();
+        axes.position.set(0, 1, 0);
+        this.scene.add(axes);
     }
 
-    createLadder() {
+    public getEditableObjects(): Object3D[] {
+        return Array.from(this.editorObjects.values());
+    }
 
-        const totalOfStairs = 3
-        for (let i = 1; i <= totalOfStairs; i++) {
-
-            const degraus = new Mesh(
-                new BoxGeometry(2, 0.3),
-                new MeshToonMaterial({ color: 0x000 })
-            )
-
-            degraus.name = "degrau"
-
-            // const axes = new BoxHelper(degraus)
-            // degraus.add(axes)
-
-            degraus.position.x = -24
-            degraus.position.z = 21 + (0.53 * i)
-            degraus.position.y = 0.2 * i
-
-            if (i === 3) {
-
-                const palcoChao = new Mesh(
-                    new BoxGeometry(8, 0.2, 13),
-                    new MeshBasicMaterial({ transparent: true, opacity: 0 })
-                )
-
-                palcoChao.name = "degrau"
-
-
-                // const chaoPalcoHelper = new BoxHelper(palcoChao)
-                // palcoChao.add(chaoPalcoHelper)
-
-                palcoChao.position.x = -24.5
-                palcoChao.position.z = 30
-                palcoChao.position.y = 0.8
-
-                this.scene.add(palcoChao)
-                colliders.push(palcoChao)
-
-                let auxChaoPalco = palcoChao.clone()
-                auxChaoPalco.name = "aux_chao"
-                auxChaoPalco.position.x = -24.5
-                auxChaoPalco.position.z = 30
-                auxChaoPalco.position.y = 0
-                colliders.push(auxChaoPalco)
-
-            }
-
-            this.scene.add(degraus)
-            colliders.push(degraus)
+    updateItemTransform(data: SceneObjectUpdate) {
+        const object = this.editorObjects.get(data.name);
+        if (object) {
+            object.position.set(data.position.x, data.position.y, data.position.z);
+            object.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
+            object.scale.set(data.scale.x, data.scale.y, data.scale.z);
         }
     }
 
-    setItems() {
+    async setItems() {
+        for (const item of this.items) {
+            const obj = await this.loading.loader.loadAsync(item.path);
+            obj.scene.name = item.name;
 
-        this.items.forEach(async (item) => {
-            const obj = await this.loading.loader.loadAsync(item.path)
-            obj.scene.name = item.name
+            if (!item.isGroup) continue;
 
-            // const axes = new BoxHelper(obj.scene)
-            // obj.scene.add(axes)
+            if (item.name === "poltrona") {
+                const baseChair = obj.scene;
+                baseChair.scale.setScalar(item.scales[0]);
+                await this.createChairsGrid(
+                    baseChair,
+                    6,    // fileiras
+                    12,   // cadeiras por fileira
+                    2.0,  // espaço X
+                    2.5,  // espaço Z
+                    8,    // corredor a cada N
+                    2.5,  // largura do corredor
+                    -10,  // startX
+                    10    // startZ
+                );
+            } else {
+                obj.scene.traverse((child) => {
+                    if (!(child as Mesh).isMesh) return;
+                    const mesh = child as Mesh;
 
-            if (item.isGroup) {
+                    if (mesh.geometry) mesh.geometry.computeBoundsTree();
 
-                if (item.name === "poltrona") {
-                    const baseChair = obj.scene
+                    const ignoredNames = [
+                        "house_house_0",
+                        "house_house_0004",
+                        "house_house_0005",
+                        "house_house",
+                    ];
 
-                    baseChair.scale.set(
-                        item.scales[0],
-                        item.scales[0],
-                        item.scales[0]
-                    )
+                    if (!ignoredNames.some((n) => mesh.name.includes(n))) {
+                        colliders.push(mesh);
+                        this.raycasterView.push(mesh);
+                    }
 
-                    this.createChairsGrid(
-                        baseChair,
-                        8,          // número de fileiras
-                        12,         // cadeiras por fileira
-                        1.2,        // espaço entre cadeiras (x)
-                        2.5,        // espaço entre fileiras (z)
-                        4,          // corredor a cada 4 cadeiras
-                        2.5,        // largura do corredor
-                        -10,        // posição inicial X
-                        10          // posição inicial Z
-                    )
-                }
-                else {
-                    obj.scene.traverse((child) => {
-                        if ((child as Mesh).isMesh) {
+                    if (mesh.name === "screen1_screen1_0") {
+                        mesh.material = new MeshBasicMaterial({ color: 0xffffff });
+                        const slide = new SlideShow(mesh, this.loading);
+                        slide.loadSlidesFromUrls(["img/Slide1.png"]);
+                        new SlideController(slide);
+                    }
+                });
 
-                            if (child.name.includes("house_house")) {
-
-                                if (child.name !== "house_house_0004" && child.name !== "house_house_0005") //Chao e teto
-                                {
-                                    colliders.push(child)
-                                    this.raycasterView.push(child)
-                                }
-                            }
-
-                            // if (child.name.includes("screen1_screen1_0")) 
-                            // {
-                            //     console.log(child.name)
-                            //     this.colliders.push(child)
-                            //     this.raycasterView.push(child)                                
-                            // }
-
-                            if (child.name.includes("stage_stage2_0")) 
-                            {
-                                child.name = "degrau"
-                                colliders.push(child)
-                                                
-                            }
-
-                            if (child.name.includes("backwall_backwall")) 
-                            {
-                                colliders.push(child)
-                                this.raycasterView.push(child)       
-                            }
-
-                            if (child.name.includes("dec_dec")) 
-                            {
-                                colliders.push(child)
-                                this.raycasterView.push(child)       
-                            }
-
-                            if (child.name == "screen1_screen1_0") 
-                            {
-                                const mesh = child as Mesh;
-                                // Limpa a textura original do GLTF
-                                mesh.material = new MeshBasicMaterial({color: 0xffffff})
-
-                                
-                                const slide = new SlideShow(mesh, this.loading)
-                                slide.loadSlidesFromUrls([
-                                    'img/Slide1.png'
-                                  ]);
-                           
-                                new SlideController(slide);
-                          
-                                this.raycasterView.push(child)
-                            }
-
-                          
-                
-                        }
-                    })
-
-                    obj.scene.scale.set(
-                        item.scales[0],
-                        item.scales[0],
-                        item.scales[0]
-                    )
-
-                    // obj.scene.position.set(
-                    //     item.positions[0].x,
-                    //     item.positions[0].y,
-                    //     item.positions[0].z
-                    // )
-
-                    this.scene.add(obj.scene)
-                }
-
-
+                obj.scene.scale.setScalar(item.scales[0]);
+                this.scene.add(obj.scene);
+                obj.scene.userData.isEditable = true;
+                this.editorObjects.set(item.name, obj.scene);
             }
+        }
 
-        })
+        this.resolveItemsLoaded();
+        console.log("[Items] Todos os itens carregados.");
+    }
+
+    async createChairsGrid(
+        baseMesh: Object3D,
+        numRows: number,
+        chairsPerRow: number,
+        chairSpacingX: number,
+        rowSpacingZ: number,
+        corridorEvery: number,
+        corridorWidth: number,
+        startX = 0,
+        startZ = 0
+    ) {
+        // ── 1. Coleta todos os sub-meshes e mescla em uma geometria só ───────────
+        //
+        // Modelos GLTF do Blender geralmente têm múltiplos sub-meshes
+        // (encosto, assento, pernas, etc.). Pegar só o primeiro deixa
+        // partes da cadeira faltando. Precisamos mesclar tudo.
+        //
+        // Usamos BufferGeometryUtils.mergeGeometries para juntar todos
+        // os sub-meshes numa geometria única, aplicando a matrix local
+        // de cada um para preservar posição/rotação/escala corretas.
+
+        baseMesh.updateWorldMatrix(true, true);
+        const baseMeshInvMatrix = baseMesh.matrixWorld.clone().invert();
+
+        const geometriesToMerge: BufferGeometry[] = [];
+        let originalMaterial: any = null;
+
+        baseMesh.traverse((child) => {
+            if (!(child as Mesh).isMesh) return;
+            const mesh = child as Mesh;
+
+            // Clona a geometria e aplica a matrix relativa ao baseMesh
+            const geo = mesh.geometry.clone();
+            const relativeMatrix = mesh.matrixWorld.clone().premultiply(baseMeshInvMatrix);
+            geo.applyMatrix4(relativeMatrix);
+
+            // Remove grupos de material — necessário para mergeGeometries sem índices de grupo
+            geo.clearGroups();
+
+            geometriesToMerge.push(geo);
+
+            // Usa o material do primeiro sub-mesh encontrado
+            if (!originalMaterial) {
+                originalMaterial = Array.isArray(mesh.material)
+                    ? mesh.material[0]
+                    : mesh.material;
+            }
+        });
+
+        if (geometriesToMerge.length === 0 || !originalMaterial) {
+            console.warn("[Items] Nenhuma geometria encontrada na poltrona.");
+            return;
+        }
+
+        // Mescla todas as partes em uma geometria única
+        const geometry = BufferGeometryUtils.mergeGeometries(geometriesToMerge, false);
+
+        if (!geometry) {
+            console.warn("[Items] Falha ao mesclar geometrias da poltrona.");
+            return;
+        }
+
+        geometry.computeBoundsTree();
+
+        // Libera as geometrias temporárias
+        geometriesToMerge.forEach((g) => g.dispose());
+
+        const totalChairs = numRows * chairsPerRow;
+
+        // ── 2. InstancedMesh com material original do GLTF ────────────────────
+        // Não alteramos o material — a iluminação vem dos SpotLights e AmbientLight.
+        const instancedMesh = new InstancedMesh(geometry, originalMaterial, totalChairs);
+        instancedMesh.name = "poltrona_grid";
+        instancedMesh.frustumCulled = true;
+        this.chairInstancedMesh = instancedMesh;
+
+        // Quaternion de rotação das cadeiras
+        const chairQuaternion = new Quaternion().setFromEuler(
+            new Euler(CHAIR_ROT_X, CHAIR_ROT_Y, 0, "XYZ")
+        );
+
+        // Escala neutra: a escala do baseMesh já foi "assada" na geometria
+        // via applyMatrix4 acima — não aplicar duas vezes
+        const neutralScale = new Vector3(1.4, 1.4, 1.4);
+        const matrix = new Matrix4();
+        let index = 0;
+
+        for (let row = 0; row < numRows; row++) {
+            let offsetX = startX;
+
+            for (let col = 0; col < chairsPerRow; col++) {
+                if (corridorEvery > 0 && col > 0 && col % corridorEvery === 0) {
+                    offsetX += corridorWidth;
+                }
+
+                const position = new Vector3(
+                    offsetX + col * chairSpacingX,
+                    0,   // Y=1 mantido do seu arquivo
+                    startZ + row * rowSpacingZ
+                );
+
+                matrix.compose(position, chairQuaternion, neutralScale);
+                instancedMesh.setMatrixAt(index, matrix);
+
+                const name = `poltrona_${row}_${col}`;
+                this.chairInstances.set(name, {
+                    name,
+                    instanceIndex: index,
+                    position: position.clone(),
+                    quaternion: chairQuaternion.clone(),
+                });
+
+                index++;
+            }
+        }
+
+        instancedMesh.instanceMatrix.needsUpdate = true;
+        this.scene.add(instancedMesh);
+        colliders.push(instancedMesh);
+        this.editorObjects.set("poltrona_grid", instancedMesh);
+
+        // ── 4. SpotLights nos corredores ──────────────────────────────────────
+        this.addChairSpotlights(
+            numRows, chairsPerRow, chairSpacingX, rowSpacingZ,
+            corridorEvery, corridorWidth, startX, startZ
+        );
+
+        console.log(`[Items] ${totalChairs} cadeiras — 1 draw call.`);
+    }
+
+    private addChairSpotlights(
+        numRows: number,
+        chairsPerRow: number,
+        chairSpacingX: number,
+        rowSpacingZ: number,
+        corridorEvery: number,
+        corridorWidth: number,
+        startX: number,
+        startZ: number
+    ) {
+        // Calcula o centro X de cada bloco entre corredores
+        const blockCentersX: number[] = [];
+        const numBlocks = Math.ceil(chairsPerRow / corridorEvery);
+
+        for (let b = 0; b < numBlocks; b++) {
+            const blockColStart = b * corridorEvery;
+            const blockColEnd   = Math.min(blockColStart + corridorEvery, chairsPerRow) - 1;
+            const xStart = startX + blockColStart * chairSpacingX + b * corridorWidth;
+            const xEnd   = startX + blockColEnd   * chairSpacingX + b * corridorWidth;
+            blockCentersX.push((xStart + xEnd) / 2);
+        }
+
+        const lightHeight = 5;
+        const rowStep     = 2;
+
+        for (const centerX of blockCentersX) {
+            for (let row = 0; row < numRows; row += rowStep) {
+                const centerZ = startZ + (row + rowStep / 2) * rowSpacingZ;
+
+                const spot = new SpotLight(
+                    0xffffff, // branco puro — ilumina a cor real do material
+                    30,       // intensidade alta para compensar luz ambiente baixa
+                    lightHeight + 6,
+                    Math.PI / 4,
+                    0.6,
+                    1.0
+                );
+
+                spot.position.set(centerX, lightHeight, centerZ);
+                spot.target.position.set(centerX, 0, centerZ);
+                spot.castShadow = false;
+
+                this.scene.add(spot.target);
+                this.scene.add(spot);
+            }
+        }
+
+        // NOTA: se as cadeiras ainda estiverem escuras, aumente a AmbientLight
+        // no Experience.ts:
+        //   this.ambientLight.intensity = 1.5  (era 0.2)
+        // Ou adicione uma luz direcional apontando para a plateia:
+        //   const fill = new DirectionalLight(0xffffff, 1)
+        //   fill.position.set(0, 10, 20)
+        //   this.scene.add(fill)
+    }
+
+    getNearestChair(playerPos: Vector3, maxDistance: number): ChairInstance | null {
+        let nearest: ChairInstance | null = null;
+        let nearestDist = maxDistance;
+
+        for (const chair of this.chairInstances.values()) {
+            const dist = playerPos.distanceTo(chair.position);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = chair;
+            }
+        }
+
+        return nearest;
     }
 
     addLight(position: Vector3) {
-        const lightGeometry = new SphereGeometry(.1, 2, 2)
+        const lightGeometry = new SphereGeometry(0.1, 2, 2);
         const lightMaterial = new MeshStandardMaterial({
-            emissive: 0xFFD700,
-            emissiveIntensity: 1.5
-        })
+            emissive: 0xffd700,
+            emissiveIntensity: 1.5,
+        });
+        const lightMesh = new Mesh(lightGeometry, lightMaterial);
+        lightMesh.position.copy(position);
 
-        const lightMesh = new Mesh(lightGeometry, lightMaterial)
-        lightMesh.position.copy(position)
+        const pointLight = new PointLight(0xffd700, 10, 2);
+        lightMesh.add(pointLight);
+        pointLight.position.y -= 1;
 
+        const spotLight = new SpotLight(0xffff80, 100, 20, Math.PI / 3, 0.4, 2);
+        spotLight.target.lookAt(0, 0, 0);
+        lightMesh.add(spotLight);
+        lightMesh.add(spotLight.target);
 
-        const pointLight = new PointLight(0xFFD700, 10, 2)
-        lightMesh.add(pointLight)
-        pointLight.position.y -= 1
-
-        const spotLight = new SpotLight(0xFFFF80, 100, 20, Math.PI / 3, .4, 2)
-        spotLight.target.lookAt(0, 0, 0)
-
-        lightMesh.add(spotLight)
-        lightMesh.add(spotLight.target)
-
-        this.scene.add(lightMesh)
-        this.lights.push(lightMesh)
-
+        this.scene.add(lightMesh);
+        this.lights.push(lightMesh);
     }
-
-    createChairsGrid = (
-        baseMesh: Object3D,
-        numRows: number,               // número de fileiras
-        chairsPerRow: number,         // número de cadeiras por fileira
-        chairSpacing: number,         // espaçamento entre cadeiras (x)
-        rowSpacing: number,           // espaçamento entre fileiras (z)
-        corridorEvery: number,        // a cada quantas cadeiras adicionar um corredor
-        corridorWidth: number,        // largura do corredor
-        startX = 0,                   // posição inicial em X
-        startZ = 0                    // posição inicial em Z
-    ) => {
-        let chairIndex = 0
-
-        for (let row = 0; row < numRows; row++) {
-            let offsetX = startX
-
-            for (let col = 0; col < chairsPerRow; col++) {
-
-                // Adiciona espaço para corredor
-                if (corridorEvery > 0 && col > 0 && col % corridorEvery === 0) {
-                    offsetX += corridorWidth
-                }
-
-                // Clona a cadeira
-                const chair = baseMesh.clone()
-                chair.name = `poltrona_${row}_${col}`
-
-                // Define posição da cadeira
-                chair.position.set(
-                    offsetX + (col * chairSpacing),
-                    0,
-                    startZ + (row * rowSpacing)
-                )
-
-                // Adiciona ao cenário
-                this.scene.add(chair)
-                colliders.push(chair)
-
-                chairIndex++
-            }
-        }
-    }
-
 }

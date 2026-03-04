@@ -101,11 +101,15 @@ export default class Experience{
         this.playerController = new PlayerController(
             this.scene, 
             this.camera,
-            this.octree,
             this.items,
             this.loading,
             this.urlAvatar
         )
+
+        this.items.itemsLoaded.then(() => {
+            this.playerController.refreshBVH()
+            console.log("[Experience] BVH buildado após loading completo.")
+        })
 
         //Inicia a posição do personagem
 
