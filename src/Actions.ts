@@ -980,40 +980,66 @@ kill -9 [PID] → Elimina um processo forçadamente.`,
         return ""
     },
     // ── Comando admin: iniciar aula do professor ──────────────────────────
-    // Uso: teach <lesson-id>   (ex: teach intro-c)
-    // Uso: teach list          (lista aulas disponíveis)
-    // Uso: teach next          (avança slide atual)
-    // Uso: teach stop          (encerra a aula)
+    // ── Comando teach — controle do professor NPC ────────────────────────────
+    // teach list                → lista aulas disponíveis
+    // teach start <lesson-id>   → NPC caminha ao palco e inicia a aula
+    // teach next                → avança slide
+    // teach prev                → volta slide
+    // teach stop                → encerra aula e NPC retorna
     "teach": (args: any) => {
         const isAdmin = infoPlayer.role === "admin" || infoPlayer.role === "moderator";
         if (!isAdmin) return "Permissao negada. Apenas admin ou moderador.";
 
-        const sub = args[0]?.toLowerCase();
+        const sub  = (args[0] ?? "").toLowerCase();
+        const arg2 = (args[1] ?? "").toLowerCase();
         const teacher = (window as any).__teacherNPC;
         if (!teacher) return "Erro: TeacherNPC nao inicializado.";
 
+        // ── teach list ────────────────────────────────────────────────────
         if (!sub || sub === "list") {
             return [
-                "Aulas disponíveis:",
-                "  teach intro-c        Introducao a linguagem C",
-                "  teach conditionals   Condicionais em C",
-                "  teach loops          Loops em C",
-                "---",
-                "  teach start          Inicia Slide",
-                "  teach next           Avanca slide",
-                "  teach prev           Volta slide",
-                "  teach stop           Encerra aula",
+                "Uso do comando teach:",
+                "  teach start intro-c        → Intro a linguagem C",
+                "  teach start conditionals   → Condicionais em C",
+                "  teach start loops          → Loops em C",
+                "─────────────────────────────",
+                "  teach next    → avanca slide",
+                "  teach prev    → volta slide",
+                "  teach stop    → encerra aula",
             ].join("\n");
         }
-        if (sub === "next")  { teacher.nextSlide(); return "Avancando slide..."; }
-        if (sub === "prev")  { teacher.prevSlide(); return "Voltando slide..."; }
-        if (sub === "stop")  {
-            teacher.endLessonNow?.();
-            return "Aula encerrada pelo admin.";
+
+        // ── teach start <lesson-id> ───────────────────────────────────────
+        if (sub === "start") {
+            if (!arg2) return [
+                "Uso: teach start <lesson-id>",
+                "  teach start intro-c",
+                "  teach start conditionals",
+                "  teach start loops",
+            ].join("\n");
+
+            teacher.startLesson(arg2);
+            return `Prof. Chico indo ao palco — aula: ${arg2}`;
         }
-        // Inicia a aula pelo id
-        teacher.startLesson(sub);
-        return `Iniciando aula: ${sub}`;
+
+        // ── teach next / prev / stop ──────────────────────────────────────
+        if (sub === "next") {
+            if (!teacher.isTeaching) return "Nenhuma aula em andamento.";
+            teacher.nextSlide();
+            return `Avancando: ${teacher.lessonProgress}`;
+        }
+        if (sub === "prev") {
+            if (!teacher.isTeaching) return "Nenhuma aula em andamento.";
+            teacher.prevSlide();
+            return `Voltando: ${teacher.lessonProgress}`;
+        }
+        if (sub === "stop") {
+            if (!teacher.isTeaching) return "Nenhuma aula em andamento.";
+            teacher.endLessonNow?.();
+            return "Aula encerrada. Prof. Chico retornando ao ponto de espera.";
+        }
+
+        return `Subcomando desconhecido: '${sub}'. Digite: teach list`;
     }
 };
 

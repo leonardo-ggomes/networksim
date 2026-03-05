@@ -32,7 +32,7 @@ import { EntityManager } from "yuka";
 import { npcPaths } from "./Path";
 import VoiceChatManager from "./VoiceChatManager";
 import Guest from "./Guest";
-import {MissionManagers} from "./MissionManager";
+import {MissionManager} from "./MissionManager";
 import VitalSystem from "./VitalSystem";
 import TeacherNPC from "./Teachernpc";
 
@@ -53,7 +53,7 @@ export default class Experience{
     voiceChatManager: VoiceChatManager
     urlAvatar:      string
     playerName:     string
-    missionManager: MissionManagers
+    missionManager: MissionManager
     vitalSystem:    VitalSystem
     teacherNPC:     TeacherNPC
 
@@ -166,7 +166,7 @@ export default class Experience{
         this.vitalSystem = new VitalSystem(this.playerController);
 
         // ── MissionManager: sequência de missões centralizada ─────────────
-        this.missionManager = new MissionManagers(this.scene, this.loading);
+        this.missionManager = new MissionManager(this.scene, this.loading);
         this.missionManager.start();
 
         // ── TeacherNPC: professor que entrega notebook e ministra aulas ──────

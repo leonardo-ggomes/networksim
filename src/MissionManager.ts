@@ -266,7 +266,7 @@ function buildMissions(): MissionDef[] {
 
 // ── MissionManager ────────────────────────────────────────────────────────────
 
-export class MissionManagers {
+export class MissionManager {
 
     private scene:    Scene;
     private loading:  Loading;

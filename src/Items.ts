@@ -128,11 +128,8 @@ export default class Items {
 
                     if (mesh.geometry) mesh.geometry.computeBoundsTree();
 
-                    const ignoredNames = [
-                        "house_house_0",
-                        "house_house_0004",
-                        "house_house_0005",
-                        "house_house",
+                    const ignoredNames = [                        
+                        "house_ground",
                     ];
 
                     if (!ignoredNames.some((n) => mesh.name.includes(n))) {
