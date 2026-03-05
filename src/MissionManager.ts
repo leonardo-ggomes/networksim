@@ -210,10 +210,8 @@ export default class MissionManager {
         );
         this.active = mission;
 
-        // Registra no HUD (lista de missões) e mostra instrução após 3s
+        // Registra missao no HUD (uma unica chamada)
         window.HUD?.setMission(def.id, def.title, def.instruction);
-        setTimeout(() => showInstruction(def.title, def.instruction), 15000);
-        elementos.setCurrentMission(def.title);
 
         // Escuta o evento de conclusão
         const eventName = def.listenTo ?? 'collided';
@@ -227,6 +225,8 @@ export default class MissionManager {
 
     // ── Conclui a missão atual e aplica recompensas ───────────────────────────
     private completeCurrent(mission: Mission, def: MissionDef) {
+        // Remove listeners PRIMEIRO para o callback nao disparar novamente
+        mission.clearAllListeners();
         mission.finished();
         mission.removeMissionPoint(mission.missionPoint, this.scene);
 
@@ -263,9 +263,11 @@ export default class MissionManager {
     get missionRadius() { return this.currentDef?.radius ?? 2; }
 
     checkZone(playerPos: Vector3) {
-        if (!this.active || this.currentDef?.id !== this.defs[this.index - 1]?.id) {
-            this.active?.checkMissionZone(playerPos, this.active.missionPoint.position, this.missionRadius);
-        }
-        this.active?.checkMissionZone(playerPos, this.active.missionPoint.position, this.missionRadius);
+        if (!this.active) return;
+        this.active.checkMissionZone(
+            playerPos,
+            this.active.missionPoint.position,
+            this.missionRadius
+        );
     }
 }
