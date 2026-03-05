@@ -1,5 +1,7 @@
+import { CCompiler } from "./Compiler";
 import { infoPlayer, othersPlayers, roles } from "./InfoPlayer";
 import SocketManager from "./SocketManager";
+
 
 //Compartilhado globalmente
 export const eventEmitter = new EventTarget();
@@ -198,6 +200,7 @@ function createTerminal() {
 
     const tabDefs = [
         { id:"terminal",  label:"Terminal",  icon:"bx-terminal" },
+        { id:"editor-c",  label:"Editor C",  icon:"bx-code-alt" },
         { id:"processes", label:"Processos", icon:"bx-chip" },
         { id:"files",     label:"Arquivos",  icon:"bx-folder" },
     ];
@@ -354,8 +357,143 @@ function createTerminal() {
     });
 
     // ══════════════════════════════════════════════════════════════════════════
-    // PAINEL: ARQUIVOS
+    // PAINEL: EDITOR C
     // ══════════════════════════════════════════════════════════════════════════
+    const cPanel = panels["editor-c"];
+    css(cPanel, { flexDirection:"column", position:"relative" });
+
+    const cHeader = document.createElement("div");
+    css(cHeader, { padding:"7px 14px", borderBottom:`1px solid ${V.border}`,
+                   display:"flex", alignItems:"center", justifyContent:"space-between",
+                   fontFamily:"'Rajdhani',sans-serif", gap:"8px" });
+
+    const cTitle = document.createElement("span");
+    css(cTitle, { fontSize:"10px", letterSpacing:".15em", color:V.muted,
+                  textTransform:"uppercase", display:"flex", alignItems:"center", gap:"6px" });
+    cTitle.innerHTML = `<i class='bx bx-code-alt' style="color:${V.green}"></i> COMPILADOR C — HackOS GCC`;
+
+    const cActions = document.createElement("div");
+    cActions.style.display = "flex"; cActions.style.gap = "8px";
+
+    const runBtn = document.createElement("button");
+    css(runBtn, { fontFamily:"'Rajdhani',sans-serif", fontSize:"11px", fontWeight:"700",
+                  letterSpacing:".1em", textTransform:"uppercase", padding:"4px 14px",
+                  background:`rgba(0,255,157,0.1)`, border:`1px solid ${V.green}`,
+                  color:V.green, borderRadius:"3px", cursor:"pointer",
+                  display:"flex", alignItems:"center", gap:"5px" });
+    runBtn.innerHTML = `<i class='bx bx-play-circle'></i> Compilar &amp; Executar`;
+
+    const clearCBtn = document.createElement("button");
+    css(clearCBtn, { fontFamily:"'Rajdhani',sans-serif", fontSize:"11px", fontWeight:"600",
+                     letterSpacing:".1em", textTransform:"uppercase", padding:"4px 10px",
+                     background:"transparent", border:`1px solid ${V.border}`,
+                     color:V.muted, borderRadius:"3px", cursor:"pointer" });
+    clearCBtn.textContent = "Limpar";
+
+    cActions.append(clearCBtn, runBtn);
+    cHeader.append(cTitle, cActions);
+    cPanel.appendChild(cHeader);
+
+    const cBody = document.createElement("div");
+    css(cBody, { display:"flex", flex:"1", overflow:"hidden" });
+
+    const cEditorWrap = document.createElement("div");
+    css(cEditorWrap, { flex:"1", display:"flex", flexDirection:"column",
+                       borderRight:`1px solid ${V.border}` });
+
+    const cLangBadge = document.createElement("div");
+    css(cLangBadge, { padding:"4px 14px", fontSize:"9px", letterSpacing:".14em",
+                      color:V.muted, textTransform:"uppercase", borderBottom:`1px solid ${V.border}`,
+                      display:"flex", gap:"10px", alignItems:"center" });
+    cLangBadge.innerHTML = `<span style="color:${V.yellow}">C</span> main.c &nbsp;|&nbsp; <span id="__c-status" style="color:${V.muted}">Pronto</span>`;
+
+    const cTextarea = document.createElement("textarea");
+    cTextarea.id = "__c-editor";
+    css(cTextarea, { flex:"1", background:"transparent", border:"none", outline:"none",
+                     color:V.text, fontFamily:"'Share Tech Mono', monospace",
+                     fontSize:"12px", lineHeight:"1.7", padding:"12px 14px",
+                     resize:"none", tabSize:"4" });
+    cTextarea.spellcheck = false;
+    cTextarea.value = '#include <stdio.h>\n\nint main() {\n    printf("Ola, Mundo!\\n");\n    return 0;\n}';
+
+    cTextarea.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Tab") {
+            e.preventDefault();
+            const s = cTextarea.selectionStart;
+            cTextarea.value = cTextarea.value.slice(0, s) + "    " + cTextarea.value.slice(s);
+            cTextarea.selectionStart = cTextarea.selectionEnd = s + 4;
+        }
+    });
+    cTextarea.addEventListener("click",    e => e.stopPropagation());
+    cTextarea.addEventListener("keypress", e => e.stopPropagation());
+    cEditorWrap.append(cLangBadge, cTextarea);
+
+    const cOutputWrap = document.createElement("div");
+    css(cOutputWrap, { width:"260px", display:"flex", flexDirection:"column" });
+
+    const cOutHeader = document.createElement("div");
+    css(cOutHeader, { padding:"4px 14px", fontSize:"9px", letterSpacing:".14em",
+                      color:V.muted, textTransform:"uppercase", borderBottom:`1px solid ${V.border}`,
+                      display:"flex", alignItems:"center", gap:"6px" });
+    cOutHeader.innerHTML = `<i class='bx bx-terminal' style="color:${V.green};font-size:12px"></i> SAIDA`;
+
+    const cOutput = document.createElement("pre");
+    cOutput.id = "__c-output";
+    css(cOutput, { flex:"1", overflowY:"auto", margin:"0", padding:"12px 14px",
+                   fontSize:"11px", lineHeight:"1.6", color:V.text,
+                   fontFamily:"'Share Tech Mono', monospace", whiteSpace:"pre-wrap",
+                   background:"rgba(0,0,0,0.2)" });
+    cOutput.textContent = "// Execute para ver a saida";
+
+    cOutputWrap.append(cOutHeader, cOutput);
+    cBody.append(cEditorWrap, cOutputWrap);
+    cPanel.appendChild(cBody);
+    device.appendChild(cPanel);
+
+    function runCCode() {
+        const ta     = document.getElementById("__c-editor") as HTMLTextAreaElement;
+        const output = document.getElementById("__c-output")  as HTMLPreElement;
+        const status = document.getElementById("__c-status")  as HTMLSpanElement;
+        if (!ta || !output || !status) return;
+        const src = ta.value;
+        status.textContent = "Compilando..."; status.style.color = V.yellow;
+        output.textContent = ""; output.style.color = V.text;
+        setTimeout(() => {
+            const result = CCompiler.run(src);
+            if (result.success) {
+                status.textContent = "OK"; status.style.color = V.green;
+                output.textContent = result.output || "(sem saida)";
+                eventEmitter.dispatchEvent(new CustomEvent("c:output", {
+                    detail: { output: result.output, source: src }
+                }));
+            } else {
+                status.textContent = "ERRO"; status.style.color = V.red;
+                output.style.color = V.red;
+                output.textContent = result.errors.map((e: string, i: number) => `[Erro ${i+1}] ${e}`).join("\n");
+            }
+        }, 80);
+    }
+
+    runBtn.addEventListener("click", runCCode);
+    clearCBtn.addEventListener("click", () => {
+        const ta = document.getElementById("__c-editor") as HTMLTextAreaElement;
+        if (ta) ta.value = '#include <stdio.h>\n\nint main() {\n    \n    return 0;\n}';
+        const out = document.getElementById("__c-output") as HTMLPreElement;
+        if (out) { out.textContent = "// Execute para ver a saida"; out.style.color = V.text; }
+        const st = document.getElementById("__c-status") as HTMLSpanElement;
+        if (st) { st.textContent = "Pronto"; st.style.color = V.muted; }
+    });
+
+    // Quando professor mudar slide, preenche editor com codigo de exemplo
+    eventEmitter.addEventListener("teacher:slide", (e: Event) => {
+        const { slide } = (e as CustomEvent).detail;
+        if (slide.code) {
+            const ta = document.getElementById("__c-editor") as HTMLTextAreaElement;
+            if (ta) ta.value = `#include <stdio.h>\n\n${slide.code}`;
+        }
+    });
+
     const filePanel = panels["files"];
     css(filePanel, { flexDirection:"row" });
 

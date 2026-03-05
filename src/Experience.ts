@@ -32,7 +32,7 @@ import { EntityManager } from "yuka";
 import { npcPaths } from "./Path";
 import VoiceChatManager from "./VoiceChatManager";
 import Guest from "./Guest";
-import MissionManager from "./MissionManager";
+import {MissionManager} from "./MissionManager";
 import VitalSystem from "./VitalSystem";
 
 export default class Experience{

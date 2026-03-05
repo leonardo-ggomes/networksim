@@ -19,14 +19,21 @@ export default class FollowCamera {
     constructor(camera: Camera) {
         this.camera = camera;
         
-        document.addEventListener("mousedown", () => (this.mousePressed = true));
+        // Bloqueia orbit quando qualquer overlay de UI estiver aberto
+        const uiOpen = () => !!document.getElementById("framescreen");
+
+        document.addEventListener("mousedown", () => {
+            if (uiOpen()) return;
+            this.mousePressed = true;
+        });
         document.addEventListener("mouseup", () => (this.mousePressed = false));
-        
+
         document.addEventListener("mousemove", (e) => {
-            if (this.mousePressed || this.mouseMoveActived) {   
-                this.yaw -= e.movementX * this.rotationSpeed;  
+            if (uiOpen()) { this.mousePressed = false; return; }
+            if (this.mousePressed || this.mouseMoveActived) {
+                this.yaw -= e.movementX * this.rotationSpeed;
                 this.pitch = Math.max(-0.2, Math.min(0.2, this.pitch - e.movementY * this.rotationSpeed));
-            }         
+            }
         });
 
 
