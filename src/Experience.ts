@@ -32,8 +32,9 @@ import { EntityManager } from "yuka";
 import { npcPaths } from "./Path";
 import VoiceChatManager from "./VoiceChatManager";
 import Guest from "./Guest";
-import {MissionManager} from "./MissionManager";
+import {MissionManagers} from "./MissionManager";
 import VitalSystem from "./VitalSystem";
+import TeacherNPC from "./Teachernpc";
 
 export default class Experience{
 
@@ -52,8 +53,9 @@ export default class Experience{
     voiceChatManager: VoiceChatManager
     urlAvatar:      string
     playerName:     string
-    missionManager: MissionManager
+    missionManager: MissionManagers
     vitalSystem:    VitalSystem
+    teacherNPC:     TeacherNPC
 
     constructor(loading: Loading, avatarUrl: string, scene: Scene, playerName = 'Agente')
     {
@@ -164,8 +166,17 @@ export default class Experience{
         this.vitalSystem = new VitalSystem(this.playerController);
 
         // ── MissionManager: sequência de missões centralizada ─────────────
-        this.missionManager = new MissionManager(this.scene, this.loading);
+        this.missionManager = new MissionManagers(this.scene, this.loading);
         this.missionManager.start();
+
+        // ── TeacherNPC: professor que entrega notebook e ministra aulas ──────
+        this.teacherNPC = new TeacherNPC(this.scene, this.loading);
+        this.teacherNPC.setPlayerModel(this.playerController.playerModel);
+        this.entityManager.add(this.teacherNPC);  // Yuka gerencia o update()
+
+        // Expõe globalmente para o comando "teach" do terminal acessar
+        (window as any).__teacherNPC = this.teacherNPC;
+
     }
   
     setScene(){      
@@ -373,6 +384,7 @@ export default class Experience{
         this.vitalSystem.update(delta)
 
         // Verifica zona da missão ativa
+        this.teacherNPC.tick(this.camera)  // label 2D (update() é pelo entityManager)
         this.missionManager.checkZone(this.playerController.playerModel.position)
 
         this.entityManager.update(delta)

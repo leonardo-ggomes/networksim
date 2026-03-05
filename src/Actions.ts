@@ -978,6 +978,42 @@ kill -9 [PID] → Elimina um processo forçadamente.`,
         const clean = args.filter((a: string) => !a.startsWith("-"))
         SocketManager.io.emit("sendRemoteAccess", { currentDir: "/", command: "gpasswd", dir: clean[0] || "", name: clean[1] || "" })
         return ""
+    },
+    // ── Comando admin: iniciar aula do professor ──────────────────────────
+    // Uso: teach <lesson-id>   (ex: teach intro-c)
+    // Uso: teach list          (lista aulas disponíveis)
+    // Uso: teach next          (avança slide atual)
+    // Uso: teach stop          (encerra a aula)
+    "teach": (args: any) => {
+        const isAdmin = infoPlayer.role === "admin" || infoPlayer.role === "moderator";
+        if (!isAdmin) return "Permissao negada. Apenas admin ou moderador.";
+
+        const sub = args[0]?.toLowerCase();
+        const teacher = (window as any).__teacherNPC;
+        if (!teacher) return "Erro: TeacherNPC nao inicializado.";
+
+        if (!sub || sub === "list") {
+            return [
+                "Aulas disponíveis:",
+                "  teach intro-c        Introducao a linguagem C",
+                "  teach conditionals   Condicionais em C",
+                "  teach loops          Loops em C",
+                "---",
+                "  teach start          Inicia Slide",
+                "  teach next           Avanca slide",
+                "  teach prev           Volta slide",
+                "  teach stop           Encerra aula",
+            ].join("\n");
+        }
+        if (sub === "next")  { teacher.nextSlide(); return "Avancando slide..."; }
+        if (sub === "prev")  { teacher.prevSlide(); return "Voltando slide..."; }
+        if (sub === "stop")  {
+            teacher.endLessonNow?.();
+            return "Aula encerrada pelo admin.";
+        }
+        // Inicia a aula pelo id
+        teacher.startLesson(sub);
+        return `Iniciando aula: ${sub}`;
     }
 };
 

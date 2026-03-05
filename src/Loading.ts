@@ -24,6 +24,19 @@ export default class Loading
         this.loadGlobalAnimations()
     }
 
+    /**
+     * Cria um GLTFLoader independente do LoadingManager principal.
+     * Use para carregar assets APÓS o loading inicial (ex: TeacherNPC)
+     * sem reativar a barra de progresso.
+     */
+    createIndependentLoader(): GLTFLoader {
+        const draco = new DRACOLoader();
+        draco.setDecoderPath("draco/");
+        const loader = new GLTFLoader();
+        loader.setDRACOLoader(draco);
+        return loader;
+    }
+
     private showProgressBar()
     {
         // ── Keyframes e fontes (injetados uma única vez) ──────────────────────

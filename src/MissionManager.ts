@@ -61,43 +61,45 @@ export type MissionDef = {
 // ── Missões do jogo ───────────────────────────────────────────────────────────
 // Edite aqui para adicionar / remover / reordenar missões.
 
+// ── Helpers de validação de saída C ──────────────────────────────────────────
+
+/** Remove espaços extras e normaliza quebras de linha da saída do compilador */
+function normalizeOutput(s: string): string {
+    return s.replace(/\r/g, '').trim().replace(/\s+/g, ' ');
+}
+
+/** Verifica se a saída contém todas as linhas esperadas (em ordem) */
+function outputContainsLines(output: string, expected: string[]): boolean {
+    const lines = output.split('\n').map(l => l.trim()).filter(Boolean);
+    let ei = 0;
+    for (const line of lines) {
+        if (line === expected[ei]) ei++;
+        if (ei === expected.length) return true;
+    }
+    return false;
+}
+
+// ── Definição das missões ─────────────────────────────────────────────────────
+
 function buildMissions(): MissionDef[] {
     return [
 
-        // ── Missão 1: Encontrar o dispositivo ──────────────────────────────
-        {
-            id:    'find-device',
-            title: '🖥️ Encontre o dispositivo',
-            instruction: 'Você precisa de um computador para realizar as atividades do evento.',
-            position: new Vector3(11.4, 1.15, 30),
-            radius:   2.5,
-            reward:   { money: 200, energy: 10 },
-            helper:   true,
-            listenTo: 'collided',
-            check: (e) => (e.detail as any).collided === true,
-            onComplete: () => {
-                infoPlayer.hasTerminal = true;
-                showInstruction('Dispositivo habilitado', 'Pressione T para usar o terminal.');
-            }
-        },
-
-        // ── Missão 2: Eliminar o malware ───────────────────────────────────
+        // ── Missão 1: Eliminar o malware (processo) ────────────────────────
         {
             id:    'kill-malware',
             title: '🦠 Elimine o Malware',
-            instruction: 'Um processo suspeito foi detectado. Abra o terminal e encerre o PID 7777.',
+            instruction: 'Um processo suspeito foi detectado. Abra o terminal (T) e encerre o PID 7777 com: kill -9 7777',
             position: new Vector3(-11.4, 1.15, 30),
             radius:   2.5,
-            reward:   { money: 500, health: 15, energy: 5 },
-            penalty:  { energy: -10 },
+            reward:   { money: 400, health: 10, energy: 5 },
             helper:   true,
             listenTo: 'remove_pid',
             onStart: () => {
                 elementos.setProcesses('anomimo', 7777, 849.90, 47);
                 setTimeout(() => showInstruction(
-                    'Elimine o Malware',
-                    'Há suspeita que o hacker executou um programa malicioso antes do blackout.'
-                ), 15000);
+                    '🦠 Elimine o Malware',
+                    'Há suspeita que o hacker executou um programa malicioso. Use: kill -9 7777'
+                ), 18000);
             },
             check: (e) => {
                 const { processes, isCollided } = e.detail as any;
@@ -110,49 +112,150 @@ function buildMissions(): MissionDef[] {
             }
         },
 
-        // ── Missão 3: Corrigir o bug no código ────────────────────────────
+        // ── Missão 2: Olá Mundo em C ───────────────────────────────────────
         {
-            id:    'fix-bug',
-            title: '🐛 Corrija o bug',
-            instruction: 'O hacker implantou uma falha no código. Corrija o mais rápido possível.',
-            position: new Vector3(10, 0.5, 30),
-            radius:   2.5,
-            reward:   { money: 750, health: 10 },
-            helper:   true,
-            listenTo: 'new_code',
+            id:    'c-hello',
+            title: '👨‍💻 Olá Mundo em C',
+            instruction: 'Abra o terminal (T) → aba "Editor C" e escreva um programa que imprima exatamente: Ola, Mundo!',
+            position: new Vector3(0, 0, 10),
+            radius:   15,
+            reward:   { money: 300, energy: 10 },
+            helper:   false,
+            listenTo: 'c:output',
             onStart: () => {
-                elementos.setFilesInMission('/', 'app.js',
-                    `1 #Código\n` +
-                    `2 function guardarCarro(vaga = 1){\n` +
-                    `3\n` +
-                    `4   while(pos <= 20){\n` +
-                    `5       if(vaga == pos){\n` +
-                    `6            console.log("Vaga reservada: "+pos)\n` +
-                    `7        }\n` +
-                    `8        pos++\n` +
-                    `9   }\n` +
-                    `10 }`
+                showInstruction(
+                    '👨‍💻 Desafio C #1',
+                    'Escreva um programa C que imprima: Ola, Mundo!\nUse printf() e compile com o botão verde.'
                 );
-                setTimeout(() => showInstruction(
-                    'Sistema parado',
-                    'O hacker implantou uma falha no código, corrija o mais rápido possível.'
-                ), 15000);
             },
             check: (e) => {
-                const { line, code, isCollided } = e.detail as any;
-                return isCollided &&
-                       line === 3 &&
-                       String(code).includes('let pos = 0');
+                const { output } = e.detail as any;
+                return normalizeOutput(output) === 'Ola, Mundo!';
+            },
+            onComplete: () => {
+                showInstruction('✅ Correto!', 'Seu primeiro programa C funcionou!');
             }
         },
 
-        // ── Missão 4: Participar da apresentação ──────────────────────────
+        // ── Missão 3: Variáveis e aritmética ──────────────────────────────
+        {
+            id:    'c-arithmetic',
+            title: '🔢 Variáveis e Aritmética',
+            instruction: 'Declare duas variáveis int, some-as e imprima o resultado. Ex: a=7, b=3 → imprima 10',
+            position: new Vector3(0, 0, 10),
+            radius:   15,
+            reward:   { money: 400, energy: 5 },
+            helper:   false,
+            listenTo: 'c:output',
+            onStart: () => {
+                showInstruction(
+                    '🔢 Desafio C #2 — Aritmética',
+                    'Declare: int a = 7, b = 3;\nImprima a soma: printf("%d", a + b);\nResultado esperado: 10'
+                );
+            },
+            check: (e) => {
+                const { output, source } = e.detail as any;
+                const out = normalizeOutput(output);
+                // Aceita qualquer soma correta onde resultado seja número inteiro
+                const num = parseInt(out, 10);
+                const hasVars = /int\s+\w+\s*=/.test(source);
+                const hasSum  = /\+/.test(source);
+                return !isNaN(num) && hasVars && hasSum;
+            },
+            onComplete: () => {
+                showInstruction('✅ Correto!', 'Você dominou variáveis e aritmética em C!');
+            }
+        },
+
+        // ── Missão 4: Condicional ─────────────────────────────────────────
+        {
+            id:    'c-conditional',
+            title: '🔀 Use um if/else',
+            instruction: 'Escreva um programa C que verifique se um número é positivo ou negativo e imprima "positivo" ou "negativo".',
+            position: new Vector3(0, 0, 10),
+            radius:   15,
+            reward:   { money: 500, health: 10 },
+            helper:   false,
+            listenTo: 'c:output',
+            onStart: () => {
+                showInstruction(
+                    '🔀 Desafio C #3 — Condicional',
+                    'Use if/else para verificar se um número é positivo ou negativo.\nImprima "positivo" ou "negativo".'
+                );
+            },
+            check: (e) => {
+                const { output, source } = e.detail as any;
+                const out  = output.toLowerCase();
+                const hasIf = /\bif\b/.test(source) && /\belse\b/.test(source);
+                const hasPrint = out.includes('positivo') || out.includes('negativo');
+                return hasIf && hasPrint;
+            },
+            onComplete: () => {
+                showInstruction('✅ Correto!', 'Você sabe usar condicionais em C!');
+            }
+        },
+
+        // ── Missão 5: Loop for ────────────────────────────────────────────
+        {
+            id:    'c-loop',
+            title: '🔁 Loop de 1 a 5',
+            instruction: 'Escreva um programa C com um loop for que imprima os números de 1 a 5, um por linha.',
+            position: new Vector3(0, 0, 10),
+            radius:   15,
+            reward:   { money: 600, health: 10, energy: 10 },
+            helper:   false,
+            listenTo: 'c:output',
+            onStart: () => {
+                showInstruction(
+                    '🔁 Desafio C #4 — Loop',
+                    'Use for para imprimir 1, 2, 3, 4, 5 (cada número em uma linha).\nDica: for(int i=1; i<=5; i++)'
+                );
+            },
+            check: (e) => {
+                const { output, source } = e.detail as any;
+                const hasFor = /\bfor\b/.test(source);
+                return hasFor && outputContainsLines(output, ['1','2','3','4','5']);
+            },
+            onComplete: () => {
+                showInstruction('✅ Correto!', 'Loop for dominado! Você está evoluindo em C.');
+            }
+        },
+
+        // ── Missão 6: Função customizada ──────────────────────────────────
+        {
+            id:    'c-function',
+            title: '⚙️ Crie uma função',
+            instruction: 'Crie uma função em C que receba dois inteiros e retorne a multiplicação. Imprima o resultado de mult(4, 5).',
+            position: new Vector3(0, 0, 10),
+            radius:   15,
+            reward:   { money: 800, health: 15, energy: 15 },
+            helper:   false,
+            listenTo: 'c:output',
+            onStart: () => {
+                showInstruction(
+                    '⚙️ Desafio C #5 — Função',
+                    'Crie: int mult(int a, int b){ return a * b; }\nChame em main: printf("%d", mult(4, 5));\nEsperado: 20'
+                );
+            },
+            check: (e) => {
+                const { output, source } = e.detail as any;
+                const out     = normalizeOutput(output);
+                const hasFunc = /int\s+\w+\s*\(/.test(source) && /return/.test(source);
+                const hasCall = /\w+\s*\(\s*\d+\s*,\s*\d+\s*\)/.test(source);
+                return hasFunc && hasCall && out === '20';
+            },
+            onComplete: () => {
+                showInstruction('🏆 Excelente!', 'Você sabe criar e chamar funções em C!');
+            }
+        },
+
+        // ── Missão 7: Participar da apresentação ─────────────────────────
         {
             id:    'attend-talk',
             title: '🎤 Assista à apresentação',
             instruction: 'Sente-se em uma cadeira e assista à apresentação para ganhar pontos.',
             position: new Vector3(0, 0, 10),
-            radius:   15, // zona ampla — qualquer cadeira
+            radius:   15,
             reward:   { money: 300 },
             helper:   false,
             listenTo: 'collided',
@@ -163,7 +266,7 @@ function buildMissions(): MissionDef[] {
 
 // ── MissionManager ────────────────────────────────────────────────────────────
 
-export class MissionManager {
+export class MissionManagers {
 
     private scene:    Scene;
     private loading:  Loading;
@@ -249,7 +352,7 @@ export class MissionManager {
 
         // Próxima missão
         this.index++;
-        setTimeout(() => this.launchCurrent(), 2000);
+        setTimeout(() => this.launchCurrent(), 6000);
     }
 
     private onAllComplete() {
