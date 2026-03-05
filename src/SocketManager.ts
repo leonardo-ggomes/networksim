@@ -91,6 +91,9 @@ class SocketManager{
         this.io.on("player:info", this.getPlayerInfo);          
         this.io.on("players:update", this.updatePlayerInfo);
         this.io.on("chair:list", this.updateChairs);
+        this.io.on("npc:state",   this.updateNpcState);
+        this.io.on("slide:npc",   this.receiveNpcSlide);
+        this.io.on("slide:npc:end", this.receiveNpcSlideEnd);
     }
 
     loadPlayers = (players: any) => {
@@ -188,6 +191,52 @@ class SocketManager{
                         
         }
 
+    }
+
+    // Recebe estado do TeacherNPC e aplica no mesh local
+    updateNpcState = (data: any) => {
+        const npc = (window as any).__teacherNPC;
+        if (!npc || !npc.npcMesh) return;
+
+        // Se este cliente é o controlador do NPC (admin que emitiu npc:update),
+        // ignora o estado recebido — o NPC já é gerenciado localmente pelo TeacherNPC.
+        // O servidor usa socket.to() e não devolve para o emissor, mas ao entrar
+        // na sala recebe o npcState salvo — esse caso deve ser ignorado também.
+        if (npc.isControlledLocally) return;
+
+        const mesh = npc.npcMesh;
+
+        // Posição
+        mesh.position.set(data.x, data.y, data.z);
+
+        // Rotação
+        mesh.quaternion.set(data.qx, data.qy, data.qz, data.qw);
+
+        // Animação
+        const anims  = npc["animationsAction"] as Record<string, any>;
+        const action = anims?.[data.clip];
+        if (action && action !== npc["activedClip"]) {
+            npc["activedClip"]?.fadeOut(0.2);
+            action.reset().fadeIn(0.1).play();
+            npc["activedClip"] = action;
+        }
+    }
+
+    // Recebe slide da aula e renderiza localmente
+    receiveNpcSlide = (data: { lessonId: string; slideIndex: number }) => {
+        const npc = (window as any).__teacherNPC;
+        if (!npc) return;
+        if (npc.isControlledLocally) return;  // admin já renderizou localmente
+        npc.renderRemoteSlide(data.lessonId, data.slideIndex);
+    }
+
+    // Recebe fim de aula e remove o slide da tela
+    receiveNpcSlideEnd = () => {
+        const npc = (window as any).__teacherNPC;
+        if (!npc) return;
+        if (npc.isControlledLocally) return;  // admin já removeu localmente
+        npc.removeRemoteSlide();
+        window.HUD?.notify("🎓 Aula encerrada.", "info");
     }
 
     setHudStatus(status: boolean){

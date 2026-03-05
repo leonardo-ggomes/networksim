@@ -22,6 +22,7 @@ import Loading from "./Loading";
 import { pathDefs } from "./Path";
 import { eventEmitter, showInstruction } from "./Actions";
 import { infoPlayer } from "./InfoPlayer";
+import SocketManager from "./SocketManager";
 
 // ── Slides e Lições ───────────────────────────────────────────────────────────
 
@@ -142,6 +143,16 @@ export class TeacherNPC extends YUKA.Vehicle {
     private slideTimer    = 0;
     private slideDuration = 20;   // segundos por slide (ajuste com setSlideDuration)
     private slideMesh?:   Mesh;
+
+    // Flag: true quando ESTE cliente controla o NPC (admin que chamou startLesson)
+    // Usado pelo SocketManager para ignorar npc:state recebido do servidor
+    isControlledLocally = false;
+
+    // Socket — throttle de emissão de posição (10 Hz)
+    private lastNpcEmit    = 0;
+    private lastNpcX       = 0;
+    private lastNpcZ       = 0;
+    private lastNpcClip    = "";
 
     // Notebook
     private notebookGiven        = false;
@@ -385,10 +396,16 @@ export class TeacherNPC extends YUKA.Vehicle {
         this.slideMesh.rotation.y = 0;
         this.scene.add(this.slideMesh);
 
-        // Emite evento — Editor C preenche o código automaticamente
+        // Emite evento local — Editor C preenche o código automaticamente
         eventEmitter.dispatchEvent(new CustomEvent("teacher:slide", {
             detail: { slide, index: idx, total: this.lesson.slides.length, lesson: this.lesson }
         }));
+
+        // Broadcast para todos os clientes — eles reconstroem o slide localmente
+        SocketManager.io.emit("slide:npc", {
+            lessonId:   this.lesson.id,
+            slideIndex: idx,
+        });
 
         window.HUD?.notify(
             `📄 Slide ${idx + 1}/${this.lesson.slides.length}: ${slide.title}`,
@@ -403,6 +420,8 @@ export class TeacherNPC extends YUKA.Vehicle {
         (this.slideMesh.material as MeshBasicMaterial).map?.dispose();
         (this.slideMesh.material as MeshBasicMaterial).dispose();
         this.slideMesh = undefined;
+        // Avisa todos que a aula terminou — remove slide na tela de cada cliente
+        SocketManager.io.emit("slide:npc:end", {});
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -422,6 +441,7 @@ export class TeacherNPC extends YUKA.Vehicle {
 
         this.lesson = lesson;
         this.tState = "WALKING";
+        this.isControlledLocally = true;  // este cliente passa a controlar o NPC
 
         // Caminho definido em Path.ts — ajuste sem tocar aqui
         this.buildNamedPath("teacher-to-stage");
@@ -455,6 +475,7 @@ export class TeacherNPC extends YUKA.Vehicle {
     private endLesson() {
         this.removeSlide();
         this.tState = "RETURNING";
+        this.isControlledLocally = false;  // libera controle ao encerrar
         this.buildNamedPath("teacher-to-idle");
         this.setAnimation(this.animationsAction["Walk"]);
 
@@ -556,6 +577,40 @@ export class TeacherNPC extends YUKA.Vehicle {
     // Chamado no loop do Experience — atualiza label 2D e PathDebugger
     tick(camera: any) {
         this.updateLabel(camera);
+        this.emitNpcState();
+    }
+
+    // Emite posição/estado do NPC via socket (10 Hz, apenas se mudou)
+    private emitNpcState() {
+        if (!this.npcMesh) return;
+        const now = Date.now();
+        if (now - this.lastNpcEmit < 100) return;  // 10 Hz
+
+        const p    = this.npcMesh.position;
+        const q    = this.npcMesh.quaternion;
+        const clip = this.tState === "WALKING" || this.tState === "RETURNING" ? "Walk" : "Idle";
+
+        // Só emite se algo mudou de fato
+        const moved = Math.abs(p.x - this.lastNpcX) > 0.01 || Math.abs(p.z - this.lastNpcZ) > 0.01;
+        const clipChanged = clip !== this.lastNpcClip;
+        if (!moved && !clipChanged) return;
+
+        SocketManager.io.emit("npc:update", {
+            x:      +p.x.toFixed(3),
+            y:      +p.y.toFixed(3),
+            z:      +p.z.toFixed(3),
+            qx:     +q.x.toFixed(3),
+            qy:     +q.y.toFixed(3),
+            qz:     +q.z.toFixed(3),
+            qw:     +q.w.toFixed(3),
+            clip,
+            tState: this.tState,
+        });
+
+        this.lastNpcEmit = now;
+        this.lastNpcX    = p.x;
+        this.lastNpcZ    = p.z;
+        this.lastNpcClip = clip;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -570,6 +625,48 @@ export class TeacherNPC extends YUKA.Vehicle {
     }
 
     setPlayerModel(m: Object3D)  { this.playerModel  = m; }
+
+    /**
+     * Chamado pelo SocketManager quando recebe slide:npc de outro cliente.
+     * Reconstrói o slide localmente sem reemitir via socket.
+     */
+    renderRemoteSlide(lessonId: string, slideIndex: number) {
+        const lesson = LESSONS.find(l => l.id === lessonId);
+        if (!lesson) return;
+        this.lesson   = lesson;
+        this.slideIdx = slideIndex;
+        // Remove slide anterior
+        if (this.slideMesh) {
+            this.scene.remove(this.slideMesh);
+            this.slideMesh.geometry.dispose();
+            (this.slideMesh.material as MeshBasicMaterial).map?.dispose();
+            (this.slideMesh.material as MeshBasicMaterial).dispose();
+        }
+        // Reconstrói localmente com os dados da aula
+        const slide = lesson.slides[slideIndex];
+        const tex   = this.buildSlideTexture(slide);
+        const geo   = new PlaneGeometry(10.0, 5.6);
+        const mat   = new MeshBasicMaterial({ map: tex, transparent: false });
+        this.slideMesh = new Mesh(geo, mat);
+        this.slideMesh.position.set(0, 4.5, -3.5);
+        this.slideMesh.rotation.y = 0;
+        this.scene.add(this.slideMesh);
+        // Notifica o Editor C local
+        eventEmitter.dispatchEvent(new CustomEvent("teacher:slide", {
+            detail: { slide, index: slideIndex, total: lesson.slides.length, lesson }
+        }));
+        window.HUD?.notify(`📄 Slide ${slideIndex + 1}/${lesson.slides.length}: ${slide.title}`, "info");
+    }
+
+    /** Remove o slide da tela (chamado remotamente via slide:npc:end) */
+    removeRemoteSlide() {
+        if (!this.slideMesh) return;
+        this.scene.remove(this.slideMesh);
+        this.slideMesh.geometry.dispose();
+        (this.slideMesh.material as MeshBasicMaterial).map?.dispose();
+        (this.slideMesh.material as MeshBasicMaterial).dispose();
+        this.slideMesh = undefined;
+    }
     setSlideDuration(s: number)  { this.slideDuration = s; }
 
     /**
