@@ -231,9 +231,13 @@ export class TeacherNPC extends YUKA.Vehicle {
             return; // reavalia no próximo frame com o novo target
         }
 
-        // Rotação suave em direção ao alvo
+        // Rotação suave em direção ao alvo — apenas no eixo Y (horizontal)
+        // lookAt com target nivelado evita que o NPC incline quando o caminho
+        // sobe/desce (ex: último waypoint em y=1 no palco)
         this.targetRot.position.copy(this.npcMesh.position);
-        this.targetRot.lookAt(target);
+        const flatTarget = target.clone();
+        flatTarget.y = this.npcMesh.position.y;   // nivela o Y — sem inclinação
+        this.targetRot.lookAt(flatTarget);
         this.npcMesh.quaternion.slerp(this.targetRot.quaternion, delta * 8.0);
 
         // Velocidade CONSTANTE — sem aceleração/desaceleração

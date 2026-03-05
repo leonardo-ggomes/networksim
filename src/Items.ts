@@ -117,8 +117,8 @@ export default class Items {
                     2.0,  // espaço X
                     2.5,  // espaço Z
                     8,    // corredor a cada N
-                    2.5,  // largura do corredor
-                    -10,  // startX
+                    3.5,  // largura do corredor
+                    -15,  // startX
                     10    // startZ
                 );
             } else {
