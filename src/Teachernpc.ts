@@ -290,6 +290,9 @@ export class TeacherNPC extends YUKA.Vehicle {
 
         } else if (this.tState === "RETURNING") {
             this.tState = "IDLE";
+            // Só libera o controle aqui, depois que o NPC chegou e o estado
+            // final Idle já foi emitido com a posição correta ao servidor.
+            this.isControlledLocally = false;
             window.HUD?.notify("🎓 Prof. Chico voltou ao ponto de espera.", "info");
         }
     }
@@ -682,9 +685,18 @@ export class TeacherNPC extends YUKA.Vehicle {
     private endLesson() {
         this.removeSlide();
         this.tState = "RETURNING";
-        this.isControlledLocally = false;  // libera controle ao encerrar
+        // Mantém isControlledLocally=true durante todo o RETURNING.
+        // O admin continua emitindo posição/animação até chegar ao destino.
+        // isControlledLocally só vai a false em onArrived(), depois que o
+        // estado final Idle já foi emitido com a posição correta.
+        this.isControlledLocally = true;
         this.buildNamedPath("teacher-to-idle");
         this.setAnimation(this.animationsAction["Walk"]);
+        // Zera o throttle para forçar emissão imediata do clip=Walk,
+        // sem esperar os 100ms — garante que o segundo player receba
+        // o estado correto antes que o servidor entregue um estado stale.
+        this.lastNpcEmit = 0;
+        this.lastNpcClip = "";
 
         eventEmitter.dispatchEvent(new CustomEvent("lesson:complete", {
             detail: { lessonId: this.lesson?.id }
