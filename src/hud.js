@@ -452,7 +452,7 @@
       setTimeout(() => {
         toast.classList.add('removing');
         toast.addEventListener('animationend', () => toast.remove());
-      }, 3500);
+      }, 70000);
     },
 
     // ── Minimapa ─────────────────────────────────────────────────────────────

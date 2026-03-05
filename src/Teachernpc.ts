@@ -101,7 +101,7 @@ export class TeacherNPC extends YUKA.Vehicle {
         this.scene       = scene;
         this.loading     = loading;
         this.playerModel = playerModel;
-        this.maxSpeed    = 3.5;
+        this.maxSpeed    = .5;
         this.position.set(this.IDLE_POS.x, this.IDLE_POS.y, this.IDLE_POS.z);
         this.loadModel();
         this.addLabel();
@@ -155,15 +155,9 @@ export class TeacherNPC extends YUKA.Vehicle {
 
         const target = new Vector3(cur.x, cur.y, cur.z);
 
-        // Rotação suave
-        this.targetRot.position.copy(this.npcMesh.position);
-        this.targetRot.lookAt(target);
-        this.npcMesh.quaternion.slerp(this.targetRot.quaternion, delta * 9.0);
-
-        // Movimento lerp
-        const pos = this.npcMesh.position.clone().lerp(target, delta * this.maxSpeed * 0.3);
-
-        if (pos.distanceTo(target) < 0.4) {
+        // Se ja esta perto do waypoint atual (inclui o proprio 'from' no 1o frame),
+        // avanca para o proximo SEM mover o mesh - elimina o teletransporte
+        if (this.npcMesh.position.distanceTo(target) < 0.4) {
             if (this.yukaPath.finished()) {
                 this.npcMesh.position.copy(target);
                 this.position.set(target.x, target.y, target.z);
@@ -171,8 +165,16 @@ export class TeacherNPC extends YUKA.Vehicle {
                 return;
             }
             this.yukaPath.advance();
+            return; // reavalia no proximo frame com o novo target
         }
 
+        // Rotacao suave
+        this.targetRot.position.copy(this.npcMesh.position);
+        this.targetRot.lookAt(target);
+        this.npcMesh.quaternion.slerp(this.targetRot.quaternion, delta * 9.0);
+
+        // Lerp suave sem salto
+        const pos = this.npcMesh.position.clone().lerp(target, delta * this.maxSpeed * 0.3);
         this.npcMesh.position.copy(pos);
         this.position.set(pos.x, pos.y, pos.z);
     }
@@ -181,7 +183,7 @@ export class TeacherNPC extends YUKA.Vehicle {
         this.yukaPath = new YUKA.Path();
         this.yukaPath.add(from.clone());
         this.yukaPath.add(to.clone());
-        this.yukaPath.advance();
+        // SEM advance() - NPC parte do 'from' sem teleporte
         this.paused = false;
     }
 
@@ -205,63 +207,92 @@ export class TeacherNPC extends YUKA.Vehicle {
     // SLIDE 3D — PlaneGeometry + CanvasTexture
     // ─────────────────────────────────────────────────────────────────────────
     private buildSlideTexture(slide: Slide): CanvasTexture {
-        const W = 1024, H = 640;
+        const W = 1920, H = 1080;
+        const PAD = 80;
         const canvas = document.createElement("canvas");
         canvas.width  = W;
         canvas.height = H;
         const ctx = canvas.getContext("2d")!;
 
-        // Fundo
-        ctx.fillStyle = "#0b0b0b";
+        // Fundo degradê
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, "#0d1a12");
+        grad.addColorStop(1, "#070f0a");
+        ctx.fillStyle = grad;
         ctx.fillRect(0, 0, W, H);
 
-        // Borda verde
+        // Borda dupla
         ctx.strokeStyle = "#00ff9d";
-        ctx.lineWidth = 4;
-        ctx.strokeRect(4, 4, W - 8, H - 8);
+        ctx.lineWidth = 8;
+        ctx.strokeRect(8, 8, W - 16, H - 16);
+        ctx.strokeStyle = "rgba(0,255,157,0.15)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(24, 24, W - 48, H - 48);
 
-        // Badge superior
-        ctx.fillStyle = "#00ff9d";
-        ctx.fillRect(40, 36, 180, 4);
-        ctx.font = "bold 18px 'Share Tech Mono', monospace";
+        // Header
+        ctx.fillStyle = "rgba(0,255,157,0.06)";
+        ctx.fillRect(0, 0, W, 120);
+        ctx.font = "bold 28px 'Share Tech Mono', monospace";
         ctx.fillStyle = "#3a6b52";
-        ctx.fillText("HackOS  AULA", 40, 30);
+        ctx.fillText("// HackOS — AULA DE PROGRAMACAO", PAD, 56);
+        ctx.strokeStyle = "#00ff9d";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(PAD, 82); ctx.lineTo(W - PAD, 82); ctx.stroke();
 
-        // Título
-        ctx.font = "bold 52px Rajdhani, sans-serif";
+        // Titulo
+        ctx.font = "bold 96px Rajdhani, sans-serif";
         ctx.fillStyle = "#ffffff";
-        ctx.fillText(slide.title, 40, 110);
+        ctx.fillText(slide.title, PAD, 200);
+        const tw = ctx.measureText(slide.title).width;
+        ctx.fillStyle = "#00ff9d";
+        ctx.fillRect(PAD, 212, Math.min(tw, W - PAD * 2), 5);
 
-        // Linhas de conteúdo
-        ctx.font = "26px 'Share Tech Mono', monospace";
-        ctx.fillStyle = "#b0ffd8";
+        // Linhas de conteudo
+        const lineH = 68;
+        ctx.font = "42px 'Share Tech Mono', monospace";
         slide.lines.forEach((line, i) => {
-            ctx.fillText(line, 40, 175 + i * 40);
+            ctx.fillStyle = "#00ff9d";
+            ctx.fillText(">", PAD, 306 + i * lineH);
+            ctx.fillStyle = "#b0ffd8";
+            ctx.fillText(line, PAD + 52, 306 + i * lineH);
         });
 
-        // Bloco de código (se houver)
+        // Bloco de codigo
         if (slide.code) {
-            const codeY = 175 + slide.lines.length * 40 + 20;
-            ctx.fillStyle = "rgba(0,255,157,0.06)";
-            ctx.fillRect(32, codeY - 4, W - 64, slide.code.split("\n").length * 34 + 16);
+            const codeLines = slide.code.split("\n");
+            const codeLineH = 54;
+            const codeTopY  = 306 + slide.lines.length * lineH + 40;
+            const codeH     = codeLines.length * codeLineH + 50;
+            ctx.fillStyle = "rgba(0,0,0,0.55)";
+            ctx.fillRect(PAD - 12, codeTopY - 14, W - (PAD - 12) * 2, codeH);
             ctx.strokeStyle = "#0d2e1c";
-            ctx.lineWidth = 1;
-            ctx.strokeRect(32, codeY - 4, W - 64, slide.code.split("\n").length * 34 + 16);
-            ctx.font = "24px 'Share Tech Mono', monospace";
-            ctx.fillStyle = "#f0b90b";
-            slide.code.split("\n").forEach((line, i) => {
-                ctx.fillText(line, 48, codeY + 28 + i * 34);
+            ctx.lineWidth = 2;
+            ctx.strokeRect(PAD - 12, codeTopY - 14, W - (PAD - 12) * 2, codeH);
+            ctx.font = "bold 24px 'Share Tech Mono', monospace";
+            ctx.fillStyle = "#3a6b52";
+            ctx.fillText("// codigo", PAD, codeTopY + 22);
+            ctx.font = "38px 'Share Tech Mono', monospace";
+            codeLines.forEach((line, i) => {
+                ctx.fillStyle = "#3a6b52";
+                ctx.fillText(String(i + 1).padStart(2, " "), PAD, codeTopY + 62 + i * codeLineH);
+                ctx.fillStyle = "#f0b90b";
+                ctx.fillText(line, PAD + 68, codeTopY + 62 + i * codeLineH);
             });
         }
 
-        // Rodapé com número do slide
+        // Rodape
         const total = this.lesson?.slides.length ?? 1;
-        ctx.font = "18px 'Share Tech Mono', monospace";
+        ctx.fillStyle = "rgba(0,255,157,0.06)";
+        ctx.fillRect(0, H - 80, W, 80);
+        ctx.strokeStyle = "#0d2e1c";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, H - 80); ctx.lineTo(W, H - 80); ctx.stroke();
+        ctx.font = "30px 'Share Tech Mono', monospace";
         ctx.fillStyle = "#3a6b52";
-        ctx.fillText(
-            `${slide.title}  ·  ${this.slideIdx + 1} / ${total}`,
-            40, H - 24
-        );
+        ctx.fillText(this.lesson?.title ?? "", PAD, H - 26);
+        const pageText = `${this.slideIdx + 1} / ${total}`;
+        ctx.fillStyle = "#00ff9d";
+        ctx.fillText(pageText, W - PAD - ctx.measureText(pageText).width, H - 26);
 
         return new CanvasTexture(canvas);
     }
@@ -281,13 +312,13 @@ export class TeacherNPC extends YUKA.Vehicle {
 
         // Cria novo painel 3D acima do palco (3.2 unidades de largura, 2 de altura)
         const tex  = this.buildSlideTexture(slide);
-        const geo  = new PlaneGeometry(4.8, 3.0);
+        const geo  = new PlaneGeometry(10.0, 5.6);  // tela projetor grande
         const mat  = new MeshBasicMaterial({ map: tex, transparent: false });
         this.slideMesh = new Mesh(geo, mat);
 
-        // Posição: ligeiramente atrás do NPC no palco, altura da cabeça
-        this.slideMesh.position.set(0, 2.8, -1.5);
-        this.slideMesh.rotation.y = 0; // voltado para a plateia
+        // Fundo do palco, elevado - visivel de toda a plateia
+        this.slideMesh.position.set(0, 4.5, -3.5);
+        this.slideMesh.rotation.y = 0; // voltado para Z+
         this.scene.add(this.slideMesh);
 
         // Emite evento (Editor C preenche o código automaticamente)

@@ -82,9 +82,9 @@ export default class Items {
         this.scene = scene;
         this.setItems();
 
-        const axes = new AxesHelper();
-        axes.position.set(0, 1, 0);
-        this.scene.add(axes);
+        // const axes = new AxesHelper();
+        // axes.position.set(0, 1, 0);
+        // this.scene.add(axes);
     }
 
     public getEditableObjects(): Object3D[] {
