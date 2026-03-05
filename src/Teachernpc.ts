@@ -231,12 +231,11 @@ export class TeacherNPC extends YUKA.Vehicle {
             return; // reavalia no próximo frame com o novo target
         }
 
-        // Rotação suave em direção ao alvo — apenas no eixo Y (horizontal)
-        // lookAt com target nivelado evita que o NPC incline quando o caminho
-        // sobe/desce (ex: último waypoint em y=1 no palco)
+        // Rotação suave — apenas eixo Y (horizontal)
+        // flatTarget nivela o Y para evitar inclinação ao subir degraus/palco
         this.targetRot.position.copy(this.npcMesh.position);
         const flatTarget = target.clone();
-        flatTarget.y = this.npcMesh.position.y;   // nivela o Y — sem inclinação
+        flatTarget.y = this.npcMesh.position.y;
         this.targetRot.lookAt(flatTarget);
         this.npcMesh.quaternion.slerp(this.targetRot.quaternion, delta * 8.0);
 
@@ -299,92 +298,284 @@ export class TeacherNPC extends YUKA.Vehicle {
     // SLIDE 3D — PlaneGeometry + CanvasTexture
     // ─────────────────────────────────────────────────────────────────────────
     private buildSlideTexture(slide: Slide): CanvasTexture {
-        const W = 1920, H = 1080;
-        const PAD = 80;
+        // ── Canvas: resolução alta para nitidez na textura 3D ─────────────────
+        // Altura calculada dinamicamente para o código não ser cortado
+        const W        = 1920;
+        const PAD      = 72;
+        const MONO     = "'Share Tech Mono', monospace";
+
+        // ── Paleta cyber/neon moderna ─────────────────────────────────────────
+        const C_BG0    = "#06090f";   // preto azulado
+        const C_BG1    = "#0a1628";   // azul meia-noite
+        const C_ACCENT = "#7df9e8";   // aqua neon — destaque principal
+        const C_AMBER  = "#fbbf24";   // âmbar — labels / números
+        const C_PURPLE = "#a78bfa";   // violeta — keywords do código
+        const C_GREEN  = "#4ade80";   // verde — strings
+        const C_WHITE  = "#e2f0ff";   // branco levemente azulado — corpo do texto
+        const C_DIM    = "#334155";   // cinza azulado — elementos secundários
+
+        // ── Medição prévia para calcular a altura total necessária ─────────────
+        const HDR_H     = 100;
+        const TITLE_H   = 110;
+        const LINE_H    = 62;
+        const CODE_LH   = 48;
+        const CODE_HPAD = 72;   // padding top+bottom dentro do bloco de código
+        const SEC_GAP   = 24;   // gap entre seções
+
+        const codeLines = slide.code ? slide.code.split("\n") : [];
+        const hasCode   = codeLines.length > 0;
+
+        const contentH = slide.lines.length * LINE_H;
+        const codeBlockH = hasCode
+            ? CODE_HPAD + codeLines.length * CODE_LH + 20
+            : 0;
+        const FTR_H = 64;
+
+        // Altura total: nunca menor que 900, nunca corta o código
+        const H = Math.max(900, HDR_H + TITLE_H + contentH + SEC_GAP + codeBlockH + FTR_H + 40);
+
         const canvas = document.createElement("canvas");
         canvas.width  = W;
         canvas.height = H;
         const ctx = canvas.getContext("2d")!;
 
-        // Fundo degradê
-        const grad = ctx.createLinearGradient(0, 0, 0, H);
-        grad.addColorStop(0, "#0d1a12");
-        grad.addColorStop(1, "#070f0a");
-        ctx.fillStyle = grad;
+        // ═════════════════════════════════════════════════════════════════════
+        // 1. FUNDO
+        // ═════════════════════════════════════════════════════════════════════
+
+        // Base escura
+        ctx.fillStyle = C_BG0;
         ctx.fillRect(0, 0, W, H);
 
-        // Borda dupla
-        ctx.strokeStyle = "#00ff9d";
-        ctx.lineWidth = 8;
-        ctx.strokeRect(8, 8, W - 16, H - 16);
-        ctx.strokeStyle = "rgba(0,255,157,0.15)";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(24, 24, W - 48, H - 48);
+        // Faixa diagonal — brilho sutil vindo do canto superior direito
+        const diag = ctx.createLinearGradient(W, 0, W * 0.3, H * 0.6);
+        diag.addColorStop(0,    "rgba(125,249,232,0.07)");
+        diag.addColorStop(0.4,  "rgba(10, 22, 40, 0.15)");
+        diag.addColorStop(1,    "rgba(6,  9, 15,  0)");
+        ctx.fillStyle = diag;
+        ctx.fillRect(0, 0, W, H);
 
-        // Header
-        ctx.fillStyle = "rgba(0,255,157,0.06)";
-        ctx.fillRect(0, 0, W, 120);
-        ctx.font = "bold 28px 'Share Tech Mono', monospace";
-        ctx.fillStyle = "#3a6b52";
-        ctx.fillText("// HackOS — AULA DE PROGRAMACAO", PAD, 56);
-        ctx.strokeStyle = "#00ff9d";
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(PAD, 82); ctx.lineTo(W - PAD, 82); ctx.stroke();
+        // Grade de pontos — textura tech
+        ctx.fillStyle = "rgba(125,249,232,0.055)";
+        for (let x = 52; x < W; x += 52)
+            for (let y = 52; y < H; y += 52) {
+                ctx.beginPath();
+                ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
-        // Título
-        ctx.font = "bold 96px Rajdhani, sans-serif";
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(slide.title, PAD, 200);
-        const tw = ctx.measureText(slide.title).width;
-        ctx.fillStyle = "#00ff9d";
-        ctx.fillRect(PAD, 212, Math.min(tw, W - PAD * 2), 5);
+        // ═════════════════════════════════════════════════════════════════════
+        // 2. HEADER
+        // ═════════════════════════════════════════════════════════════════════
 
-        // Linhas de conteúdo
-        const lineH = 68;
-        ctx.font = "42px 'Share Tech Mono', monospace";
+        // Faixa do header com gradiente
+        const hg = ctx.createLinearGradient(0, 0, W, 0);
+        hg.addColorStop(0,   "rgba(125,249,232,0.12)");
+        hg.addColorStop(0.7, "rgba(125,249,232,0.04)");
+        hg.addColorStop(1,   "rgba(125,249,232,0)");
+        ctx.fillStyle = hg;
+        ctx.fillRect(0, 0, W, HDR_H);
+
+        // Label sistema — esquerda
+        ctx.font      = `bold 24px ${MONO}`;
+        ctx.fillStyle = C_ACCENT;
+        ctx.globalAlpha = 0.6;
+        ctx.fillText("◈  HACKOS EDU-SYS  /  MÓDULO ATIVO", PAD, 38);
+        ctx.globalAlpha = 1;
+
+        // Label lesson — direita
+        const lessonLabel = (this.lesson?.title ?? "").toUpperCase();
+        ctx.font      = `bold 22px ${MONO}`;
+        ctx.fillStyle = C_AMBER;
+        ctx.globalAlpha = 0.7;
+        const llW = ctx.measureText(lessonLabel).width;
+        ctx.fillText(lessonLabel, W - PAD - llW, 38);
+        ctx.globalAlpha = 1;
+
+        // Separador header — linha dupla
+        ctx.strokeStyle = C_ACCENT;
+        ctx.lineWidth   = 2.5;
+        ctx.beginPath(); ctx.moveTo(PAD, HDR_H - 12); ctx.lineTo(W - PAD, HDR_H - 12); ctx.stroke();
+        ctx.strokeStyle = "rgba(125,249,232,0.15)";
+        ctx.lineWidth   = 1;
+        ctx.beginPath(); ctx.moveTo(PAD, HDR_H - 6);  ctx.lineTo(W - PAD, HDR_H - 6);  ctx.stroke();
+
+        // ═════════════════════════════════════════════════════════════════════
+        // 3. TÍTULO
+        // ═════════════════════════════════════════════════════════════════════
+
+        const TITLE_Y = HDR_H + 82;
+
+        // Pill de número do slide — tag âmbar antes do título
+        const total    = this.lesson?.slides.length ?? 1;
+        const slideTag = ` ${String(this.slideIdx + 1).padStart(2,"0")} / ${String(total).padStart(2,"0")} `;
+        ctx.font = `bold 26px ${MONO}`;
+        const tagW = ctx.measureText(slideTag).width + 24;
+        ctx.fillStyle = C_AMBER;
+        ctx.globalAlpha = 0.18;
+        ctx.beginPath();
+        ctx.roundRect(PAD, TITLE_Y - 70, tagW, 38, 6);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = C_AMBER;
+        ctx.fillText(slideTag, PAD + 12, TITLE_Y - 42);
+
+        // Título principal — branco nítido, grande
+        ctx.font      = "bold 94px 'Rajdhani', sans-serif";
+        ctx.fillStyle = C_WHITE;
+        ctx.fillText(slide.title, PAD, TITLE_Y);
+
+        // Sublinhado accent
+        const titleW = Math.min(ctx.measureText(slide.title).width, W - PAD * 2);
+        ctx.fillStyle = C_ACCENT;
+        ctx.fillRect(PAD, TITLE_Y + 10, titleW, 4);
+        ctx.fillStyle = "rgba(125,249,232,0.15)";
+        ctx.fillRect(PAD, TITLE_Y + 17, titleW * 0.6, 2);
+
+        // ═════════════════════════════════════════════════════════════════════
+        // 4. CONTEÚDO — bullets
+        // ═════════════════════════════════════════════════════════════════════
+
+        const CONTENT_Y = TITLE_Y + 42;
+        ctx.font = `46px ${MONO}`;
+
         slide.lines.forEach((line, i) => {
-            ctx.fillStyle = "#00ff9d";
-            ctx.fillText(">", PAD, 306 + i * lineH);
-            ctx.fillStyle = "#b0ffd8";
-            ctx.fillText(line, PAD + 52, 306 + i * lineH);
+            const y = CONTENT_Y + (i + 1) * LINE_H;
+
+            // Número sequencial em âmbar
+            ctx.font      = `bold 22px ${MONO}`;
+            ctx.fillStyle = C_AMBER;
+            ctx.globalAlpha = 0.8;
+            ctx.fillText(String(i + 1).padStart(2, "0"), PAD, y - 6);
+            ctx.globalAlpha = 1;
+
+            // Traço separador vertical
+            ctx.fillStyle = "rgba(125,249,232,0.3)";
+            ctx.fillRect(PAD + 56, y - 44, 2, 52);
+
+            // Texto
+            ctx.font      = `44px ${MONO}`;
+            ctx.fillStyle = C_WHITE;
+            ctx.fillText(line, PAD + 76, y);
         });
 
-        // Bloco de código
-        if (slide.code) {
-            const codeLines = slide.code.split("\n");
-            const codeLineH = 54;
-            const codeTopY  = 306 + slide.lines.length * lineH + 40;
-            const codeH     = codeLines.length * codeLineH + 50;
-            ctx.fillStyle = "rgba(0,0,0,0.55)";
-            ctx.fillRect(PAD - 12, codeTopY - 14, W - (PAD - 12) * 2, codeH);
-            ctx.strokeStyle = "#0d2e1c";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(PAD - 12, codeTopY - 14, W - (PAD - 12) * 2, codeH);
-            ctx.font = "bold 24px 'Share Tech Mono', monospace";
-            ctx.fillStyle = "#3a6b52";
-            ctx.fillText("// codigo", PAD, codeTopY + 22);
-            ctx.font = "38px 'Share Tech Mono', monospace";
+        // ═════════════════════════════════════════════════════════════════════
+        // 5. BLOCO DE CÓDIGO — terminal com syntax highlight
+        // ═════════════════════════════════════════════════════════════════════
+
+        if (hasCode) {
+            const CODE_X   = PAD - 4;
+            const CODE_W   = W - CODE_X - PAD + 4;
+            const CODE_Y   = CONTENT_Y + slide.lines.length * LINE_H + SEC_GAP + LINE_H;
+            const FULL_H   = codeBlockH;  // altura calculada dinamicamente — sem corte
+            const TITLE_BAR = 44;
+
+            // Fundo do terminal
+            ctx.fillStyle = "rgba(2, 6, 14, 0.92)";
+            ctx.beginPath();
+            ctx.roundRect(CODE_X, CODE_Y, CODE_W, FULL_H, 8);
+            ctx.fill();
+
+            // Borda esquerda accent
+            ctx.fillStyle = C_PURPLE;
+            ctx.fillRect(CODE_X, CODE_Y, 4, FULL_H);
+
+            // Barra de título do terminal
+            ctx.fillStyle = "rgba(167,139,250,0.10)";
+            ctx.fillRect(CODE_X + 4, CODE_Y, CODE_W - 4, TITLE_BAR);
+
+            // Bolinhas estilo macOS
+            const dots: [string, number][] = [["#ff5f57",0], ["#febc2e",1], ["#28c840",2]];
+            dots.forEach(([c, j]) => {
+                ctx.beginPath();
+                ctx.arc(CODE_X + 22 + j * 24, CODE_Y + TITLE_BAR / 2, 7, 0, Math.PI * 2);
+                ctx.fillStyle = c;
+                ctx.fill();
+            });
+
+            // Label do terminal
+            ctx.font      = `bold 22px ${MONO}`;
+            ctx.fillStyle = "rgba(167,139,250,0.65)";
+            ctx.fillText("  ◉  terminal  —  C", CODE_X + 92, CODE_Y + 28);
+
+            // Linhas de código com syntax highlight
+            ctx.font = `38px ${MONO}`;
             codeLines.forEach((line, i) => {
-                ctx.fillStyle = "#3a6b52";
-                ctx.fillText(String(i + 1).padStart(2, " "), PAD, codeTopY + 62 + i * codeLineH);
-                ctx.fillStyle = "#f0b90b";
-                ctx.fillText(line, PAD + 68, codeTopY + 62 + i * codeLineH);
+                const cy = CODE_Y + TITLE_BAR + 20 + (i + 1) * CODE_LH;
+
+                // Número da linha
+                ctx.fillStyle = "rgba(125,249,232,0.22)";
+                ctx.fillText(String(i + 1).padStart(2, " "), CODE_X + 14, cy);
+
+                // Gutter separator
+                ctx.fillStyle = "rgba(125,249,232,0.08)";
+                ctx.fillRect(CODE_X + 64, CODE_Y + TITLE_BAR, 1, FULL_H - TITLE_BAR);
+
+                // Tokenizador — keywords C, strings, diretivas, comentários, resto
+                const kwReg = /((?:int|float|char|double|long|short|unsigned|void|return|if|else|while|for|do|switch|case|break|continue|printf|scanf|include|define|struct|typedef)|"[^"]*"|'[^']*'|\/\/.*$|#\w+)/g;
+                let last = 0, xOff = CODE_X + 78;
+                let m: RegExpExecArray | null;
+                while ((m = kwReg.exec(line)) !== null) {
+                    if (m.index > last) {
+                        ctx.fillStyle = C_WHITE;
+                        const t = line.slice(last, m.index);
+                        ctx.fillText(t, xOff, cy);
+                        xOff += ctx.measureText(t).width;
+                    }
+                    const tok = m[0];
+                    if      (/^"/.test(tok) || /^'/.test(tok))  ctx.fillStyle = C_GREEN;
+                    else if (/^\/\//.test(tok))                  ctx.fillStyle = C_DIM;
+                    else if (/^#/.test(tok))                     ctx.fillStyle = C_AMBER;
+                    else                                         ctx.fillStyle = C_PURPLE;
+                    ctx.fillText(tok, xOff, cy);
+                    xOff += ctx.measureText(tok).width;
+                    last = m.index + tok.length;
+                }
+                if (last < line.length) {
+                    ctx.fillStyle = C_WHITE;
+                    ctx.fillText(line.slice(last), xOff, cy);
+                }
             });
         }
 
-        // Rodapé
-        const total = this.lesson?.slides.length ?? 1;
-        ctx.fillStyle = "rgba(0,255,157,0.06)";
-        ctx.fillRect(0, H - 80, W, 80);
-        ctx.strokeStyle = "#0d2e1c";
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(0, H - 80); ctx.lineTo(W, H - 80); ctx.stroke();
-        ctx.font = "30px 'Share Tech Mono', monospace";
-        ctx.fillStyle = "#3a6b52";
-        ctx.fillText(this.lesson?.title ?? "", PAD, H - 26);
-        const pageText = `${this.slideIdx + 1} / ${total}`;
-        ctx.fillStyle = "#00ff9d";
-        ctx.fillText(pageText, W - PAD - ctx.measureText(pageText).width, H - 26);
+        // ═════════════════════════════════════════════════════════════════════
+        // 6. BORDA EXTERNA + CANTOS EM L
+        // ═════════════════════════════════════════════════════════════════════
+
+        // Borda principal fina
+        ctx.strokeStyle = C_ACCENT;
+        ctx.lineWidth   = 3;
+        ctx.strokeRect(6, 6, W - 12, H - 12);
+        ctx.strokeStyle = "rgba(125,249,232,0.12)";
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(14, 14, W - 28, H - 28);
+
+        // Cantos em L
+        const CL = 80, CW = 6;
+        ctx.fillStyle = C_ACCENT;
+        [[6,6,1,1],[W-6,6,-1,1],[6,H-6,1,-1],[W-6,H-6,-1,-1]].forEach(([cx,cy,sx,sy]) => {
+            ctx.fillRect(cx, cy,          sx * CL, sy * CW);
+            ctx.fillRect(cx, cy,          sx * CW, sy * CL);
+        });
+
+        // ═════════════════════════════════════════════════════════════════════
+        // 7. RODAPÉ
+        // ═════════════════════════════════════════════════════════════════════
+
+        const FY = H - FTR_H;
+        ctx.strokeStyle = "rgba(125,249,232,0.25)";
+        ctx.lineWidth   = 1;
+        ctx.beginPath(); ctx.moveTo(PAD, FY); ctx.lineTo(W - PAD, FY); ctx.stroke();
+
+        ctx.font      = `26px ${MONO}`;
+        ctx.fillStyle = "rgba(125,249,232,0.40)";
+        ctx.fillText(this.lesson?.title ?? "", PAD, FY + 40);
+
+        const pgText = `SLIDE  ${this.slideIdx + 1} / ${total}`;
+        ctx.fillStyle = C_ACCENT;
+        ctx.globalAlpha = 0.7;
+        ctx.fillText(pgText, W - PAD - ctx.measureText(pgText).width, FY + 40);
+        ctx.globalAlpha = 1;
 
         return new CanvasTexture(canvas);
     }
@@ -403,12 +594,12 @@ export class TeacherNPC extends YUKA.Vehicle {
         }
 
         const tex  = this.buildSlideTexture(slide);
-        const geo  = new PlaneGeometry(10.0, 5.6);   // tela projetor grande
+        const geo  = new PlaneGeometry(12.0, 6.2);   // proporcional ao canvas dinâmico
         const mat  = new MeshBasicMaterial({ map: tex, transparent: false });
         this.slideMesh = new Mesh(geo, mat);
 
-        // Fundo do palco, elevado — visível de toda a plateia
-        this.slideMesh.position.set(0, 4.5, -3.5);
+        // Posição: elevado e recuado — visível de toda a plateia
+        this.slideMesh.position.set(0, 4.8, -3.5);
         this.slideMesh.rotation.y = 0;
         this.scene.add(this.slideMesh);
 
@@ -661,10 +852,10 @@ export class TeacherNPC extends YUKA.Vehicle {
         // Reconstrói localmente com os dados da aula
         const slide = lesson.slides[slideIndex];
         const tex   = this.buildSlideTexture(slide);
-        const geo   = new PlaneGeometry(10.0, 5.6);
+        const geo   = new PlaneGeometry(12.0, 6.2);
         const mat   = new MeshBasicMaterial({ map: tex, transparent: false });
         this.slideMesh = new Mesh(geo, mat);
-        this.slideMesh.position.set(0, 4.5, -3.5);
+        this.slideMesh.position.set(0, 4.8, -3.5);
         this.slideMesh.rotation.y = 0;
         this.scene.add(this.slideMesh);
         // Notifica o Editor C local

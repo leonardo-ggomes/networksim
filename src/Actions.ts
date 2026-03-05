@@ -8,13 +8,28 @@ export const eventEmitter = new EventTarget();
 
 
 //Processes
-const processes = [
-    { pid: 1234, user: "root", cpu: "0.3%", mem: "1.2%", command: "systemd" },
-    { pid: 5678, user: "me", cpu: "1.8%", mem: "0.9%", command: "node server.js" },
-    { pid: 9101, user: "me", cpu: "0.1%", mem: "0.5%", command: "bash" },
-    { pid: 1121, user: "me", cpu: "2.5%", mem: "1.1%", command: "firefox" },
-    { pid: 2233, user: "me", cpu: "0.7%", mem: "0.3%", command: "htop" },
+type Process = { pid:number; user:string; cpu:number; mem:number; command:string; state:string };
+const processes: Process[] = [
+    { pid:    1, user:"root",   cpu:0.0, mem:0.1, command:"systemd",               state:"S" },
+    { pid:  312, user:"root",   cpu:0.0, mem:0.0, command:"kthreadd",              state:"S" },
+    { pid:  891, user:"root",   cpu:0.1, mem:0.3, command:"sshd",                  state:"S" },
+    { pid: 1042, user:"root",   cpu:0.0, mem:0.2, command:"cron",                  state:"S" },
+    { pid: 2048, user:"hackos", cpu:1.4, mem:2.1, command:"hackos-kernel",         state:"R" },
+    { pid: 2049, user:"hackos", cpu:0.8, mem:1.7, command:"edu-server --port 443", state:"S" },
+    { pid: 2201, user:"hackos", cpu:0.2, mem:0.9, command:"mission-manager",       state:"S" },
+    { pid: 3310, user:"player", cpu:2.9, mem:3.4, command:"bash",                  state:"R" },
+    { pid: 3311, user:"player", cpu:0.0, mem:0.6, command:"nano",                  state:"S" },
+    { pid: 4096, user:"player", cpu:5.1, mem:4.2, command:"gcc hello.c -o hello",  state:"R" },
+    { pid: 5500, user:"player", cpu:0.3, mem:1.1, command:"node index.js",         state:"S" },
+    { pid: 7777, user:"root",   cpu:0.0, mem:0.1, command:"watchdog/0",            state:"I" },
 ];
+function _tickProcesses() {
+    processes.forEach(p => {
+        p.cpu = Math.max(0, Math.min(99, p.cpu + (Math.random() - 0.5) * 0.8));
+        p.mem = Math.max(0, Math.min(99, p.mem + (Math.random() - 0.5) * 0.3));
+    });
+}
+setInterval(_tickProcesses, 1200);
 
 // Variáveis de estado
 let isCollided = false;
@@ -80,9 +95,10 @@ let elementos = {
         processes.push({
             command: name,
             pid: pid,
-            mem: memory.toString(),
-            cpu: cpu.toString(),
-            user: "default"
+            mem: memory,
+            cpu: cpu,
+            user: "default",
+            state: "R"
         })
     },
     setFilesInMission: (dirPath = rootPath, name: string, content: string) => {
@@ -100,6 +116,196 @@ let elementos = {
 };
 
 // Criar o terminal — dispositivo estilo GTA V
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TERMINAL ENGINE — typewriter · glitch · missões · histórico · cores · CRT
+// ─────────────────────────────────────────────────────────────────────────────
+
+const cmdHistory: string[] = [];
+let   cmdHistoryIdx = -1;
+
+type OutputType = "default"|"success"|"error"|"info"|"warn"|"system"|"mission";
+const OUTPUT_COLORS: Record<OutputType,string> = {
+    default: "#c8fce8",
+    success: "#4ade80",
+    error:   "#f87171",
+    info:    "#7df9e8",
+    warn:    "#fbbf24",
+    system:  "#6b7280",
+    mission: "#a78bfa",
+};
+
+function detectOutputType(text: string): OutputType {
+    if (!text) return "default";
+    const t = text.toLowerCase();
+    if (t.startsWith("erro") || t.startsWith("error") || t.includes("não encontrado") || t.includes("não existe")) return "error";
+    if (t.startsWith("✓") || t.includes("criado") || t.includes("atualizado") || t.includes("sucesso") || t.includes("conectado")) return "success";
+    if (t.startsWith("⚠") || t.includes("aviso")) return "warn";
+    if (t.startsWith("[missão]") || t.startsWith("▸") || t.startsWith("◈")) return "mission";
+    if (t.startsWith("//") || t.startsWith("hackos") || t.startsWith("kernel") ||
+        t.startsWith("montando") || t.startsWith("inicializando") || t.startsWith("conexão") ||
+        t.startsWith("detectando") || t.startsWith("carregando")) return "system";
+    return "default";
+}
+
+// Typewriter: imprime texto letra por letra
+function typewriterAppend(text: string, terminal: HTMLDivElement, type: OutputType = "default", onDone?: () => void) {
+    const lines = text.split("\n");
+    let li = 0;
+    function nextLine() {
+        if (li >= lines.length) { onDone?.(); return; }
+        const line = lines[li++];
+        const lt   = detectOutputType(line) !== "default" ? detectOutputType(line) : type;
+        const div  = document.createElement("div");
+        div.style.color      = OUTPUT_COLORS[lt];
+        div.style.minHeight  = "1.2em";
+        div.style.fontFamily = "'Share Tech Mono', monospace";
+        div.style.fontSize   = "12px";
+        terminal.appendChild(div);
+        terminal.scrollTop   = terminal.scrollHeight;
+        if (!line.trim()) { nextLine(); return; }
+        // Linhas de sistema saem de uma vez (mais rápido, sem digitar)
+        if (lt === "system" || line.startsWith(" ")) { div.textContent = line; setTimeout(nextLine, 18); return; }
+        let ci = 0;
+        function nextChar() {
+            if (ci < line.length) {
+                div.textContent += line[ci++];
+                terminal.scrollTop = terminal.scrollHeight;
+                setTimeout(nextChar, 16);
+            } else {
+                setTimeout(nextLine, 10);
+            }
+        }
+        nextChar();
+    }
+    nextLine();
+}
+
+// Glitch: corrompe visualmente o terminal por ~800ms
+function triggerGlitch(terminal: HTMLDivElement) {
+    const el    = terminal.parentElement ?? terminal;
+    const chars = "!@#$%^&*░▒▓█▀▄╗╔╝╚╬";
+    const noise: HTMLDivElement[] = [];
+    for (let i = 0; i < 3; i++) {
+        const n = document.createElement("div");
+        n.style.color      = "#f87171";
+        n.style.opacity    = "0.7";
+        n.style.fontFamily = "'Share Tech Mono',monospace";
+        n.style.fontSize   = "11px";
+        n.textContent = Array.from({length: 40 + (Math.random()*20|0)},
+            () => chars[Math.random()*chars.length|0]).join("");
+        terminal.appendChild(n);
+        noise.push(n);
+    }
+    terminal.scrollTop = terminal.scrollHeight;
+    let frames = 0;
+    const iv = setInterval(() => {
+        noise.forEach(n => {
+            n.textContent = Array.from({length: 40 + (Math.random()*20|0)},
+                () => chars[Math.random()*chars.length|0]).join("");
+        });
+        el.style.transform = `translate(${(Math.random()-.5)*8}px,${(Math.random()-.5)*4}px)`;
+        el.style.filter    = `hue-rotate(${Math.random()*60}deg) brightness(1.2)`;
+        if (++frames > 10) {
+            clearInterval(iv);
+            noise.forEach(n => n.remove());
+            el.style.transform = "";
+            el.style.filter    = "";
+        }
+    }, 60);
+}
+
+// CRT: adiciona scanlines animadas sobre o painel do terminal
+function applyCRTOverlay(termPanel: HTMLElement) {
+    if (!document.getElementById("crt-style")) {
+        const st = document.createElement("style");
+        st.id = "crt-style";
+        st.textContent = `
+            @keyframes crtFlicker { 0%,95%,100%{opacity:1} 96%{opacity:.92} 97%{opacity:1} 98%{opacity:.88} }
+            @keyframes progressFill { from{width:0%} to{width:100%} }
+        `;
+        document.head.appendChild(st);
+    }
+    const crt = document.createElement("div");
+    Object.assign(crt.style, {
+        position:"absolute", inset:"0", pointerEvents:"none", zIndex:"10",
+        backgroundImage:`repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.13) 3px,rgba(0,0,0,0.13) 4px)`,
+        animation:"crtFlicker 4s infinite",
+    });
+    termPanel.style.position = "relative";
+    termPanel.appendChild(crt);
+}
+
+// ── Sistema de Missões ────────────────────────────────────────────────────────
+export type TerminalStep = {
+    instruction: string;
+    validate: (cmd: string, args: string[]) => boolean;
+    successMsg?: string;
+    failMsg?:    string;
+};
+export type TerminalMission = {
+    id: string; title: string; description: string; steps: TerminalStep[];
+};
+
+let activeMission:   TerminalMission | null = null;
+let missionStepIdx:  number = 0;
+let missionTerminal: HTMLDivElement | null = null;
+
+/** Inicia uma missão de terminal — chame de qualquer lugar do projeto */
+export function startTerminalMission(mission: TerminalMission) {
+    activeMission  = mission;
+    missionStepIdx = 0;
+    const t = missionTerminal ?? (document.getElementById("terminal") as HTMLDivElement | null);
+    if (!t) return;
+    typewriterAppend(
+        `◈  MISSÃO: ${mission.title}\n${mission.description}\n▸ ${mission.steps[0].instruction}`,
+        t, "mission"
+    );
+}
+
+function checkMissionStep(cmd: string, args: string[], terminal: HTMLDivElement): boolean {
+    if (!activeMission) return false;
+    const step = activeMission.steps[missionStepIdx];
+    if (!step) return false;
+    if (step.validate(cmd, args)) {
+        missionStepIdx++;
+        if (missionStepIdx >= activeMission.steps.length) {
+            typewriterAppend(step.successMsg ?? "✓ Passo concluído!", terminal, "success");
+            setTimeout(() => typewriterAppend(`✓  MISSÃO CONCLUÍDA: ${activeMission!.title}`, terminal, "success"), 400);
+            activeMission = null; missionStepIdx = 0;
+        } else {
+            typewriterAppend(step.successMsg ?? "✓ Correto! Próximo passo:", terminal, "success");
+            setTimeout(() => typewriterAppend(`▸ ${activeMission!.steps[missionStepIdx].instruction}`, terminal, "mission"), 300);
+        }
+        return true;
+    } else {
+        triggerGlitch(terminal);
+        typewriterAppend(step.failMsg ?? `✗ Comando incorreto. Tente: ${step.instruction}`, terminal, "error");
+        return true;
+    }
+}
+
+/** Missões pré-definidas prontas para uso */
+export const TERMINAL_MISSIONS: Record<string, TerminalMission> = {
+    "explorar-arquivos": {
+        id:"explorar-arquivos", title:"Exploração do Sistema",
+        description:"Navegue pelo sistema de arquivos e encontre o arquivo.",
+        steps:[
+            { instruction:"Liste os arquivos com: ls",        validate:(c)=>c==="ls",                         successMsg:"✓ Arquivos listados." },
+            { instruction:"Entre no diretório home: cd home", validate:(c,a)=>c==="cd"&&a[0]==="home",        successMsg:"✓ Dentro de /home." },
+            { instruction:"Leia o arquivo: cat missao.txt",   validate:(c,a)=>c==="cat"&&a[0]==="missao.txt", successMsg:"✓ Arquivo lido!" },
+        ],
+    },
+    "criar-arquivo": {
+        id:"criar-arquivo", title:"Primeiro Script",
+        description:"Crie e leia seu primeiro arquivo no terminal.",
+        steps:[
+            { instruction:'Crie um arquivo: nano hello.txt "Ola Mundo"', validate:(c,a)=>c==="nano"&&a[0]==="hello.txt", successMsg:"✓ Arquivo criado!" },
+            { instruction:"Leia o arquivo: cat hello.txt",               validate:(c,a)=>c==="cat"&&a[0]==="hello.txt",  successMsg:"✓ Missão completa!" },
+        ],
+    },
+};
+
 function createTerminal() {
     if (document.getElementById("framescreen")) return;
 
@@ -268,92 +474,125 @@ function createTerminal() {
     termPanel.appendChild(terminal);
     device.appendChild(termPanel);
 
-    // Boot message
-    const bootLines = [
-        { t:`HackOS v2.4 — kernel 6.1.0-secure`, c:V.blue },
-        { t:`Montando sistema de arquivos... OK`,  c:V.muted },
-        { t:`Inicializando módulos de rede... OK`, c:V.muted },
-        { t:`Conexão: 192.168.1.100`, c:V.muted },
-        { t:``, c:"" },
+    // Registra terminal para missões + aplica CRT
+    missionTerminal = terminal;
+    applyCRTOverlay(termPanel);
+
+    // Boot sequence dramático com barra de progresso
+    const bootSteps = [
+        { t:"HackOS v2.4 — kernel 6.1.0-secure",             delay:0    },
+        { t:"Inicializando BIOS... OK",                       delay:180  },
+        { t:"Detectando hardware... CPU: x86_64 | RAM: 512M", delay:340  },
+        { t:"Montando sistema de arquivos... OK",             delay:520  },
+        { t:"Carregando módulos de segurança... OK",          delay:700  },
+        { t:"Inicializando módulos de rede... OK",            delay:880  },
+        { t:"Conexão estabelecida: 192.168.1.100",            delay:1060 },
     ];
-    bootLines.forEach(({ t, c }, i) => {
+
+    // Barra de progresso visual
+    const progWrap = document.createElement("div");
+    Object.assign(progWrap.style, { margin:"6px 0", display:"flex", alignItems:"center", gap:"10px" });
+    const progLabel = document.createElement("span");
+    Object.assign(progLabel.style, { color:OUTPUT_COLORS.system, fontSize:"11px", fontFamily:"'Share Tech Mono',monospace" });
+    progLabel.textContent = "BOOT";
+    const progTrack = document.createElement("div");
+    Object.assign(progTrack.style, { flex:"1", height:"3px", background:"rgba(125,249,232,0.12)", borderRadius:"2px", overflow:"hidden" });
+    const progFill = document.createElement("div");
+    Object.assign(progFill.style, { height:"100%", width:"0%", background:OUTPUT_COLORS.info, borderRadius:"2px", animation:"progressFill 1200ms linear both" });
+    progTrack.appendChild(progFill);
+    progWrap.appendChild(progLabel);
+    progWrap.appendChild(progTrack);
+    terminal.appendChild(progWrap);
+
+    bootSteps.forEach(({ t, delay }, i) => {
         setTimeout(() => {
-            if (t) {
-                const d = document.createElement("div");
-                d.style.color = c;
-                d.textContent = t;
-                terminal.appendChild(d);
+            const d = document.createElement("div");
+            Object.assign(d.style, { color:OUTPUT_COLORS.system, fontFamily:"'Share Tech Mono',monospace", fontSize:"11px" });
+            d.textContent = t;
+            terminal.appendChild(d);
+            terminal.scrollTop = terminal.scrollHeight;
+            if (i === bootSteps.length - 1) {
+                setTimeout(() => { progWrap.remove(); addNewCommandLine(terminal); }, 200);
             }
-            if (i === bootLines.length - 1) addNewCommandLine(terminal);
-        }, i * 90);
+        }, delay);
     });
 
     // ══════════════════════════════════════════════════════════════════════════
     // PAINEL: PROCESSOS
     // ══════════════════════════════════════════════════════════════════════════
     const procPanel = panels["processes"];
-
+    css(procPanel, { flexDirection:"column" });
     const procToolbar = document.createElement("div");
-    css(procToolbar, { padding:"8px 14px", borderBottom:`1px solid ${V.border}`,
-                       display:"flex", alignItems:"center", justifyContent:"space-between" });
+    css(procToolbar, { padding:"6px 14px", borderBottom:`1px solid ${V.border}`,
+                       display:"flex", alignItems:"center", gap:"8px", flexShrink:"0" });
     const procCount = document.createElement("span");
-    css(procCount, { fontFamily:"'Rajdhani',sans-serif", fontSize:"10px",
-                     letterSpacing:".15em", color:V.muted, textTransform:"uppercase" });
+    css(procCount, { fontFamily:"'Share Tech Mono',monospace", fontSize:"10px", color:V.muted, flex:"1" });
+    const procUptime = document.createElement("span");
+    css(procUptime, { fontFamily:"'Share Tech Mono',monospace", fontSize:"10px", color:V.muted });
     const killBtn = document.createElement("button");
-    css(killBtn, { fontFamily:"'Rajdhani',sans-serif", fontSize:"11px", fontWeight:"700",
-                   letterSpacing:".1em", textTransform:"uppercase",
-                   padding:"4px 12px", background:"transparent",
-                   border:`1px solid ${V.red}`, color:V.red,
-                   borderRadius:"3px", cursor:"pointer" });
+    css(killBtn, { fontFamily:"'Rajdhani',sans-serif", fontSize:"10px", fontWeight:"700",
+                   letterSpacing:".1em", textTransform:"uppercase", padding:"3px 10px",
+                   background:"transparent", border:`1px solid ${V.red}`, color:V.red,
+                   borderRadius:"3px", cursor:"pointer", display:"flex", alignItems:"center", gap:"4px" });
     killBtn.innerHTML = `<i class='bx bx-x-circle'></i> Kill -9`;
     procToolbar.appendChild(procCount);
+    procToolbar.appendChild(procUptime);
     procToolbar.appendChild(killBtn);
     procPanel.appendChild(procToolbar);
-
+    const procHead = document.createElement("div");
+    css(procHead, { display:"grid", gridTemplateColumns:"52px 74px 160px 160px 1fr",
+                    padding:"4px 14px", borderBottom:`1px solid ${V.border}`,
+                    fontFamily:"'Rajdhani',sans-serif", fontSize:"10px",
+                    letterSpacing:".12em", textTransform:"uppercase", color:V.muted, flexShrink:"0" });
+    procHead.innerHTML = ["PID","USER","CPU","MEM","COMANDO"].map(h => `<span>${h}</span>`).join("");
+    procPanel.appendChild(procHead);
     const procScroll = document.createElement("div");
-    css(procScroll, { flex:"1", overflowY:"auto", padding:"0 14px 12px" });
-    const procTable = document.createElement("table");
-    procTable.style.cssText = "width:100%;border-collapse:collapse;font-size:12px;";
-    procTable.innerHTML = `<thead><tr>
-        ${["PID","USUÁRIO","%CPU","%MEM","COMANDO"].map(h =>
-            `<th style="padding:8px 6px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:${V.muted};border-bottom:1px solid ${V.border};text-align:left">${h}</th>`
-        ).join("")}
-    </tr></thead>`;
-    const procBody = document.createElement("tbody");
-    procTable.appendChild(procBody);
-    procScroll.appendChild(procTable);
+    css(procScroll, { flex:"1", overflowY:"auto", padding:"4px 0" });
     procPanel.appendChild(procScroll);
     device.appendChild(procPanel);
-
     let selectedPid: number | null = null;
-
+    function mkBar(pct: number, color: string): string {
+        const filled = Math.min(Math.round(pct / 5), 20);
+        return `<span style="color:${color};letter-spacing:-1px;font-size:9px">${"█".repeat(filled)}${"░".repeat(20-filled)}</span> <span style="color:${color}">${pct.toFixed(1)}%</span>`;
+    }
     function renderProcs() {
-        procCount.textContent = `Processos ativos — ${processes.length}`;
-        procBody.innerHTML = "";
-        processes.forEach(p => {
-            const tr = document.createElement("tr");
-            tr.style.cursor = "pointer";
-            const highCpu = parseFloat(p.cpu) > 1.5;
-            tr.innerHTML = `
-                <td style="padding:7px 6px;color:${V.yellow};border-bottom:1px solid rgba(13,46,28,.5)">${p.pid}</td>
-                <td style="padding:7px 6px;color:${V.text};border-bottom:1px solid rgba(13,46,28,.5)">${p.user}</td>
-                <td style="padding:7px 6px;color:${highCpu?V.red:V.green};border-bottom:1px solid rgba(13,46,28,.5)">${p.cpu}%</td>
-                <td style="padding:7px 6px;color:${V.text};border-bottom:1px solid rgba(13,46,28,.5)">${p.mem}%</td>
-                <td style="padding:7px 6px;color:${V.text};border-bottom:1px solid rgba(13,46,28,.5)">${p.command}</td>
-            `;
-            tr.addEventListener("click", () => {
-                procBody.querySelectorAll("tr").forEach((r:any) => r.style.background="");
-                tr.style.background = "rgba(0,255,157,0.08)";
-                selectedPid = p.pid;
-            });
-            procBody.appendChild(tr);
+        const now = new Date();
+        const avg = (processes.reduce((s, p) => s + p.cpu, 0) / processes.length).toFixed(2);
+        procUptime.textContent = `${now.toLocaleTimeString()}  load: ${avg}`;
+        procCount.textContent  = `tasks: ${processes.length}  running: ${processes.filter(p => p.state === "R").length}`;
+        procScroll.innerHTML = "";
+        [...processes].sort((a, b) => b.cpu - a.cpu).forEach(p => {
+            const row = document.createElement("div");
+            const sel = selectedPid === p.pid;
+            const cpuColor = p.cpu > 4 ? V.red : p.cpu > 1.5 ? V.yellow : V.green;
+            const stateColor: Record<string,string> = { R:V.green, S:V.muted, I:"#334155", Z:V.red };
+            css(row, { display:"grid", gridTemplateColumns:"52px 74px 160px 160px 1fr",
+                       padding:"5px 14px", cursor:"pointer", alignItems:"center",
+                       background: sel ? "rgba(0,255,157,0.07)" : "transparent",
+                       borderLeft: sel ? `2px solid ${V.green}` : "2px solid transparent",
+                       transition:"background .1s" });
+            row.innerHTML =
+                `<span style="color:${V.yellow};font-family:'Share Tech Mono',monospace;font-size:11px">${p.pid}</span>` +
+                `<span style="color:${V.muted};font-family:'Share Tech Mono',monospace;font-size:11px">${p.user}</span>` +
+                `<span style="font-family:'Share Tech Mono',monospace;font-size:10px">${mkBar(p.cpu, cpuColor)}</span>` +
+                `<span style="font-family:'Share Tech Mono',monospace;font-size:10px">${mkBar(p.mem, "#7df9e8")}</span>` +
+                `<span style="color:${V.text};font-family:'Share Tech Mono',monospace;font-size:11px">` +
+                `<span style="color:${stateColor[p.state]??V.muted};margin-right:6px">[${p.state}]</span>${p.command}</span>`;
+            row.addEventListener("mouseenter", () => { if (!sel) row.style.background = "rgba(255,255,255,0.02)"; });
+            row.addEventListener("mouseleave", () => { if (!sel) row.style.background = "transparent"; });
+            row.addEventListener("click", () => { selectedPid = p.pid; renderProcs(); });
+            procScroll.appendChild(row);
         });
     }
-
+    setInterval(() => { if (procPanel.style.display !== "none") renderProcs(); }, 1200);
     killBtn.addEventListener("click", () => {
         if (selectedPid === null) return;
         const idx = processes.findIndex(p => p.pid === selectedPid);
-        if (idx !== -1) { processes.splice(idx, 1); selectedPid = null; renderProcs(); }
+        if (idx !== -1) {
+            processes.splice(idx, 1); selectedPid = null;
+            eventEmitter.dispatchEvent(new CustomEvent("remove_pid", { detail: { processes, isCollided } }));
+            renderProcs();
+        }
     });
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -495,92 +734,192 @@ function createTerminal() {
     });
 
     const filePanel = panels["files"];
-    css(filePanel, { flexDirection:"row" });
-
+    css(filePanel, { flexDirection:"column" });
+    const fileTB = document.createElement("div");
+    css(fileTB, { padding:"6px 12px", borderBottom:`1px solid ${V.border}`,
+                  display:"flex", alignItems:"center", gap:"6px", flexShrink:"0" });
+    const pathDisplay = document.createElement("span");
+    css(pathDisplay, { fontFamily:"'Share Tech Mono',monospace", fontSize:"11px",
+                       color:V.green, flex:"1", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" });
+    const mkFBtn = (icon: string, label: string, color = V.green2) => {
+        const b = document.createElement("button");
+        css(b, { fontFamily:"'Rajdhani',sans-serif", fontSize:"10px", fontWeight:"700",
+                 letterSpacing:".06em", textTransform:"uppercase", padding:"3px 8px",
+                 background:"transparent", border:`1px solid ${color}`, color,
+                 borderRadius:"3px", cursor:"pointer", display:"flex", alignItems:"center", gap:"3px", flexShrink:"0" });
+        b.innerHTML = `<i class='bx ${icon}'></i>${label}`;
+        return b;
+    };
+    const btnNewFile = mkFBtn("bx-file-plus", "Novo arquivo");
+    const btnNewDir  = mkFBtn("bx-folder-plus", "Nova pasta");
+    const btnSave    = mkFBtn("bx-save", "Salvar");
+    const btnDl      = mkFBtn("bx-download", "Download");
+    btnSave.style.display = "none"; btnDl.style.display = "none";
+    fileTB.appendChild(pathDisplay); fileTB.appendChild(btnNewFile);
+    fileTB.appendChild(btnNewDir);   fileTB.appendChild(btnSave); fileTB.appendChild(btnDl);
+    filePanel.appendChild(fileTB);
+    const createForm = document.createElement("div");
+    css(createForm, { display:"none", padding:"7px 12px", borderBottom:`1px solid ${V.border}`,
+                      background:"rgba(0,255,157,0.03)", alignItems:"center", gap:"6px" });
+    const createInput = document.createElement("input");
+    css(createInput, { flex:"1", background:"#06090f", border:`1px solid ${V.border}`,
+                       borderRadius:"4px", padding:"4px 8px", color:V.text,
+                       fontFamily:"'Share Tech Mono',monospace", fontSize:"11px", outline:"none" });
+    createInput.placeholder = "nome-do-arquivo.txt";
+    const createOkBtn = mkFBtn("bx-check", "Criar", V.green);
+    const createCxBtn = mkFBtn("bx-x", "", V.red);
+    createForm.appendChild(createInput); createForm.appendChild(createOkBtn); createForm.appendChild(createCxBtn);
+    filePanel.appendChild(createForm);
+    const fileBody = document.createElement("div");
+    css(fileBody, { flex:"1", display:"flex", overflow:"hidden" });
     const sidebar = document.createElement("div");
-    css(sidebar, { width:"150px", borderRight:`1px solid ${V.border}`,
-                   padding:"12px 0", overflowY:"auto" });
-
+    css(sidebar, { width:"140px", borderRight:`1px solid ${V.border}`, overflowY:"auto", flexShrink:"0" });
     const fileMain = document.createElement("div");
     css(fileMain, { flex:"1", display:"flex", flexDirection:"column", overflow:"hidden" });
-
-    const fileToolbar = document.createElement("div");
-    css(fileToolbar, { padding:"8px 14px", borderBottom:`1px solid ${V.border}`,
-                       display:"flex", alignItems:"center", justifyContent:"space-between" });
-    const pathDisplay = document.createElement("span");
-    css(pathDisplay, { fontSize:"11px", color:V.green, fontFamily:"'Share Tech Mono',monospace" });
-    const newBtn = document.createElement("button");
-    css(newBtn, { fontFamily:"'Rajdhani',sans-serif", fontSize:"11px", fontWeight:"700",
-                  letterSpacing:".1em", textTransform:"uppercase",
-                  padding:"4px 10px", background:"transparent",
-                  border:`1px solid ${V.green2}`, color:V.green2,
-                  borderRadius:"3px", cursor:"pointer" });
-    newBtn.textContent = "+ Novo";
-    fileToolbar.appendChild(pathDisplay);
-    fileToolbar.appendChild(newBtn);
-
     const fileList = document.createElement("div");
-    css(fileList, { flex:"1", overflowY:"auto", padding:"10px 14px" });
-
-    fileMain.appendChild(fileToolbar);
-    fileMain.appendChild(fileList);
-    filePanel.appendChild(sidebar);
-    filePanel.appendChild(fileMain);
+    css(fileList, { flex:"1", overflowY:"auto", padding:"6px 8px" });
+    const editorPane = document.createElement("div");
+    css(editorPane, { display:"none", flexDirection:"column", borderTop:`1px solid ${V.border}`, flexShrink:"0", maxHeight:"55%" });
+    const editorBar = document.createElement("div");
+    css(editorBar, { padding:"4px 10px", background:"rgba(125,249,232,0.04)",
+                     borderBottom:`1px solid ${V.border}`, display:"flex", alignItems:"center", gap:"6px", flexShrink:"0" });
+    const editorTitle = document.createElement("span");
+    css(editorTitle, { fontFamily:"'Share Tech Mono',monospace", fontSize:"10px", color:"#7df9e8", flex:"1" });
+    const editorCloseBtn = document.createElement("button");
+    css(editorCloseBtn, { background:"transparent", border:"none", color:V.muted, cursor:"pointer", fontSize:"13px" });
+    editorCloseBtn.textContent = "✕";
+    editorBar.appendChild(editorTitle); editorBar.appendChild(editorCloseBtn);
+    const editorTA = document.createElement("textarea");
+    css(editorTA, { flex:"1", background:"#040810", color:"#c8fce8",
+                    fontFamily:"'Share Tech Mono',monospace", fontSize:"12px",
+                    border:"none", outline:"none", padding:"10px 12px",
+                    resize:"none", lineHeight:"1.65", overflowY:"auto" });
+    editorTA.spellcheck = false;
+    editorPane.appendChild(editorBar); editorPane.appendChild(editorTA);
+    fileMain.appendChild(fileList); fileMain.appendChild(editorPane);
+    fileBody.appendChild(sidebar);  fileBody.appendChild(fileMain);
+    filePanel.appendChild(fileBody);
     device.appendChild(filePanel);
-
     let fileViewDir = "/";
-
+    let editingFile: file | null = null;
+    let creatingDir = false;
+    function openEditor(f: file) {
+        editingFile = f; editorTitle.textContent = `✎  ${fileViewDir}${f.name}`;
+        editorTA.value = f.content; editorPane.style.display = "flex";
+        btnSave.style.display = "flex"; btnDl.style.display = "flex";
+        editorTA.focus(); renderFilesPanel();
+    }
+    function closeEditor() {
+        editingFile = null; editorPane.style.display = "none";
+        btnSave.style.display = "none"; btnDl.style.display = "none";
+        renderFilesPanel();
+    }
+    editorCloseBtn.addEventListener("click", closeEditor);
+    btnSave.addEventListener("click", () => {
+        if (!editingFile) return;
+        editingFile.content = editorTA.value;
+        const prev = editorTitle.textContent;
+        editorTitle.textContent = `✎  ${fileViewDir}${editingFile.name}  ✓ salvo`;
+        setTimeout(() => { editorTitle.textContent = prev; }, 1400);
+    });
+    btnDl.addEventListener("click", () => {
+        if (!editingFile) return;
+        const blob = new Blob([editorTA.value], { type:"text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = Object.assign(document.createElement("a"), { href:url, download:editingFile.name });
+        a.click(); URL.revokeObjectURL(url);
+    });
+    function showCreateForm(isDir: boolean) {
+        creatingDir = isDir; createInput.placeholder = isDir ? "nome-da-pasta" : "arquivo.txt";
+        createInput.value = ""; createForm.style.display = "flex"; createInput.focus();
+    }
+    function hideCreateForm() { createForm.style.display = "none"; }
+    btnNewFile.addEventListener("click", () => showCreateForm(false));
+    btnNewDir.addEventListener("click",  () => showCreateForm(true));
+    createCxBtn.addEventListener("click", hideCreateForm);
+    createInput.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") createOkBtn.click();
+        if (e.key === "Escape") hideCreateForm();
+    });
+    createOkBtn.addEventListener("click", () => {
+        const name = createInput.value.trim(); if (!name) return;
+        const dir = diretories[fileViewDir]; if (!dir) return;
+        if (creatingDir) {
+            const newPath = `${fileViewDir}${name}/`;
+            if (!diretories[newPath]) { diretories[newPath] = { name, contentFile:[], contentDir:[] }; dir.contentDir.push(name); }
+        } else {
+            if (!dir.contentFile.some(f => f.name === name)) {
+                const nf: file = { name, content:"" }; dir.contentFile.push(nf);
+                hideCreateForm(); renderFilesPanel(); openEditor(nf); return;
+            }
+        }
+        hideCreateForm(); renderFilesPanel();
+    });
     function renderFilesPanel() {
         sidebar.innerHTML = "";
         Object.keys(diretories).forEach(path => {
             const d = document.createElement("div");
-            css(d, { padding:"7px 14px", fontSize:"10px",
-                     color: path===fileViewDir ? V.green : V.muted,
-                     background: path===fileViewDir ? "rgba(0,255,157,0.06)" : "transparent",
-                     cursor:"pointer", display:"flex", alignItems:"center",
-                     gap:"6px", transition:"color .12s" });
-            d.innerHTML = `<i class='bx bx-folder' style="font-size:13px"></i>${path}`;
-            d.addEventListener("click", () => { fileViewDir = path; renderFilesPanel(); });
+            css(d, { padding:"6px 10px", fontSize:"10px", fontFamily:"'Share Tech Mono',monospace",
+                     color: path===fileViewDir ? "#7df9e8" : V.muted,
+                     background: path===fileViewDir ? "rgba(125,249,232,0.06)" : "transparent",
+                     cursor:"pointer", display:"flex", alignItems:"center", gap:"5px",
+                     borderLeft: path===fileViewDir ? "2px solid #7df9e8" : "2px solid transparent" });
+            d.innerHTML = `<i class='bx bx-folder' style="font-size:12px"></i>${path}`;
+            d.addEventListener("click", () => { fileViewDir = path; closeEditor(); hideCreateForm(); renderFilesPanel(); });
             sidebar.appendChild(d);
         });
-
-        pathDisplay.textContent = fileViewDir;
-        fileList.innerHTML = "";
-        const dir = diretories[fileViewDir];
-        if (!dir) return;
-
+        pathDisplay.textContent = `~${fileViewDir}`; fileList.innerHTML = "";
+        const dir = diretories[fileViewDir]; if (!dir) return;
+        const iconMap: Record<string,string> = { TXT:"bx-file-blank", JS:"bx-code-alt", PY:"bx-code-curly", C:"bx-chip", H:"bx-chip" };
         dir.contentDir.forEach(name => {
             const item = document.createElement("div");
-            css(item, { display:"flex", alignItems:"center", gap:"8px",
-                        padding:"7px 8px", borderRadius:"4px", cursor:"pointer",
-                        color:V.text, fontSize:"12px", transition:"background .12s" });
-            item.innerHTML = `<i class='bx bx-folder' style="color:${V.green};font-size:15px"></i>${name}/ <span style="color:${V.muted};font-size:10px;margin-left:auto">DIR</span>`;
-            item.addEventListener("click", () => { fileViewDir += name+"/"; renderFilesPanel(); });
+            css(item, { display:"flex", alignItems:"center", gap:"7px", padding:"6px 8px", borderRadius:"3px",
+                        cursor:"pointer", color:V.text, fontFamily:"'Share Tech Mono',monospace", fontSize:"11px" });
+            item.innerHTML = `<i class='bx bx-folder' style="color:${V.yellow};font-size:14px"></i><span style="flex:1">${name}/</span><span style="color:${V.muted};font-size:10px">DIR</span>`;
+            item.addEventListener("mouseenter", () => item.style.background = "rgba(255,255,255,0.03)");
+            item.addEventListener("mouseleave", () => item.style.background = "transparent");
+            item.addEventListener("click", () => { fileViewDir = `${fileViewDir}${name}/`; hideCreateForm(); renderFilesPanel(); });
             fileList.appendChild(item);
         });
-
         dir.contentFile.forEach(f => {
             const ext = f.name.split(".").pop()?.toUpperCase() || "";
+            const icon = iconMap[ext] ?? "bx-file";
+            const isOpen = editingFile?.name === f.name;
             const item = document.createElement("div");
-            css(item, { display:"flex", alignItems:"center", gap:"8px",
-                        padding:"7px 8px", borderRadius:"4px",
-                        color:V.text, fontSize:"12px", transition:"background .12s" });
-            item.innerHTML = `<i class='bx bx-file' style="color:${V.green};font-size:15px"></i>${f.name} <span style="color:${V.muted};font-size:10px;margin-left:auto">${ext}</span>`;
+            css(item, { display:"flex", alignItems:"center", gap:"7px", padding:"6px 8px", borderRadius:"3px",
+                        cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:"11px",
+                        color: isOpen ? "#7df9e8" : V.text,
+                        background: isOpen ? "rgba(125,249,232,0.06)" : "transparent",
+                        borderLeft: isOpen ? "2px solid #7df9e8" : "2px solid transparent" });
+            const delBtn = document.createElement("button");
+            css(delBtn, { background:"transparent", border:"none", color:V.red, cursor:"pointer",
+                          fontSize:"12px", padding:"0 2px", marginLeft:"auto", opacity:"0", transition:"opacity .1s", flexShrink:"0" });
+            delBtn.textContent = "✕";
+            item.innerHTML = `<i class='bx ${icon}' style="color:${isOpen?"#7df9e8":V.green};font-size:14px"></i><span style="flex:1">${f.name}</span><span style="color:${V.muted};font-size:9px">${ext}</span>`;
+            item.appendChild(delBtn);
+            item.addEventListener("mouseenter", () => { if (!isOpen) item.style.background = "rgba(255,255,255,0.03)"; delBtn.style.opacity = "1"; });
+            item.addEventListener("mouseleave", () => { if (!isOpen) item.style.background = "transparent"; delBtn.style.opacity = "0"; });
+            item.addEventListener("click", (e) => { if (e.target === delBtn) return; openEditor(f); });
+            delBtn.addEventListener("click", (e) => {
+                e.stopPropagation(); item.innerHTML = "";
+                css(item, { background:"rgba(248,113,113,0.08)", borderLeft:`2px solid ${V.red}`, color:V.red, justifyContent:"space-between" });
+                const msg = Object.assign(document.createElement("span"), { textContent:`Apagar ${f.name}?` });
+                msg.style.fontSize = "10px";
+                const yesBtn = mkFBtn("bx-check", "Sim", V.red);
+                const noBtn  = mkFBtn("bx-x", "Não", V.muted);
+                yesBtn.addEventListener("click", () => { const i = dir.contentFile.indexOf(f); if (i !== -1) dir.contentFile.splice(i,1); if (editingFile?.name===f.name) closeEditor(); renderFilesPanel(); });
+                noBtn.addEventListener("click", () => renderFilesPanel());
+                item.appendChild(msg); item.appendChild(yesBtn); item.appendChild(noBtn);
+            });
             fileList.appendChild(item);
         });
-
         if (!dir.contentDir.length && !dir.contentFile.length) {
-            fileList.innerHTML = `<div style="color:${V.muted};font-size:11px;padding:20px 8px;text-align:center">Diretório vazio</div>`;
+            const empty = document.createElement("div");
+            css(empty, { color:V.muted, fontSize:"11px", padding:"24px 8px", textAlign:"center", fontFamily:"'Share Tech Mono',monospace" });
+            empty.textContent = "diretório vazio"; fileList.appendChild(empty);
         }
     }
-
-    newBtn.addEventListener("click", () => {
-        const name = prompt("Nome do arquivo (ex: script.js):");
-        if (!name) return;
-        const content = prompt("Conteúdo:") || "";
-        diretories[fileViewDir]?.contentFile.push({ name, content });
-        renderFilesPanel();
-    });
 
     // ── Status bar ────────────────────────────────────────────────────────────
     const statusBar = document.createElement("div");
@@ -623,67 +962,133 @@ function createTerminal() {
 // Adicionar uma nova linha de comando ao terminal
 export function addNewCommandLine(terminal: HTMLDivElement) {
     const commandLine = document.createElement("div");
-    commandLine.style.display = "flex";
+    commandLine.style.display    = "flex";
     commandLine.style.alignItems = "center";
+    commandLine.style.marginTop  = "2px";
 
-    // Prefixo
+    // Prefixo colorido: user · : · dir · $
     const prefix = document.createElement("span");
-    prefix.textContent = `${currentPrefix} ${currentDir}`;
-    prefix.style.color = "#00a99d";
+    prefix.style.userSelect  = "none";
+    prefix.style.flexShrink  = "0";
+    prefix.style.whiteSpace  = "nowrap";
+    prefix.style.fontFamily  = "'Share Tech Mono',monospace";
+    prefix.style.fontSize    = "12px";
+    prefix.innerHTML =
+        `<span style="color:#7df9e8">${currentPrefix}</span>` +
+        `<span style="color:#6b7280">:</span>` +
+        `<span style="color:#a78bfa">${currentDir}</span>` +
+        `<span style="color:#fbbf24">$ </span>`;
     commandLine.appendChild(prefix);
 
-    // Campo de entrada editável
     const input = document.createElement("span");
     input.contentEditable = "true";
-    input.style.outline = "none";
-    input.style.color = "white";
-    input.style.wordBreak = "break-word"; // Quebra palavras longas automaticamente
-    input.style.overflow = "hidden"; // Impede que o texto ultrapasse os limites
-    input.style.flexGrow = "1";
+    input.style.outline    = "none";
+    input.style.color      = "#e2f0ff";
+    input.style.fontFamily = "'Share Tech Mono',monospace";
+    input.style.fontSize   = "12px";
+    input.style.wordBreak  = "break-word";
+    input.style.overflow   = "hidden";
+    input.style.flexGrow   = "1";
     input.style.whiteSpace = "pre-wrap";
     commandLine.appendChild(input);
 
     terminal.appendChild(commandLine);
     terminal.scrollTop = terminal.scrollHeight;
     input.focus();
-
+    cmdHistoryIdx = -1;
 
     input.addEventListener("keydown", (event) => {
         event.stopPropagation();
 
+        // ── Histórico ↑↓ ────────────────────────────────────────────────────
+        if (event.key === "ArrowUp") {
+            event.preventDefault();
+            if (!cmdHistory.length) return;
+            cmdHistoryIdx = Math.min(cmdHistoryIdx + 1, cmdHistory.length - 1);
+            input.textContent = cmdHistory[cmdHistoryIdx];
+            const r = document.createRange(), s = window.getSelection();
+            r.selectNodeContents(input); r.collapse(false);
+            s?.removeAllRanges(); s?.addRange(r);
+            return;
+        }
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+            if (cmdHistoryIdx <= 0) { cmdHistoryIdx = -1; input.textContent = ""; return; }
+            cmdHistoryIdx--;
+            input.textContent = cmdHistory[cmdHistoryIdx];
+            return;
+        }
+
+        // ── Tab autocomplete básico ──────────────────────────────────────────
+        if (event.key === "Tab") {
+            event.preventDefault();
+            const partial = input.innerText.trim();
+            if (!partial) return;
+            const match = Object.keys(commands).find(c => c.startsWith(partial) && c !== partial);
+            if (match) {
+                input.textContent = match + " ";
+                const r = document.createRange(), s = window.getSelection();
+                r.selectNodeContents(input); r.collapse(false);
+                s?.removeAllRanges(); s?.addRange(r);
+            }
+            return;
+        }
+
+        // ── Enter ────────────────────────────────────────────────────────────
         if (event.key === "Enter") {
             event.preventDefault();
-
             const command = input.innerText.trim();
-            if (command !== "") {
+            if (command) {
+                if (cmdHistory[0] !== command) cmdHistory.unshift(command);
+                if (cmdHistory.length > 50) cmdHistory.pop();
                 executeCommand(command, terminal);
             }
-
             input.contentEditable = "false";
             addNewCommandLine(terminal);
         }
     });
 
-    input.addEventListener("click", (event) => event.stopPropagation());
-    input.addEventListener("keypress", (event) => event.stopPropagation());
-
-
+    input.addEventListener("click",    (e) => e.stopPropagation());
+    input.addEventListener("keypress", (e) => e.stopPropagation());
 }
 // Dicionário de comandos do terminal
 const commands: Record<string, (args: string[]) => string> = {
     "ping": (args) => `  PING ${args[0] || "127.0.0.1"}: 56 data bytes\n64 bytes from ${args[0] || "127.0.0.1"}: icmp_seq=1 ttl=64 time=0.5 ms`,
     "pwd": () => currentDir,
     "ifconfig": () => `  eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n gateway 192.168.1.1`,
-    "help": () => `ping [host] → Testa a conexão com um host.
-ifconfig → Exibe informações de rede.
-help → Lista os comandos disponíveis no terminal.
-clear → Limpa o terminal.
-cd [diretório] → Entra em um diretório válido.
-cat [arquivo] → Exibe o conteúdo de um arquivo.
-ls → Lista os arquivos disponíveis no diretório atual.
-ps aux → Lista todos os processos.
-ssh [user@address] → Realiza um conexão remota.
-kill -9 [PID] → Elimina um processo forçadamente.`,
+    "help": () => [
+        "╔══════════════════════════════════════════════════════╗",
+        "║         HACKOS v2.4  —  COMANDOS DISPONÍVEIS        ║",
+        "╚══════════════════════════════════════════════════════╝",
+        "",
+        "── NAVEGAÇÃO ───────────────────────────────────────────",
+        "  ls                  Lista arquivos e pastas",
+        "  cd [dir]            Entra no diretório (.. para voltar)",
+        "  pwd                 Mostra diretório atual",
+        "",
+        "── ARQUIVOS ────────────────────────────────────────────",
+        "  cat [arquivo]       Exibe conteúdo do arquivo",
+        "  nano [arq] \"texto\"  Cria ou edita arquivo",
+        "  rm [arquivo]        Remove arquivo",
+        "  mkdir [pasta]       Cria novo diretório",
+        "",
+        "── REDE ────────────────────────────────────────────────",
+        "  ping [host]         Testa conexão com host",
+        "  ifconfig            Exibe interfaces de rede",
+        "  ssh [user@host]     Conecta a servidor remoto",
+        "  exit                Encerra sessão remota",
+        "",
+        "── PROCESSOS ───────────────────────────────────────────",
+        "  top                 Monitor em tempo real (q para sair)",
+        "  ps aux              Lista todos os processos",
+        "  kill -9 [PID]       Encerra processo forçadamente",
+        "",
+        "── TERMINAL ────────────────────────────────────────────",
+        "  clear               Limpa o terminal",
+        "  help                Exibe esta mensagem",
+        "",
+        "  ↑ ↓  Histórico de comandos   Tab  Autocomplete",
+    ].join("\n"),
     "cd": (args) => {
 
         if (args[0] === "..") {
@@ -748,31 +1153,42 @@ kill -9 [PID] → Elimina um processo forçadamente.`,
         return AllFilesAndDirs;
     },
     "top": () => {
-        // Criar um elemento <pre> separado do estilo global
-            let terminal = document.getElementById("terminal") as HTMLDivElement;
-            
-            if(terminal)
-            {
-                const pre = document.createElement("pre");
-                pre.style.color = "#00ff00";
-                pre.style.fontFamily = "monospace";
-                pre.style.whiteSpace = "pre"; // Mantém formatação fixa
-                pre.style.margin = "0"; // Remove margens extras
-    
-                // Criar cabeçalho
-                let output = `PID     USER      %CPU    %MEM    COMMAND\n`;
-                output += `--------------------------------------------\n`;
-    
-                // Criar linhas formatadas
-                processes.forEach(p => {
-                    output += `${p.pid.toString().padEnd(7)} ${p.user.padEnd(9)} ${p.cpu.padEnd(7)} ${p.mem.padEnd(7)} ${p.command}\n`;
-                });
-    
-                pre.textContent = output; // Adicionar saída formatada no <pre>
-                terminal.appendChild(pre)
+        const terminal = document.getElementById("terminal") as HTMLDivElement | null;
+        if (!terminal) return "";
+        const box = document.createElement("pre");
+        Object.assign(box.style, {
+            color:"#7df9e8", fontFamily:"'Share Tech Mono',monospace", fontSize:"11px",
+            lineHeight:"1.55", margin:"4px 0", background:"rgba(0,0,0,0.4)",
+            padding:"8px 10px", borderLeft:"3px solid #7df9e8", whiteSpace:"pre",
+        });
+        const SEP = "─".repeat(58);
+        function renderTop() {
+            const now = new Date();
+            const avg = (processes.reduce((s, p) => s + p.cpu, 0) / processes.length).toFixed(1);
+            let out =
+                ` top — ${now.toLocaleTimeString()}  |  tasks: ${processes.length}  |  cpu avg: ${avg}%\n` +
+                `${SEP}\n` +
+                ` ${"PID".padEnd(6)}${"USER".padEnd(9)}${"CPU%".padEnd(7)}${"MEM%".padEnd(7)}${"ST".padEnd(4)}COMANDO\n` +
+                `${SEP}\n`;
+            [...processes].sort((a, b) => b.cpu - a.cpu).forEach(p => {
+                out += ` ${String(p.pid).padEnd(6)}${p.user.padEnd(9)}${p.cpu.toFixed(1).padEnd(7)}${p.mem.toFixed(1).padEnd(7)}${p.state.padEnd(4)}${p.command}\n`;
+            });
+            out += `${SEP}\n pressione q para sair`;
+            box.textContent = out;
+        }
+        renderTop();
+        terminal.appendChild(box);
+        terminal.scrollTop = terminal.scrollHeight;
+        const tid = setInterval(() => { if (!box.isConnected) { clearInterval(tid); return; } renderTop(); }, 1200);
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key.toLowerCase() === "q") {
+                clearInterval(tid); box.style.borderLeftColor = "#f87171";
+                box.textContent += "\n[top encerrado]";
+                document.removeEventListener("keydown", onKey);
             }
-
-            return ""
+        };
+        document.addEventListener("keydown", onKey);
+        return "";
     },
     "kill": (args) => {
         if (args.length < 2 || args[0] !== "-9") {
@@ -1045,26 +1461,37 @@ kill -9 [PID] → Elimina um processo forçadamente.`,
 
 // Executar um comando digitado
 function executeCommand(command: string, terminal: HTMLDivElement) {
-    const args = command.split(" ");
-    const cmd = args.shift()?.toLowerCase();
-
+    const parts = command.trim().split(/\s+/);
+    const cmd   = parts.shift()?.toLowerCase() ?? "";
+    const args  = parts;
     if (!cmd) return;
 
-    if (cmd === "clear") {
-        terminal.innerHTML = "";
-        addNewCommandLine(terminal);
-        return;
-    }
+    if (cmd === "clear") { terminal.innerHTML = ""; return; }
 
-    const output = commands[cmd] ? commands[cmd](args) : `Comando não reconhecido: ${cmd}`;
-    appendToTerminal(output, terminal);
+    // Verifica passo de missão ativa antes de executar
+    const missionHit = checkMissionStep(cmd, args, terminal);
+
+    if (commands[cmd]) {
+        const output = commands[cmd](args);
+        if (output) typewriterAppend(output, terminal, detectOutputType(output));
+    } else if (!missionHit) {
+        // Comando desconhecido e não era passo de missão → glitch + erro
+        triggerGlitch(terminal);
+        typewriterAppend(
+            `✗  comando não encontrado: ${cmd}\nDigite help para ver os comandos disponíveis.`,
+            terminal, "error"
+        );
+    }
 }
 
-// Adiciona a saída no terminal
-export function appendToTerminal(text: string, terminal: HTMLDivElement) {
+// Adiciona output sem typewriter — para uso programático externo
+export function appendToTerminal(text: string, terminal: HTMLDivElement, type: OutputType = "default") {
     const lines = text.split("\n");
     lines.forEach(line => {
         const div = document.createElement("div");
+        div.style.color      = OUTPUT_COLORS[detectOutputType(line) !== "default" ? detectOutputType(line) : type];
+        div.style.fontFamily = "'Share Tech Mono',monospace";
+        div.style.fontSize   = "12px";
         div.textContent = line;
         terminal.appendChild(div);
     });
