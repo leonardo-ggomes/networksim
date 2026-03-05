@@ -212,7 +212,7 @@ export default class MissionManager {
 
         // Registra no HUD (lista de missões) e mostra instrução após 3s
         window.HUD?.setMission(def.id, def.title, def.instruction);
-        setTimeout(() => showInstruction(def.title, def.instruction), 3000);
+        setTimeout(() => showInstruction(def.title, def.instruction), 15000);
         elementos.setCurrentMission(def.title);
 
         // Escuta o evento de conclusão

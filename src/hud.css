@@ -24,7 +24,7 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
-  z-index: 200;
+  z-index: 100;
   pointer-events: none;
   font-family: var(--hud-font);
 }
@@ -140,7 +140,7 @@
   position: fixed;
   bottom: 24px;
   left: 24px;
-  z-index: 200;
+  z-index: 100;
   pointer-events: none;
   animation: hudSlideInLeft .4s .1s cubic-bezier(.4,0,.2,1) both;
 }
@@ -232,7 +232,7 @@
   position: fixed;
   top: 24px;
   left: 24px;
-  z-index: 200;
+  z-index: 100;
   pointer-events: none;
   max-width: 280px;
   animation: hudSlideInLeft .35s cubic-bezier(.4,0,.2,1) both;
@@ -278,7 +278,7 @@
   position: fixed;
   top: 24px;
   right: 24px;
-  z-index: 200;
+  z-index: 600;
   display: flex;
   flex-direction: column;
   align-items: flex-end;

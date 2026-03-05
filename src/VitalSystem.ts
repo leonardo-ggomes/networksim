@@ -162,7 +162,7 @@ export default class VitalSystem {
             top:            '50%',
             left:           '50%',
             transform:      'translate(-50%,-50%)',
-            zIndex:         '7500',
+            zIndex:         '1500',
             display:        'none',
             flexDirection:  'column',
             alignItems:     'center',

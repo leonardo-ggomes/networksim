@@ -191,18 +191,12 @@ class SocketManager{
     }
 
     setHudStatus(status: boolean){
-        const hudStatus = document.getElementById("status-server") as HTMLDivElement
-        
-        if(status){
-            hudStatus.innerText = 'Online'
-            hudStatus.style.borderLeftColor = "#8BC34A"
+        const hud = (window as any).HUD;
+        if (status) {
+            hud?.notify('Servidor online', 'success');
+        } else {
+            hud?.notify('Conexão perdida com o servidor', 'error');
         }
-        else{
-            hudStatus.innerText = 'Offline'
-            hudStatus.style.borderLeftColor = "#FF0000"
-        }
-
-
     }
 
     sendRemoteAccess = (currentDir: string, dir: string , command: string, name?: string) => {

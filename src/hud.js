@@ -46,7 +46,7 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        z-index: 7000;
+        z-index: 700;
         pointer-events: none;
       }
       .hud-money-icon {

@@ -400,9 +400,6 @@ export default class Loading
             const statusText = (container as any).__statusText as HTMLElement;
             statusText.childNodes[0].textContent = "Pronto";
 
-            (document.getElementById("status-server") as HTMLDivElement).style.display = "block";
-            (document.getElementById("instruction")   as HTMLDivElement).style.display = "block";
-
             // Fade out suave antes de remover
             setTimeout(() => {
                 container.style.transition = "opacity .6s ease";

@@ -4,7 +4,6 @@ import SocketManager from "./SocketManager";
 //Compartilhado globalmente
 export const eventEmitter = new EventTarget();
 
-let missionContent = ""
 
 //Processes
 const processes = [
@@ -74,7 +73,7 @@ let elementos = {
         removeElement('framescreen')
     },
     setIsCollided: (state: boolean) => { isCollided = state; },
-    setCurrentMission: (currentMission: string) => { missionContent = currentMission; },
+    setCurrentMission: (currentMission: string) => { (window as any).HUD?.setMission(currentMission, currentMission, ''); },
     setProcesses: (name: string, pid: number, memory: number, cpu: number) => {
         processes.push({
             command: name,
@@ -94,7 +93,7 @@ let elementos = {
         diretories[dirPath].contentFile.push(missionFile)
     },
     showMsg: (msg: string) => {
-        showMissionFinished(msg)
+        (window as any).HUD?.notify(msg, 'success');
     }
 };
 
@@ -885,31 +884,6 @@ function removeElement(name: string) {
     }
 }
 
-function showMissionFinished(text: string) {
-    let status = document.getElementById("status") as HTMLDivElement;
-
-    if (!status) {
-        status = document.createElement("div");
-        status.id = "status";
-
-        status.style.position = "absolute";
-        status.style.top = "50%";
-        status.style.left = "50%";
-        status.style.transform = "translate(-50%, -50%)"
-        status.style.color = "#ffffff";
-        status.style.fontSize = "51px";
-        status.style.textAlign = "center"
-        status.style.fontFamily = "Poppins"
-        status.style.fontWeight = "bold"
-        status.innerHTML = text
-        document.body.appendChild(status);
-
-        setTimeout(() => {
-            document.body.removeChild(status)
-        }, 4000)
-    }
-
-}
 
 createRadialMenu([
     {
@@ -1120,13 +1094,16 @@ function createRadialMenu(actions: RadialAction[]) {
 
 
 export function showInstruction(title: string, content: string){
+    // Atualiza o elemento legado (usado pelo driver.js)
     const instruction = document.getElementById("instruction") as HTMLDivElement
-    instruction.innerHTML = `
-        <div class="inst-title">${title}</div>
-        <div class="inst-subtitle">
-            ${content}
-        </div>
-    `
+    if (instruction) {
+        instruction.innerHTML = `
+            <div class="inst-title">${title}</div>
+            <div class="inst-subtitle">${content}</div>
+        `
+    }
+    // Dispara toast no HUD novo
+    ;(window as any).HUD?.notify(`${title} — ${content}`, 'info');
 }
 
 export default elementos;
