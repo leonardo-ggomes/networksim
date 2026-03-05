@@ -99,7 +99,7 @@ function hasLines(output: string, expected: string[]): boolean {
 // Ajuste os vetores para o layout real do mapa.
 
 const POS = {
-    professor: new Vector3(-6, 0, 25),   // NPC professor
+    professor: new Vector3(-15, 0, 25),   // NPC professor
     sala:      new Vector3(   0,    0,  10),   // zona de trabalho (terminal / C)
     servidor:  new Vector3(  -8,    1,  22),   // sala do servidor remoto
     auditorio: new Vector3(   0,    0,  -5),   // palco de encerramento
@@ -395,9 +395,11 @@ export function buildMissions(): MissionDef[] {
                 window.HUD?.notify('🦠 Execute: kill -9 4096', 'error');
             },
             check: (e) => {
-                const { processes, isCollided } = e.detail as any;
-                return isCollided
-                    && (processes as any[]).findIndex(p => p.pid === 4096) === -1;
+                const { processes } = e.detail as any;
+                // Verifica apenas se o PID 4096 foi removido.
+                // isCollided foi removido do check: o comando kill -9 é executado
+                // no terminal que já está aberto — não depende de zona de colisão.
+                return (processes as any[]).findIndex(p => p.pid === 4096) === -1;
             },
             onComplete: () => {
                 showInstruction(

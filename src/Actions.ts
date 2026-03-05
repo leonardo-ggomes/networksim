@@ -1053,8 +1053,15 @@ export function addNewCommandLine(terminal: HTMLDivElement) {
 }
 // Dicionário de comandos do terminal
 const commands: Record<string, (args: string[]) => string> = {
-    "ping": (args) => `  PING ${args[0] || "127.0.0.1"}: 56 data bytes\n64 bytes from ${args[0] || "127.0.0.1"}: icmp_seq=1 ttl=64 time=0.5 ms`,
-    "pwd": () => currentDir,
+    "ping": (args) => {
+        const _h = args[0] || "127.0.0.1";
+        eventEmitter.dispatchEvent(new CustomEvent("terminal:ping", { detail: { host: _h } }));
+        return `  PING ${_h}: 56 data bytes\n64 bytes from ${_h}: icmp_seq=1 ttl=64 time=0.5 ms`;
+    },
+    "pwd": () => {
+        eventEmitter.dispatchEvent(new CustomEvent("terminal:pwd", { detail: { dir: currentDir } }));
+        return currentDir;
+    },
     "ifconfig": () => `  eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n gateway 192.168.1.1`,
     "help": () => [
         "╔══════════════════════════════════════════════════════╗",
@@ -1128,7 +1135,8 @@ const commands: Record<string, (args: string[]) => string> = {
 
             if(findFile)
             {
-                msg = findFile.content
+                msg = findFile.content;
+                eventEmitter.dispatchEvent(new CustomEvent("terminal:cat", { detail: { file: args[0], dir: currentDir } }));
             }
             else
             {
@@ -1150,6 +1158,7 @@ const commands: Record<string, (args: string[]) => string> = {
         let AllFilesAndDirs = `\n${actualDir.contentDir.map(dir => ` ${dir}`).join("  ")}`
         AllFilesAndDirs += `  ${actualDir.contentFile.map(file => ` ${file.name}`).join("  ")}`
 
+        eventEmitter.dispatchEvent(new CustomEvent("terminal:ls", { detail: { dir: currentDir } }));
         return AllFilesAndDirs;
     },
     "top": () => {
@@ -1245,6 +1254,7 @@ const commands: Record<string, (args: string[]) => string> = {
                 return "";
             }
 
+            eventEmitter.dispatchEvent(new CustomEvent("terminal:nano", { detail: { file: fileName, action: "updated", dir: currentDir } }));
             return `Arquivo ${fileName} atualizado.`;
         } else {
 
@@ -1256,6 +1266,7 @@ const commands: Record<string, (args: string[]) => string> = {
             }
 
             dirLocal[currentDir].contentFile.push(localFile);
+            eventEmitter.dispatchEvent(new CustomEvent("terminal:nano", { detail: { file: fileName, action: "created", dir: currentDir } }));
             return `Arquivo ${fileName} criado com sucesso.`;
         }
     },
@@ -1279,7 +1290,7 @@ const commands: Record<string, (args: string[]) => string> = {
                     contentFile: [],
                     contentDir: []
                 }
-
+                eventEmitter.dispatchEvent(new CustomEvent("terminal:mkdir", { detail: { dir: args[0], path } }));
                 return ""
             }
 
@@ -1340,6 +1351,7 @@ const commands: Record<string, (args: string[]) => string> = {
                 isRemotelyConnected = true;
                 currentPrefix = serverPrefix
                 currentDir = rootPath
+                eventEmitter.dispatchEvent(new CustomEvent("terminal:ssh", { detail: { address: args[0] } }));
                 return "Conectado ao servidor remoto"
             }
             else {
