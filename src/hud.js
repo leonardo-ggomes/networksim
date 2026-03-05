@@ -22,6 +22,7 @@
   const ICONS = {
     health: `<i class='bx bxs-heart'    style="color:#ff5c5c"></i>`,
     energy: `<i class='bx bxs-bolt'     style="color:#f0b90b"></i>`,
+    money:  `<i class='bx bx-dollar'    style="color:#00ff9d"></i>`,
     warn:   `<i class='bx bxs-error'    class="hud-toast-icon"></i>`,
     info:   `<i class='bx bx-info-circle' class="hud-toast-icon"></i>`,
     success:`<i class='bx bxs-check-circle' class="hud-toast-icon"></i>`,
@@ -31,6 +32,47 @@
   // ══════════════════════════════════════════════════════════════════════════
   // DOM — cria todos os elementos do HUD
   // ══════════════════════════════════════════════════════════════════════════
+
+  // Injeta CSS do HUD uma única vez
+  (function injectHUDStyles() {
+    if (document.getElementById('__hud_money_css')) return;
+    const st = document.createElement('style');
+    st.id = '__hud_money_css';
+    st.textContent = `
+      #hud-money-wrap {
+        position: fixed;
+        bottom: 172px;
+        right: 16px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        z-index: 7000;
+        pointer-events: none;
+      }
+      .hud-money-icon {
+        font-size: 18px;
+        line-height: 1;
+      }
+      #hud-money-val {
+        font-family: 'Rajdhani', 'Share Tech Mono', monospace;
+        font-size: 28px;
+        font-weight: 700;
+        color: #00ff9d;
+        letter-spacing: 0.04em;
+        text-shadow: 0 0 12px rgba(0,255,157,0.5);
+        transition: color 0.3s ease;
+      }
+      @keyframes hudMoneyBump {
+        0%   { transform: scale(1); }
+        40%  { transform: scale(1.18); }
+        100% { transform: scale(1); }
+      }
+      .hud-money-bump {
+        animation: hudMoneyBump 0.35s cubic-bezier(.4,0,.2,1) both;
+      }
+    `;
+    document.head.appendChild(st);
+  })();
 
   function buildHUD() {
 
@@ -58,6 +100,16 @@
     root.append(player, bars);
     document.body.appendChild(root);
 
+    // ── Dinheiro estilo GTA V — canto inferior direito acima do root ────────
+    const moneyWrap = el('div', 'hud-money-wrap');
+    const moneyIcon = document.createElement('span');
+    moneyIcon.innerHTML = ICONS.money;
+    moneyIcon.className = 'hud-money-icon';
+    const moneyVal  = el('div', 'hud-money-val');
+    moneyVal.textContent = '$ 0';
+    moneyWrap.append(moneyIcon, moneyVal);
+    document.body.appendChild(moneyWrap);
+
     // ── Canto inferior esquerdo: minimapa ────────────────────────────────────
     const mmWrap  = el('div', 'hud-minimap-wrap');
     const north   = el('div', 'hud-minimap-north'); north.textContent = 'N';
@@ -82,7 +134,7 @@
     const mission = el('div', 'hud-mission');
     mission.style.display = 'none';
     const mInner  = el('div', 'hud-mission-inner');
-    const mLabel  = el('div', 'hud-mission-label'); mLabel.textContent = 'MISSÃO ATIVA';
+    const mLabel  = el('div', 'hud-mission-label'); mLabel.textContent = 'MISSÕES ATIVAS';
     const mTitle  = el('div', 'hud-mission-title');
     const mText   = el('div', 'hud-mission-text');
     mInner.append(mLabel, mTitle, mText);
@@ -93,7 +145,7 @@
     const toasts = el('div', 'hud-toasts');
     document.body.appendChild(toasts);
 
-    return { root, avatar, name, role, bars, canvas, coords, mission, mTitle, mText, toasts };
+    return { root, avatar, name, role, bars, canvas, coords, mission, mTitle, mText, toasts, moneyVal };
   }
 
   function el(tag, id) {
@@ -259,17 +311,17 @@
 
     // ── Vida ─────────────────────────────────────────────────────────────────
     setHealth(v) {
-      const val  = Math.max(0, Math.min(100, v));
+      const val  = Math.max(0, Math.min(100, Math.round(v)));
       const fill = document.getElementById('hud-health-fill');
       const txt  = document.getElementById('hud-health-val');
       if (fill) fill.style.width = val + '%';
-      if (txt)  txt.textContent  = val;
+      if (txt)  txt.textContent  = val + '%';
 
       // Avatar pulsa em vermelho se vida < 30
       if (val < 30) DOM.avatar.classList.add('danger');
       else          DOM.avatar.classList.remove('danger');
 
-      // Barra fica vermelha puro abaixo de 25
+      // Barra muda de cor conforme nível
       if (fill) {
         if (val <= 25)
           fill.style.background = 'linear-gradient(90deg,#8b0000,#ff3c3c)';
@@ -282,22 +334,104 @@
 
     // ── Energia ──────────────────────────────────────────────────────────────
     setEnergy(v) {
-      const val  = Math.max(0, Math.min(100, v));
+      const val  = Math.max(0, Math.min(100, Math.round(v)));
       const fill = document.getElementById('hud-energy-fill');
       const txt  = document.getElementById('hud-energy-val');
       if (fill) fill.style.width = val + '%';
-      if (txt)  txt.textContent  = val;
+      if (txt)  txt.textContent  = val + '%';
+
+      // Barra fica laranja/vermelha conforme nível
+      if (fill) {
+        if (val <= 20)
+          fill.style.background = 'linear-gradient(90deg,#7a3a00,#ff6b00)';
+        else if (val <= 50)
+          fill.style.background = 'linear-gradient(90deg,#b8860b,#f0b90b)';
+        else
+          fill.style.background = 'linear-gradient(90deg,#c8950a,#f0b90b)';
+      }
     },
 
-    // ── Missão ───────────────────────────────────────────────────────────────
-    setMission(title, text) {
-      DOM.mTitle.textContent = title || '';
-      DOM.mText.textContent  = text  || '';
-      DOM.mission.style.display = 'block';
+    // ── Dinheiro — animação de contagem estilo GTA V ──────────────────────
+    setMoney(target) {
+      const el  = document.getElementById('hud-money-val');
+      if (!el) return;
+
+      // Cancela animação anterior se existir
+      if (el._moneyRaf) cancelAnimationFrame(el._moneyRaf);
+
+      const start    = el._moneyCurrent ?? 0;
+      const diff     = target - start;
+      const duration = Math.min(1200, Math.abs(diff) * 1.5); // proporcional à diferença
+      const startTs  = performance.now();
+
+      // Cor: verde se aumentou, vermelho se perdeu
+      el.style.color = diff >= 0 ? '#00ff9d' : '#ff5c5c';
+      el.classList.add('hud-money-bump');
+      setTimeout(() => el.classList.remove('hud-money-bump'), 400);
+
+      const tick = (now) => {
+        const t = Math.min(1, (now - startTs) / duration);
+        // Easing out cubic
+        const ease = 1 - Math.pow(1 - t, 3);
+        const cur  = Math.round(start + diff * ease);
+        el.textContent = '$ ' + cur.toLocaleString('pt-BR');
+        el._moneyCurrent = cur;
+
+        if (t < 1) {
+          el._moneyRaf = requestAnimationFrame(tick);
+        } else {
+          el._moneyCurrent = target;
+          // Volta à cor padrão após 1.5s
+          setTimeout(() => { el.style.color = '#00ff9d'; }, 1500);
+        }
+      };
+      el._moneyRaf = requestAnimationFrame(tick);
     },
 
-    clearMission() {
-      DOM.mission.style.display = 'none';
+    // ── Missões — lista estilo GTA V com progresso ───────────────────────────
+    // _missions: Map de id → { title, text, done }
+    _missions: new Map(),
+
+    setMission(id, title, text) {
+      // Compatibilidade: se chamado com 2 args (title, text) usa id='default'
+      if (text === undefined) { text = title; title = id; id = 'default'; }
+      this._missions.set(id, { title, text, done: false });
+      this._renderMissions();
+    },
+
+    completeMission(id = 'default') {
+      const m = this._missions.get(id);
+      if (m) { m.done = true; this._renderMissions(); }
+      // Remove da lista após 2s
+      setTimeout(() => { this._missions.delete(id); this._renderMissions(); }, 2000);
+    },
+
+    clearMission(id) {
+      if (id) this._missions.delete(id);
+      else    this._missions.clear();
+      this._renderMissions();
+    },
+
+    _renderMissions() {
+      const hasAny = this._missions.size > 0;
+      DOM.mission.style.display = hasAny ? 'block' : 'none';
+      DOM.mTitle.textContent = 'MISSÕES ATIVAS';
+
+      // Reconstrói a lista de missões
+      DOM.mText.innerHTML = '';
+      this._missions.forEach((m) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:4px;opacity:' + (m.done ? '0.45' : '1');
+        const icon = document.createElement('span');
+        icon.innerHTML = m.done
+          ? `<i class='bx bxs-check-circle' style="color:#00ff9d;font-size:13px"></i>`
+          : `<i class='bx bx-radio-circle'  style="color:#f0b90b;font-size:13px"></i>`;
+        const lbl = document.createElement('span');
+        lbl.textContent = m.title;
+        lbl.style.cssText = 'font-size:12px;' + (m.done ? 'text-decoration:line-through;color:#666' : 'color:#eee');
+        row.append(icon, lbl);
+        DOM.mText.appendChild(row);
+      });
     },
 
     // ── Toast rápido ─────────────────────────────────────────────────────────

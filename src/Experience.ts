@@ -21,9 +21,6 @@ import PlayerController from "./PlayerController";
 import Items from "./Items";
 
 import SocketManager from "./SocketManager";
-import MinMap from "./MiniMap";
-import MiniMap from "./MiniMap";
-import Mission from "./Mission";
 import elementos, { eventEmitter, showInstruction } from "./Actions";
 import { gui } from "./GuiControl";
 import Loading from "./Loading";
@@ -35,6 +32,8 @@ import { EntityManager } from "yuka";
 import { npcPaths } from "./Path";
 import VoiceChatManager from "./VoiceChatManager";
 import Guest from "./Guest";
+import MissionManager from "./MissionManager";
+import VitalSystem from "./VitalSystem";
 
 export default class Experience{
 
@@ -46,15 +45,15 @@ export default class Experience{
     listener = new AudioListener();
     items: Items
     socket = SocketManager
-    miniMap: MinMap
-    currentMission?: Mission
     loading: Loading
     audioLoader: AudioLoader
     ambientLight = new AmbientLight(0xFFCC88, 2)
     entityManager: EntityManager 
     voiceChatManager: VoiceChatManager
-    urlAvatar:   string
-    playerName: string
+    urlAvatar:      string
+    playerName:     string
+    missionManager: MissionManager
+    vitalSystem:    VitalSystem
 
     constructor(loading: Loading, avatarUrl: string, scene: Scene, playerName = 'Agente')
     {
@@ -140,7 +139,6 @@ export default class Experience{
 
     
 
-        this.miniMap = new MiniMap(this.scene, this.renderer, this.playerController.playerModel.position)
 
         
         // const playerFolder = gui.addFolder("Player")
@@ -159,8 +157,15 @@ export default class Experience{
         this.entityManager = new EntityManager();
         //this.setNpc()
 
-        //Missão
-        //this.startFirstMission()
+        // ── Expõe luz ambiente para MissionManager usar ──────────────────
+        (window as any).__experienceAmbientLight = this.ambientLight;
+
+        // ── VitalSystem: drena energia/vida, bloqueia terminal ─────────────
+        this.vitalSystem = new VitalSystem(this.playerController);
+
+        // ── MissionManager: sequência de missões centralizada ─────────────
+        this.missionManager = new MissionManager(this.scene, this.loading);
+        this.missionManager.start();
     }
   
     setScene(){      
@@ -359,211 +364,19 @@ export default class Experience{
         this.entityManager.add(npc);
     }
 
-    startFirstMission(){
+    update(delta: number){
+        this.playerController.update(delta)
 
-        let reward = 3
-        let mission1 = new Mission(
-            "Encontre o dispositivo",
-            new Vector3(11.4, 1.15, 30),
-            this.scene,
-            eventEmitter,
-            reward,
-            true,
-            this.loading
-        )
-        
-        setTimeout(() => {
-            showInstruction(
-                "Encontre o dispositivo",
-                "Você precisa de um computador para realizar as atividades"
-            )
+        Guest.update(delta, this.camera)
 
-            this.setDriver("🎯Caixa de mensagem","Aqui você encontrará instruções básicas, fique de olho!" )
-        }, 3000);    
+        // Drena energia/vida e controla cooldown do terminal
+        this.vitalSystem.update(delta)
 
-       // mission1.addObject(new Vector3(11.4, 1.15, 55.8), .5,"laptop", this.scene)
-        
-
-        //Verifica se o processo foi removido
-        mission1.addGameListener('collided', (event) => {
-            const {detail} = event as CustomEvent;
-            
-           const foundDevice = detail.collided as boolean
-
-           if(foundDevice){
-                mission1.rewardPlayer()
-                infoPlayer.hasTerminal = true //Habilita o terminal
-                this.beep()
-                elementos.showMsg('✅ Dispositivo encontrado')
-                mission1.removeMissionPoint(mission1.missionPoint, this.scene)
-                showInstruction(
-                    "Dispositivo habilitado",
-                    "Pressione a tecla T para usar o dispositivo."
-                )
-                mission1.finished()
-               
-                this.startSecondMission()
-           }           
-                    
-        }, true)
-            
-        this.currentMission = mission1
-        elementos.setCurrentMission(this.currentMission.title) 
-    }
-
-    startSecondMission(){
-
-        let reward = 3
-        let mission2 = new Mission(
-            `  
-            -- [12:30]: Novo acesso: IP <201.200.928.21>[desconhecido] 
-            -- [12:58]: Aplicação instalada com sucesso
-            -- [13:01]: Aplicação em execução           
-            -- [13:04]: Alto consumo de memória
-            -- [13:05]: Alto consumo de memória
-            -- [13:15]: Sua máquina precisa de atenção
-            -- [13:17]: Alto consumo de memória
-            `,
-            new Vector3(-11.4, 1.15, 30),
-            this.scene,
-            eventEmitter,
-            reward,
-            true,
-            this.loading
-        )
-    
-        //Adiciona o processo suspeito
-        let process ={
-            name: "anomimo",
-            pid: 7777,
-            memory: 849.90,
-            cpu: 47
-        } 
-        elementos.setProcesses(process.name, process.pid, process.memory, process.cpu)
-        
-        setTimeout(() => {
-            showInstruction(
-                "Elimine o Malware",
-                "Há uma suspeita que o hacker executou um programa malicioso antes do blackout"
-            )
-        }, 15000);        
-      
-
-        //Verifica se o processo foi removido
-        mission2.addGameListener('remove_pid', (event) => {
-            const {detail} = event as CustomEvent;
-            
-           const removido = (detail.processes as any[]).findIndex(i => i.pid == 7777) //malware.exe
-
-           if(removido === -1 && detail.isCollided){
-                mission2.rewardPlayer()
-                elementos.showMsg('✅ Missão Concluída')
-                mission2.removeMissionPoint(mission2.missionPoint, this.scene)
-                showInstruction(
-                    "Progresso",
-                    "A energia parece que está voltando"
-                )
-                this.ambientLight.intensity = 0.7                
-                mission2.finished()
-                
-                this.startThirdMission()
-           }
-           else if(removido === -1){
-            //Adiciona o processo suspeito novamente se apagar fora da missão
-            elementos.setProcesses(process.name, process.pid, process.memory, process.cpu)
-           }
-                    
-        }, false)
-            
-        this.currentMission = mission2
-        elementos.setCurrentMission(this.currentMission.title) 
-    }
-    
-    startThirdMission(){
-
-        let reward = 2
-        let mission3 = new Mission(
-            `
-                \n
-                -- [13:50]: O App EstacionaSyS parou inesperadamente.
-                -- [13:51]: ReferenceError: pos is not defined.               
-            `,
-            new Vector3(10, 0.5, 30),
-            this.scene,
-            eventEmitter,
-            reward,
-            true,
-            this.loading
-        )
-
-        setTimeout(() => {
-            showInstruction(
-                "Sistema parado",
-                "O hacker implantou uma falha no código, corrija o mais rápido possível."
-            )
-        }, 15000);        
-
-        //Adiciona o processo suspeito
-        let file ={
-            name: "app.js", 
-            content: `
-            1 #Código
-            2 function guardarCarro(vaga = 1){
-            3
-            4   while(pos <= 20){
-            5       if(vaga == pos){
-            6            console.log("Vaga reservada: "+pos)
-            7        }            
-            8        pos++
-            9   }
-            10 }            
-            `
-        } 
-
-        elementos.setFilesInMission("/",file.name, file.content)
-
-        //Verifica se o processo foi removido
-        mission3.addGameListener('new_code', (event) => {
-            const {detail} = event as CustomEvent;
-            
-           const linhaCorreta = detail.line == 3
-           const codigoCorreto = String(detail.code).includes("let pos = 0")
-           
-           if(codigoCorreto && linhaCorreta && detail.isCollided){
-                mission3.rewardPlayer()
-                elementos.showMsg('✅ Missão Concluída')
-                mission3.removeMissionPoint(mission3.missionPoint, this.scene)
-                mission3.finished()
-           }  
-        }, false)
-            
-        this.currentMission = mission3
-        elementos.setCurrentMission(this.currentMission.title) 
-    }
-
-    // updatePlayers(delta: number){
-    //   Object.keys(this.socket.players).forEach(i => {
-    //     this.socket.players[i].update(delta)
-    //   })
-    // }
-
-    update(delta: number){      
-        this.playerController.update(delta)   
-        // this.updatePlayers(delta)   
-
-
-        Guest.update(delta, this.camera)  // passa câmera para ajuste de escala dos nomes
-
-        this.currentMission?.checkMissionZone(
-            this.playerController.playerModel.position,
-            this.currentMission?.missionPoint.position,
-            2
-        )
+        // Verifica zona da missão ativa
+        this.missionManager.checkZone(this.playerController.playerModel.position)
 
         this.entityManager.update(delta)
 
-        //Renderiza os mapas
-        this.miniMap.update()
         this.renderer.render(this.scene, this.camera)
     }
 }
