@@ -99,7 +99,7 @@ function hasLines(output: string, expected: string[]): boolean {
 // Ajuste os vetores para o layout real do mapa.
 
 const POS = {
-    professor: new Vector3(-11.4, 1.15, 30),   // NPC professor
+    professor: new Vector3(-6, 0, 25),   // NPC professor
     sala:      new Vector3(   0,    0,  10),   // zona de trabalho (terminal / C)
     servidor:  new Vector3(  -8,    1,  22),   // sala do servidor remoto
     auditorio: new Vector3(   0,    0,  -5),   // palco de encerramento
@@ -168,7 +168,7 @@ export function buildMissions(): MissionDef[] {
             position: POS.sala,
             radius:   30,
             reward:   { money: 150, energy: 10 },
-            helper:   false,
+            helper:   true,
             listenTo: 'terminal:opened',
             onStart: () => {
                 showInstruction(

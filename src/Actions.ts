@@ -512,7 +512,7 @@ function createTerminal() {
             terminal.appendChild(d);
             terminal.scrollTop = terminal.scrollHeight;
             if (i === bootSteps.length - 1) {
-                setTimeout(() => { progWrap.remove(); addNewCommandLine(terminal); }, 200);
+                setTimeout(() => { progWrap.remove(); addNewCommandLine(terminal); eventEmitter.dispatchEvent(new CustomEvent("terminal:opened")); }, 200);
             }
         }, delay);
     });
