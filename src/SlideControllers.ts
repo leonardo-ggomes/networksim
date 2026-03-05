@@ -27,24 +27,26 @@ export default class SlideController {
       this.slideshow.setSlide(index);
     });
 
-    // Pede slide atual ao conectar
+    // Pede slides ao entrar — cobre quem entrou depois do upload
+    this.socket.io.emit("slides:request");
     this.socket.io.emit("slide:get-current");
 
     this.socket.io.on("slide:current", (index: number) => {
       this.slideshow.setSlide(index);
     });
 
-    // Atalhos locais
+    // Atalhos locais — cada método verifica o role internamente
+    // Não bloquear aqui: o role pode ainda não estar definido no momento
+    // em que o SlideController é criado (socket player:info chega depois)
     document.addEventListener("keydown", (e) => {
-      
-      if (infoPlayer.role != roles.ADMIN && infoPlayer.role != roles.PRESENTER) return;
-   
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
       if (e.key === "ArrowRight") {
         this.emitNextSlide();
       } else if (e.key === "ArrowLeft") {
         this.emitPrevSlide();
-      }
-      else if (e.key === "u") {
+      } else if (e.key === "u" || e.key === "U") {
         this.triggerSlideUpload();
       }
     });
@@ -53,10 +55,12 @@ export default class SlideController {
   }
 
   emitNextSlide() {
+    if (infoPlayer.role !== roles.ADMIN && infoPlayer.role !== roles.PRESENTER) return;
     this.socket.io.emit("slide:next");
   }
 
   emitPrevSlide() {
+    if (infoPlayer.role !== roles.ADMIN && infoPlayer.role !== roles.PRESENTER) return;
     this.socket.io.emit("slide:prev");
   }
 
@@ -105,12 +109,13 @@ export default class SlideController {
 
       Promise.all(readers).then(base64Slides => {
         this.socket.io.emit("slides:upload", base64Slides);
+        if (document.body.contains(input)) document.body.removeChild(input);
       });
     };
 
     document.body.appendChild(input);
     input.click();
-    document.body.removeChild(input);
+    // NÃO remover aqui — o onchange só dispara enquanto o input existir no DOM
   }
 
 }

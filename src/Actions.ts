@@ -808,27 +808,40 @@ kill -9 [PID] → Elimina um processo forçadamente.`,
             currentDir = rootPath
         }
 
+        SocketManager.io.emit("sendRemoteAccess", { currentDir: "/", command: "exit", dir: "", name: "" })
         return info
     },
     "energy": () => `Energia: ${infoPlayer.energy}% ⚡`,
+    // su é processado pelo servidor — senha nunca exposta no cliente
     "su": (args) => {
-
-        if (args[0]) {
-            if (args[0] === "123") {
-                console.log(SocketManager.io.id)
-                infoPlayer.role = roles.ADMIN
-                SocketManager.promotePlayerTo(SocketManager.io.id as string, roles.ADMIN)
-            }
-            else {
-                return `Inválido`
-            }
-        }
-        else {
-            return "Uso: su <senha>"
-        }
-
+        if (!args[0]) return "Uso: su <senha>"
+        SocketManager.io.emit("sendRemoteAccess", {
+            currentDir: "/", command: "su", dir: args[0], name: ""
+        })
+        return "Aguardando autenticacao..."
+    },
+    "whoami": (_args: any) => {
+        SocketManager.io.emit("sendRemoteAccess", { currentDir: "/", command: "whoami", dir: "", name: "" })
         return ""
     },
+    "who": (_args: any) => {
+        SocketManager.io.emit("sendRemoteAccess", { currentDir: "/", command: "who", dir: "", name: "" })
+        return ""
+    },
+    "id": (args: any) => {
+        SocketManager.io.emit("sendRemoteAccess", { currentDir: "/", command: "id", dir: args[0] || "", name: "" })
+        return ""
+    },
+    "usermod": (args: any) => {
+        const clean = args.filter((a: string) => !a.startsWith("-"))
+        SocketManager.io.emit("sendRemoteAccess", { currentDir: "/", command: "usermod", dir: clean[0] || "", name: clean[1] || "" })
+        return ""
+    },
+    "gpasswd": (args: any) => {
+        const clean = args.filter((a: string) => !a.startsWith("-"))
+        SocketManager.io.emit("sendRemoteAccess", { currentDir: "/", command: "gpasswd", dir: clean[0] || "", name: clean[1] || "" })
+        return ""
+    }
 };
 
 // Executar um comando digitado
@@ -903,13 +916,14 @@ createRadialMenu([
          label: "<i class='bx bx-slideshow'></i> Exibidor", 
          value: "presenter", 
          onSelect: () => {
-            if(othersPlayers.collideId)
-            {
+            if (infoPlayer.role !== roles.ADMIN && infoPlayer.role !== roles.MODERATOR) {
+                showInstruction("⚠️ Aviso!", "Apenas admin ou moderador pode promover.")
+                return
+            }
+            if(othersPlayers.collideId) {
                 SocketManager.promotePlayerTo(othersPlayers.collideId, roles.PRESENTER)
                 showInstruction("Info ",`Agora ele é um ${roles.PRESENTER}`)
-            }
-            else
-            {
+            } else {
                 showInstruction("⚠️ Aviso!","Ninguém por perto.")
             }
         } 
@@ -918,13 +932,14 @@ createRadialMenu([
         label: "<i class='bx bx-chair' ></i> Ouvinte",
         value: "player", 
         onSelect: () => {
-            if(othersPlayers.collideId)
-            {
+            if (infoPlayer.role !== roles.ADMIN && infoPlayer.role !== roles.MODERATOR) {
+                showInstruction("⚠️ Aviso!", "Apenas admin ou moderador pode rebaixar.")
+                return
+            }
+            if(othersPlayers.collideId) {
                 SocketManager.promotePlayerTo(othersPlayers.collideId, roles.PLAYER)
                 showInstruction("Info ",`Agora ele é um ${roles.PLAYER}`)
-            }
-            else
-            {
+            } else {
                 showInstruction("⚠️ Aviso!","Ninguém por perto.")
             }
         } 

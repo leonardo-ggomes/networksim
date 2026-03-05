@@ -398,6 +398,7 @@ export default class PlayerController {
       const clip = isCrouch ? "CrouchLeft" : "WalkLeft";
       this.setAction(this.playerModel.animationsAction[clip]);
       this.clipName = clip;
+      this.smoothRotate(delta);
       this.playerImpulse.add(
         left.clone().multiplyScalar((this.velocity - 1) * delta)
       );
@@ -406,6 +407,7 @@ export default class PlayerController {
       const clip = isCrouch ? "CrouchRight" : "WalkRight";
       this.setAction(this.playerModel.animationsAction[clip]);
       this.clipName = clip;
+      this.smoothRotate(delta);
       this.playerImpulse.add(
         right.clone().multiplyScalar((this.velocity - 1) * delta)
       );
