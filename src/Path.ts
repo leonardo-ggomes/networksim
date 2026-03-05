@@ -47,6 +47,49 @@ export type PathDef = {
 // Edite aqui para ajustar rotas sem tocar em NPC.ts ou TeacherNPC.ts
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Utilitário: interpola pontos extras entre waypoints para movimento fluido.
+// `steps` = quantos pontos intermediários inserir entre cada par de waypoints.
+// ─────────────────────────────────────────────────────────────────────────────
+function interpolatePath(points: YUKA.Vector3[], steps = 4): YUKA.Vector3[] {
+    if (points.length < 2) return points;
+    const result: YUKA.Vector3[] = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        result.push(new YUKA.Vector3(a.x, a.y, a.z));
+        for (let s = 1; s < steps; s++) {
+            const t = s / steps;
+            result.push(new YUKA.Vector3(
+                a.x + (b.x - a.x) * t,
+                a.y + (b.y - a.y) * t,
+                a.z + (b.z - a.z) * t,
+            ));
+        }
+    }
+    result.push(points[points.length - 1].clone());
+    return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Utilitário: gera o caminho inverso automaticamente.
+// Usado para "teacher-to-idle" — evita duplicar e manter dois arrays em sync.
+// ─────────────────────────────────────────────────────────────────────────────
+function reversePath(points: YUKA.Vector3[]): YUKA.Vector3[] {
+    return [...points].reverse().map(p => new YUKA.Vector3(p.x, p.y, p.z));
+}
+
+// ── Waypoints base (sem interpolação) — edite apenas estes ───────────────────
+// Depois de ajustar, rode __pathDebug.showAll() para visualizar na cena.
+const STAGE_WAYPOINTS: YUKA.Vector3[] = [
+    new YUKA.Vector3(-15, 0, 25),   // IDLE_POS — ponto de espera
+    new YUKA.Vector3(-15, 0, 15),   // desvio pelo corredor esquerdo
+    new YUKA.Vector3(-10, 0,  8),   // aproximando do corredor central
+    new YUKA.Vector3( 5, 0,  3),   // entrada do palco
+    new YUKA.Vector3( 0, .5,  0),   // STAGE_POS — palco
+    new YUKA.Vector3( 0, 1,  0),   // STAGE_POS — palco
+];
+
 export const pathDefs: Record<string, PathDef> = {
 
     // ── Patrulha do NPC segurança (loop) ─────────────────────────────────────
@@ -54,42 +97,31 @@ export const pathDefs: Record<string, PathDef> = {
         description: "Patrulha lateral — NPC segurança",
         loop:  true,
         color: "#ff3c3c",
-        points: [
+        points: interpolatePath([
             new YUKA.Vector3(10, 0,  5),
             new YUKA.Vector3(10, 0, 10),
             new YUKA.Vector3(10, 0, 15),
             new YUKA.Vector3(10, 0, 20),
             new YUKA.Vector3(10, 0, 25),
             new YUKA.Vector3(10, 0, 30),
-        ],
+        ], 3),
     },
 
-    // ── Prof. Chico: ponto de espera → palco ──────────────────────────────────
-    // Adicione pontos intermediários para desviar de mesas, paredes etc.
-    // Rode __pathDebug.show("teacher-to-stage") para ver onde ficam os pontos.
+    // ── Prof. Chico: espera → palco ───────────────────────────────────────────
+    // Edite STAGE_WAYPOINTS acima para ajustar o trajeto.
+    // "teacher-to-idle" é gerado automaticamente como o reverso deste caminho.
     "teacher-to-stage": {
         description: "Prof. Chico: espera (-5,0,25) → palco (0,0,0)",
         color: "#f0b90b",
-        points: [
-            new YUKA.Vector3(-20, 0, 25),   // IDLE_POS — ponto de espera
-            new YUKA.Vector3(-20, 0, 15),   // desvio pelo corredor esquerdo
-            new YUKA.Vector3(-20, 0,  8),   // aproximando do corredor central
-            new YUKA.Vector3( -5, .5,  3),   // entrada do palco
-            new YUKA.Vector3( 0, 1,  0),   // STAGE_POS — palco
-        ],
+        points: interpolatePath(STAGE_WAYPOINTS, 4),
     },
 
-    // ── Prof. Chico: palco → ponto de espera ─────────────────────────────────
+    // ── Prof. Chico: palco → espera (reverso automático) ─────────────────────
+    // NÃO edite este — edite STAGE_WAYPOINTS acima.
     "teacher-to-idle": {
         description: "Prof. Chico: palco (0,0,0) → espera (-5,0,25)",
         color: "#00cfff",
-        points: [
-            new YUKA.Vector3( 0, 0,  0),   // STAGE_POS
-            new YUKA.Vector3( 0, 0,  3),
-            new YUKA.Vector3(-2, 0,  8),
-            new YUKA.Vector3(-5, .5, 15),
-            new YUKA.Vector3(-5, 1, 25),   // IDLE_POS
-        ],
+        points: interpolatePath(reversePath(STAGE_WAYPOINTS), 4),
     },
 
     // ── Exemplo com escada: Y cresce gradualmente nos degraus ────────────────
@@ -98,7 +130,7 @@ export const pathDefs: Record<string, PathDef> = {
     "teacher-upstairs": {
         description: "Prof. Chico sobe escada até andar superior",
         color: "#b06aff",
-        points: [
+        points: interpolatePath([
             new YUKA.Vector3( 0, 0.0,  0),  // base da escada
             new YUKA.Vector3( 1, 0.4, -1),  // degrau 1
             new YUKA.Vector3( 2, 0.8, -2),  // degrau 2
@@ -106,7 +138,7 @@ export const pathDefs: Record<string, PathDef> = {
             new YUKA.Vector3( 4, 1.6, -4),  // degrau 4
             new YUKA.Vector3( 5, 2.0, -5),  // topo da escada
             new YUKA.Vector3( 6, 2.0, -8),  // corredor superior
-        ],
+        ], 3),
     },
 }
 

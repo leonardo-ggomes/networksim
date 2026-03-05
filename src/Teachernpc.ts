@@ -234,12 +234,24 @@ export class TeacherNPC extends YUKA.Vehicle {
         // Rotação suave em direção ao alvo
         this.targetRot.position.copy(this.npcMesh.position);
         this.targetRot.lookAt(target);
-        this.npcMesh.quaternion.slerp(this.targetRot.quaternion, delta * 9.0);
+        this.npcMesh.quaternion.slerp(this.targetRot.quaternion, delta * 8.0);
 
-        // Lerp suave — sem saltos
-        const pos = this.npcMesh.position.clone().lerp(target, delta * this.maxSpeed * 0.3);
-        this.npcMesh.position.copy(pos);
-        this.position.set(pos.x, pos.y, pos.z);
+        // Velocidade CONSTANTE — sem aceleração/desaceleração
+        // lerp causava "arrancada rápida e freada próximo do waypoint"
+        const step = this.maxSpeed * delta;
+        const dir  = target.clone().sub(this.npcMesh.position);
+        const dist = dir.length();
+        if (dist > step) {
+            dir.normalize().multiplyScalar(step);
+            this.npcMesh.position.add(dir);
+        } else {
+            this.npcMesh.position.copy(target);
+        }
+        this.position.set(
+            this.npcMesh.position.x,
+            this.npcMesh.position.y,
+            this.npcMesh.position.z
+        );
     }
 
     // Monta path a partir de um caminho nomeado do Path.ts.
