@@ -3,10 +3,11 @@
  *
  * Animações : idêntico ao PlayerModel — usa loading.globalAnimations
  * Movimento : idêntico ao NPC.ts      — followPath + slerp
+ * Caminhos  : usa Path.ts (ajuste pathDefs sem tocar aqui)
  * Slides    : malha 3D (PlaneGeometry + CanvasTexture) acima do palco
  *
  * Acionamento (apenas admin):
- *   teach intro-c | teach conditionals | teach loops
+ *   teach start intro-c | teach start conditionals | teach start loops
  *   teach next | teach prev | teach stop | teach list
  */
 
@@ -18,82 +19,132 @@ import {
 import * as YUKA from "yuka";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import Loading from "./Loading";
+import { pathDefs } from "./Path";
 import { eventEmitter, showInstruction } from "./Actions";
 import { infoPlayer } from "./InfoPlayer";
 
-// ── Dados dos slides ──────────────────────────────────────────────────────────
+// ── Slides e Lições ───────────────────────────────────────────────────────────
 
-export type Slide = { title: string; lines: string[]; code?: string };
+export type Slide  = { title: string; lines: string[]; code?: string };
 export type Lesson = { id: string; title: string; slides: Slide[] };
 
 export const LESSONS: Lesson[] = [
     {
         id: "intro-c", title: "Introdução à Linguagem C",
         slides: [
-            { title: "O que é C?", lines: ["Linguagem criada em 1972.", "Base de SOs, drivers e embarcados.", "Rápida e próxima ao hardware."] },
-            { title: "Estrutura básica", lines: ["Todo programa precisa de main().", "Execução de cima para baixo.", "Cada instrução termina com ;"], code: '#include <stdio.h>\nint main() {\n    printf("Ola!\\n");\n    return 0;\n}' },
-            { title: "Variáveis", lines: ["Declara tipo antes de usar.", "Tipos: int, float, char"], code: "int x = 10;\nfloat pi = 3.14;\nchar c = 'A';" },
-            { title: "printf / scanf", lines: ["printf() exibe na tela.", "scanf() lê entrada.", "%d int  %f float  %c char"], code: 'int n;\nscanf("%d",&n);\nprintf("%d\\n",n);' },
+            {
+                title: "O que é C?",
+                lines: ["Linguagem criada em 1972.", "Base de SOs, drivers e embarcados.", "Rápida e próxima ao hardware."]
+            },
+            {
+                title: "Estrutura básica",
+                lines: ["Todo programa precisa de main().", "Execução de cima para baixo.", "Cada instrução termina com ;"],
+                code: '#include <stdio.h>\nint main() {\n    printf("Ola!\\n");\n    return 0;\n}'
+            },
+            {
+                title: "Variáveis",
+                lines: ["Declara tipo antes de usar.", "Tipos: int, float, char"],
+                code: "int x = 10;\nfloat pi = 3.14;\nchar c = 'A';"
+            },
+            {
+                title: "printf / scanf",
+                lines: ["printf() exibe na tela.", "scanf() lê entrada.", "%d int  %f float  %c char"],
+                code: 'int n;\nscanf("%d",&n);\nprintf("%d\\n",n);'
+            },
         ]
     },
     {
         id: "conditionals", title: "Condicionais em C",
         slides: [
-            { title: "if", lines: ["Executa se condição for verdadeira.", "Verdadeiro = qualquer valor != 0."], code: "if (x > 5) {\n    printf(\"maior\\n\");\n}" },
-            { title: "if / else", lines: ["else executa quando if é falso.", "else if para múltiplas condições."], code: 'if (nota>=7)\n    printf("Aprovado\\n");\nelse\n    printf("Reprovado\\n");' },
-            { title: "Comparação", lines: ["==  igual    !=  diferente", ">   maior    <   menor", ">=  maior/igual  <=  menor/igual"], code: "if (a != b)\n    printf(\"diferentes\\n\");" },
-            { title: "Lógicos", lines: ["&&  E lógico", "||  OU lógico", "!   NÃO lógico"], code: "if (idade>=18 && carteira)\n    printf(\"Pode dirigir\\n\");" },
+            {
+                title: "if",
+                lines: ["Executa se condição for verdadeira.", "Verdadeiro = qualquer valor != 0."],
+                code: 'if (x > 5) {\n    printf("maior\\n");\n}'
+            },
+            {
+                title: "if / else",
+                lines: ["else executa quando if é falso.", "else if para múltiplas condições."],
+                code: 'if (nota>=7)\n    printf("Aprovado\\n");\nelse\n    printf("Reprovado\\n");'
+            },
+            {
+                title: "Comparação",
+                lines: ["==  igual    !=  diferente", ">   maior    <   menor", ">=  maior/igual  <=  menor/igual"],
+                code: 'if (a != b)\n    printf("diferentes\\n");'
+            },
+            {
+                title: "Lógicos",
+                lines: ["&&  E lógico", "||  OU lógico", "!   NÃO lógico"],
+                code: 'if (idade>=18 && carteira)\n    printf("Pode dirigir\\n");'
+            },
         ]
     },
     {
         id: "loops", title: "Loops em C",
         slides: [
-            { title: "while", lines: ["Repete enquanto condição for verdadeira.", "Cuidado com loop infinito!"], code: "int i=0;\nwhile(i<5){\n    printf(\"%d\\n\",i);\n    i++;\n}" },
-            { title: "for", lines: ["Ideal para repetições fixas.", "for(inicio; condicao; incremento)"], code: "for(int i=0;i<10;i++)\n    printf(\"%d\\n\",i);" },
-            { title: "break / continue", lines: ["break   → sai do loop", "continue → pula iteração"], code: "for(int i=0;i<10;i++){\n    if(i==5) break;\n    if(i%2==0) continue;\n    printf(\"%d\\n\",i);\n}" },
-            { title: "Aninhados", lines: ["Loop dentro de loop.", "Útil para tabelas/matrizes."], code: "for(int i=1;i<=3;i++){\n  for(int j=1;j<=3;j++)\n    printf(\"%d \",i*j);\n  printf(\"\\n\");\n}" },
+            {
+                title: "while",
+                lines: ["Repete enquanto condição for verdadeira.", "Cuidado com loop infinito!"],
+                code: "int i=0;\nwhile(i<5){\n    printf(\"%d\\n\",i);\n    i++;\n}"
+            },
+            {
+                title: "for",
+                lines: ["Ideal para repetições fixas.", "for(inicio; condicao; incremento)"],
+                code: "for(int i=0;i<10;i++)\n    printf(\"%d\\n\",i);"
+            },
+            {
+                title: "break / continue",
+                lines: ["break   → sai do loop", "continue → pula iteração"],
+                code: "for(int i=0;i<10;i++){\n    if(i==5) break;\n    if(i%2==0) continue;\n    printf(\"%d\\n\",i);\n}"
+            },
+            {
+                title: "Aninhados",
+                lines: ["Loop dentro de loop.", "Útil para tabelas/matrizes."],
+                code: "for(int i=1;i<=3;i++){\n  for(int j=1;j<=3;j++)\n    printf(\"%d \",i*j);\n  printf(\"\\n\");\n}"
+            },
         ]
     },
 ];
 
-// ── Tipo de estado ────────────────────────────────────────────────────────────
+// ── Estado ────────────────────────────────────────────────────────────────────
 type TState = "IDLE" | "WALKING" | "TEACHING" | "RETURNING";
 
-// ── TeacherNPC ────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// TeacherNPC
+// ─────────────────────────────────────────────────────────────────────────────
 export class TeacherNPC extends YUKA.Vehicle {
 
     // Three.js
     npcMesh?: Object3D;
     mixer?:   AnimationMixer;
     private animationsAction: Record<string, AnimationAction> = {};
-    private activedClip?: AnimationAction;
+    private activedClip?:     AnimationAction;
 
     // Cena/Loading
     scene:   Scene;
     loading: Loading;
     private playerModel?: Object3D;
 
-    // Posições
+    // Posições de referência (devem coincidir com Path.ts)
     private readonly IDLE_POS  = new YUKA.Vector3(-5, 0, 25);
     private readonly STAGE_POS = new YUKA.Vector3( 0, 0,  0);
 
-    // Yuka path (igual NPC.ts)
-    private yukaPath      = new YUKA.Path();
-    private paused        = false;
-    private targetRot     = new Object3D();
+    // Yuka path — igual NPC.ts
+    private yukaPath  = new YUKA.Path();
+    private paused    = false;
+    private targetRot = new Object3D();
 
-    // Estado
+    // Estado do professor
     private tState: TState = "IDLE";
 
     // Slides
-    private lesson?:       Lesson;
-    private slideIdx       = 0;
-    private slideTimer     = 0;
-    private slideDuration  = 20;
-    private slideMesh?:    Mesh;
+    private lesson?:      Lesson;
+    private slideIdx      = 0;
+    private slideTimer    = 0;
+    private slideDuration = 20;   // segundos por slide (ajuste com setSlideDuration)
+    private slideMesh?:   Mesh;
 
     // Notebook
-    private notebookGiven = false;
+    private notebookGiven        = false;
     private readonly NOTEBOOK_RADIUS = 3.5;
 
     constructor(scene: Scene, loading: Loading, playerModel?: Object3D) {
@@ -101,7 +152,7 @@ export class TeacherNPC extends YUKA.Vehicle {
         this.scene       = scene;
         this.loading     = loading;
         this.playerModel = playerModel;
-        this.maxSpeed    = .5;
+        this.maxSpeed    = 1.5;   // velocidade de caminhada — ajuste aqui
         this.position.set(this.IDLE_POS.x, this.IDLE_POS.y, this.IDLE_POS.z);
         this.loadModel();
         this.addLabel();
@@ -117,7 +168,7 @@ export class TeacherNPC extends YUKA.Vehicle {
                 // SkeletonUtils.clone para não compartilhar bones com o player
                 this.npcMesh = (SkeletonUtils as any).clone(gltf.scene);
                 this.npcMesh!.position.set(this.IDLE_POS.x, this.IDLE_POS.y, this.IDLE_POS.z);
-                this.npcMesh!.scale.set(1.1, 1.1, 1.1);
+                this.npcMesh!.scale.set(1, 1, 1);
                 this.scene.add(this.npcMesh!);
 
                 // Mixer + clipActions a partir de globalAnimations (igual PlayerModel)
@@ -132,7 +183,7 @@ export class TeacherNPC extends YUKA.Vehicle {
                 console.log("[TeacherNPC] Pronto.");
             },
             undefined,
-            (err) => console.error("[TeacherNPC] Erro:", err)
+            (err) => console.error("[TeacherNPC] Erro ao carregar modelo:", err)
         );
     }
 
@@ -155,8 +206,9 @@ export class TeacherNPC extends YUKA.Vehicle {
 
         const target = new Vector3(cur.x, cur.y, cur.z);
 
-        // Se ja esta perto do waypoint atual (inclui o proprio 'from' no 1o frame),
-        // avanca para o proximo SEM mover o mesh - elimina o teletransporte
+        // Checa proximidade ANTES do lerp:
+        // No 1º frame o current() é 'from' (posição atual do NPC) →
+        // avança imediatamente sem mover o mesh, eliminando o teletransporte.
         if (this.npcMesh.position.distanceTo(target) < 0.4) {
             if (this.yukaPath.finished()) {
                 this.npcMesh.position.copy(target);
@@ -165,25 +217,38 @@ export class TeacherNPC extends YUKA.Vehicle {
                 return;
             }
             this.yukaPath.advance();
-            return; // reavalia no proximo frame com o novo target
+            return; // reavalia no próximo frame com o novo target
         }
 
-        // Rotacao suave
+        // Rotação suave em direção ao alvo
         this.targetRot.position.copy(this.npcMesh.position);
         this.targetRot.lookAt(target);
         this.npcMesh.quaternion.slerp(this.targetRot.quaternion, delta * 9.0);
 
-        // Lerp suave sem salto
+        // Lerp suave — sem saltos
         const pos = this.npcMesh.position.clone().lerp(target, delta * this.maxSpeed * 0.3);
         this.npcMesh.position.copy(pos);
         this.position.set(pos.x, pos.y, pos.z);
     }
 
-    private buildPath(from: YUKA.Vector3, to: YUKA.Vector3) {
+    // Monta path a partir de um caminho nomeado do Path.ts.
+    // Sempre começa da posição ATUAL do mesh para evitar teletransporte.
+    private buildNamedPath(name: string) {
+        const def = pathDefs[name];
+        if (!def) {
+            console.warn(`[TeacherNPC] Caminho "${name}" não encontrado em Path.ts`);
+            return;
+        }
         this.yukaPath = new YUKA.Path();
-        this.yukaPath.add(from.clone());
-        this.yukaPath.add(to.clone());
-        // SEM advance() - NPC parte do 'from' sem teleporte
+        // Primeiro ponto = posição real atual do NPC
+        if (this.npcMesh) {
+            this.yukaPath.add(new YUKA.Vector3(
+                this.npcMesh.position.x,
+                this.npcMesh.position.y,
+                this.npcMesh.position.z
+            ));
+        }
+        def.points.forEach(p => this.yukaPath.add(p.clone()));
         this.paused = false;
     }
 
@@ -192,7 +257,7 @@ export class TeacherNPC extends YUKA.Vehicle {
         this.setAnimation(this.animationsAction["Idle"]);
 
         if (this.tState === "WALKING") {
-            this.tState = "TEACHING";
+            this.tState     = "TEACHING";
             this.slideTimer = 0;
             this.showSlide(0);
             window.HUD?.notify(`📖 ${this.lesson?.title} — começando`, "success");
@@ -239,7 +304,7 @@ export class TeacherNPC extends YUKA.Vehicle {
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(PAD, 82); ctx.lineTo(W - PAD, 82); ctx.stroke();
 
-        // Titulo
+        // Título
         ctx.font = "bold 96px Rajdhani, sans-serif";
         ctx.fillStyle = "#ffffff";
         ctx.fillText(slide.title, PAD, 200);
@@ -247,7 +312,7 @@ export class TeacherNPC extends YUKA.Vehicle {
         ctx.fillStyle = "#00ff9d";
         ctx.fillRect(PAD, 212, Math.min(tw, W - PAD * 2), 5);
 
-        // Linhas de conteudo
+        // Linhas de conteúdo
         const lineH = 68;
         ctx.font = "42px 'Share Tech Mono', monospace";
         slide.lines.forEach((line, i) => {
@@ -257,7 +322,7 @@ export class TeacherNPC extends YUKA.Vehicle {
             ctx.fillText(line, PAD + 52, 306 + i * lineH);
         });
 
-        // Bloco de codigo
+        // Bloco de código
         if (slide.code) {
             const codeLines = slide.code.split("\n");
             const codeLineH = 54;
@@ -280,7 +345,7 @@ export class TeacherNPC extends YUKA.Vehicle {
             });
         }
 
-        // Rodape
+        // Rodapé
         const total = this.lesson?.slides.length ?? 1;
         ctx.fillStyle = "rgba(0,255,157,0.06)";
         ctx.fillRect(0, H - 80, W, 80);
@@ -302,7 +367,7 @@ export class TeacherNPC extends YUKA.Vehicle {
         this.slideIdx = idx;
         const slide   = this.lesson.slides[idx];
 
-        // Remove slide anterior
+        // Remove slide anterior e libera memória
         if (this.slideMesh) {
             this.scene.remove(this.slideMesh);
             this.slideMesh.geometry.dispose();
@@ -310,18 +375,17 @@ export class TeacherNPC extends YUKA.Vehicle {
             (this.slideMesh.material as MeshBasicMaterial).dispose();
         }
 
-        // Cria novo painel 3D acima do palco (3.2 unidades de largura, 2 de altura)
         const tex  = this.buildSlideTexture(slide);
-        const geo  = new PlaneGeometry(10.0, 5.6);  // tela projetor grande
+        const geo  = new PlaneGeometry(10.0, 5.6);   // tela projetor grande
         const mat  = new MeshBasicMaterial({ map: tex, transparent: false });
         this.slideMesh = new Mesh(geo, mat);
 
-        // Fundo do palco, elevado - visivel de toda a plateia
+        // Fundo do palco, elevado — visível de toda a plateia
         this.slideMesh.position.set(0, 4.5, -3.5);
-        this.slideMesh.rotation.y = 0; // voltado para Z+
+        this.slideMesh.rotation.y = 0;
         this.scene.add(this.slideMesh);
 
-        // Emite evento (Editor C preenche o código automaticamente)
+        // Emite evento — Editor C preenche o código automaticamente
         eventEmitter.dispatchEvent(new CustomEvent("teacher:slide", {
             detail: { slide, index: idx, total: this.lesson.slides.length, lesson: this.lesson }
         }));
@@ -344,6 +408,7 @@ export class TeacherNPC extends YUKA.Vehicle {
     // ─────────────────────────────────────────────────────────────────────────
     // API PÚBLICA
     // ─────────────────────────────────────────────────────────────────────────
+
     startLesson(lessonId: string) {
         const lesson = LESSONS.find(l => l.id === lessonId);
         if (!lesson) {
@@ -355,14 +420,11 @@ export class TeacherNPC extends YUKA.Vehicle {
             return;
         }
 
-        this.lesson  = lesson;
-        this.tState  = "WALKING";
+        this.lesson = lesson;
+        this.tState = "WALKING";
 
-        const from = this.npcMesh
-            ? new YUKA.Vector3(this.npcMesh.position.x, 0, this.npcMesh.position.z)
-            : this.IDLE_POS.clone();
-
-        this.buildPath(from, this.STAGE_POS);
+        // Caminho definido em Path.ts — ajuste sem tocar aqui
+        this.buildNamedPath("teacher-to-stage");
         this.setAnimation(this.animationsAction["Walk"]);
 
         window.HUD?.notify(`🎓 Prof. Chico indo ao palco: ${lesson.title}`, "info");
@@ -393,12 +455,7 @@ export class TeacherNPC extends YUKA.Vehicle {
     private endLesson() {
         this.removeSlide();
         this.tState = "RETURNING";
-
-        const from = this.npcMesh
-            ? new YUKA.Vector3(this.npcMesh.position.x, 0, this.npcMesh.position.z)
-            : this.STAGE_POS.clone();
-
-        this.buildPath(from, this.IDLE_POS);
+        this.buildNamedPath("teacher-to-idle");
         this.setAnimation(this.animationsAction["Walk"]);
 
         eventEmitter.dispatchEvent(new CustomEvent("lesson:complete", {
@@ -409,7 +466,7 @@ export class TeacherNPC extends YUKA.Vehicle {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // NOTEBOOK
+    // NOTEBOOK — entrega ao player próximo (estado IDLE)
     // ─────────────────────────────────────────────────────────────────────────
     private checkNotebook() {
         if (!this.npcMesh || !this.playerModel || this.notebookGiven) return;
@@ -425,19 +482,25 @@ export class TeacherNPC extends YUKA.Vehicle {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // LABEL 2D
+    // LABEL 2D flutuante sobre a cabeça do NPC
     // ─────────────────────────────────────────────────────────────────────────
     private addLabel() {
         if (document.getElementById("__teacher-label")) return;
         const el = document.createElement("div");
         el.id = "__teacher-label";
         Object.assign(el.style, {
-            position: "fixed", pointerEvents: "none", zIndex: "50",
-            fontFamily: "'Rajdhani',sans-serif", fontSize: "12px",
-            fontWeight: "700", color: "#f0b90b",
+            position:   "fixed",
+            pointerEvents: "none",
+            zIndex:     "50",
+            fontFamily: "'Rajdhani',sans-serif",
+            fontSize:   "12px",
+            fontWeight: "700",
+            color:      "#f0b90b",
             textShadow: "0 0 8px rgba(240,185,11,0.5)",
-            background: "rgba(0,0,0,0.55)", padding: "2px 8px",
-            borderRadius: "3px", display: "none",
+            background: "rgba(0,0,0,0.55)",
+            padding:    "2px 8px",
+            borderRadius: "3px",
+            display:    "none",
         });
         el.textContent = "🎓 Prof. Chico";
         document.body.appendChild(el);
@@ -461,13 +524,13 @@ export class TeacherNPC extends YUKA.Vehicle {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // UPDATE — chamado pelo entityManager (igual NPC.ts)
+    // UPDATE — chamado pelo entityManager do Yuka (igual NPC.ts)
     // ─────────────────────────────────────────────────────────────────────────
     override update(delta: number): this {
         super.update(delta);
         this.mixer?.update(delta);
 
-        // corrige root motion (igual PlayerModel.update)
+        // Corrige root motion (igual PlayerModel.update)
         const hips = this.npcMesh?.getObjectByName("Hips");
         if (hips) hips.position.set(0, hips.position.y, 0);
 
@@ -490,17 +553,41 @@ export class TeacherNPC extends YUKA.Vehicle {
         return this;
     }
 
-    // Chamado no loop do Experience apenas para o label 2D
-    tick(camera: any) { this.updateLabel(camera); }
+    // Chamado no loop do Experience — atualiza label 2D e PathDebugger
+    tick(camera: any) {
+        this.updateLabel(camera);
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // GETTERS / CONFIG
     // ─────────────────────────────────────────────────────────────────────────
-    get isIdle()     { return this.tState === "IDLE"; }
-    get isTeaching() { return this.tState === "TEACHING"; }
+    get isIdle()          { return this.tState === "IDLE"; }
+    get isTeaching()      { return this.tState === "TEACHING"; }
+    get lessonProgress()  {
+        return this.lesson
+            ? `${this.slideIdx + 1}/${this.lesson.slides.length}`
+            : "0/0";
+    }
 
-    setPlayerModel(m: Object3D) { this.playerModel = m; }
-    setSlideDuration(s: number) { this.slideDuration = s; }
+    setPlayerModel(m: Object3D)  { this.playerModel  = m; }
+    setSlideDuration(s: number)  { this.slideDuration = s; }
+
+    /**
+     * Fornece um caminho calculado externamente (ex: NavMeshSystem.findPath).
+     * O NPC abandona o caminho atual e segue este imediatamente.
+     */
+    setCustomPath(points: Vector3[]) {
+        this.yukaPath = new YUKA.Path();
+        if (this.npcMesh) {
+            this.yukaPath.add(new YUKA.Vector3(
+                this.npcMesh.position.x,
+                this.npcMesh.position.y,
+                this.npcMesh.position.z
+            ));
+        }
+        points.forEach(p => this.yukaPath.add(new YUKA.Vector3(p.x, p.y, p.z)));
+        this.paused = false;
+    }
 
     dispose() {
         this.removeSlide();

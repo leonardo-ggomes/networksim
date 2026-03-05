@@ -29,40 +29,40 @@ import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
 import { NPC } from "./NPC";
 import { EntityManager } from "yuka";
-import { npcPaths } from "./Path";
+import { npcPaths, PathDebugger } from "./Path";
 import VoiceChatManager from "./VoiceChatManager";
 import Guest from "./Guest";
-import {MissionManager} from "./MissionManager";
+import { MissionManager } from "./Missions";
 import VitalSystem from "./VitalSystem";
 import TeacherNPC from "./Teachernpc";
 
-export default class Experience{
+export default class Experience {
 
     scene: Scene
-    renderer = new WebGLRenderer({antialias: true})
-    camera = new PerspectiveCamera()
-    octree = new Octree();
+    renderer = new WebGLRenderer({ antialias: true })
+    camera   = new PerspectiveCamera()
+    octree   = new Octree();
     playerController: PlayerController
-    listener = new AudioListener();
-    items: Items
-    socket = SocketManager
-    loading: Loading
+    listener     = new AudioListener();
+    items:       Items
+    socket       = SocketManager
+    loading:     Loading
     audioLoader: AudioLoader
     ambientLight = new AmbientLight(0xFFCC88, 2)
-    entityManager: EntityManager 
+    entityManager:    EntityManager
     voiceChatManager: VoiceChatManager
-    urlAvatar:      string
-    playerName:     string
+    urlAvatar:    string
+    playerName:   string
     missionManager: MissionManager
     vitalSystem:    VitalSystem
     teacherNPC:     TeacherNPC
+    pathDebugger:   PathDebugger       // ← debug visual dos caminhos
 
-    constructor(loading: Loading, avatarUrl: string, scene: Scene, playerName = 'Agente')
-    {
-        this.scene = scene
+    constructor(loading: Loading, avatarUrl: string, scene: Scene, playerName = 'Agente') {
+        this.scene      = scene
         this.urlAvatar  = avatarUrl
         this.playerName = playerName
-        this.loading = loading
+        this.loading    = loading
         this.audioLoader = new AudioLoader(this.loading.manager)
         this.setScene()
         this.setRenderer()
@@ -96,28 +96,26 @@ export default class Experience{
             }
         })
 
-        //Gerenciador de Voz
+        // Gerenciador de Voz
         this.voiceChatManager = new VoiceChatManager(this.listener);
 
         eventEmitter.addEventListener("init_micro", async (e) => {
             const status = (e as any).detail as boolean;
-          
             try {
-              if (status) {
-                await this.voiceChatManager.initMicrophone();
-              } else {
-                this.voiceChatManager.stopMicrophone();
-              }
+                if (status) {
+                    await this.voiceChatManager.initMicrophone();
+                } else {
+                    this.voiceChatManager.stopMicrophone();
+                }
             } catch (error) {
-              console.error("Erro ao lidar com microfone:", error);
+                console.error("Erro ao lidar com microfone:", error);
             }
-          });
+        });
         
         const audioSourceObject = new Object3D();
-        audioSourceObject.position.set(0, 3, -5); // posição fixa na cena
+        audioSourceObject.position.set(0, 3, -5);
         this.scene.add(audioSourceObject);
         this.voiceChatManager.handleIncomingAudio(audioSourceObject);
-
 
         this.playerController = new PlayerController(
             this.scene, 
@@ -132,44 +130,30 @@ export default class Experience{
             console.log("[Experience] BVH buildado após loading completo.")
         })
 
-        //Inicia a posição do personagem
-
+        // Posição inicial aleatória do player
         const X = Math.random() * (20 - -10) + -10
         const Y = 0
         const Z = -(Math.random() * (20 - 15) + 15)
-        this.playerController.playerModel.setPosition(new Vector3(X,Y,Z))
-
-    
-
-
-        
-        // const playerFolder = gui.addFolder("Player")
-        // playerFolder.add(this.playerController.playerModel.rotation,"x", -Math.PI, Math.PI)
-        // playerFolder.add(this.playerController.playerModel.rotation,"y", -Math.PI, Math.PI)
-        // playerFolder.add(this.playerController.playerModel.rotation,"z", -Math.PI, Math.PI)
-        
-        // playerFolder.add(this.playerController.playerModel.position,"x", 0, 10)
-        // playerFolder.add(this.playerController.playerModel.position,"y", 0, 10)
-        // playerFolder.add(this.playerController.playerModel.position,"z", 0, 10)
+        this.playerController.playerModel.setPosition(new Vector3(X, Y, Z))
 
         this.setOctree()
         window.addEventListener('resize', this.onResize)
 
-        //NPC
+        // EntityManager do Yuka
         this.entityManager = new EntityManager();
-        //this.setNpc()
+        // this.setNpc()
 
-        // ── Expõe luz ambiente para MissionManager usar ──────────────────
+        // ── Expõe luz ambiente para MissionManager usar ───────────────────────
         (window as any).__experienceAmbientLight = this.ambientLight;
 
-        // ── VitalSystem: drena energia/vida, bloqueia terminal ─────────────
+        // ── VitalSystem: drena energia/vida, bloqueia terminal ────────────────
         this.vitalSystem = new VitalSystem(this.playerController);
 
-        // ── MissionManager: sequência de missões centralizada ─────────────
+        // ── MissionManager: sequência de missões centralizada ─────────────────
         this.missionManager = new MissionManager(this.scene, this.loading);
         this.missionManager.start();
 
-        // ── TeacherNPC: professor que entrega notebook e ministra aulas ──────
+        // ── TeacherNPC: professor que entrega notebook e ministra aulas ───────
         this.teacherNPC = new TeacherNPC(this.scene, this.loading);
         this.teacherNPC.setPlayerModel(this.playerController.playerModel);
         this.entityManager.add(this.teacherNPC);  // Yuka gerencia o update()
@@ -177,36 +161,42 @@ export default class Experience{
         // Expõe globalmente para o comando "teach" do terminal acessar
         (window as any).__teacherNPC = this.teacherNPC;
 
+        // ── PathDebugger: debug visual dos caminhos dos NPCs ──────────────────
+        // Uso no console do browser:
+        //   __pathDebug.showAll()                   → todos os caminhos
+        //   __pathDebug.show("teacher-to-stage")    → caminho específico
+        //   __pathDebug.hide()                      → remove debug
+        this.pathDebugger = new PathDebugger(this.scene);
+        (window as any).__pathDebug = this.pathDebugger;
     }
   
-    setScene(){      
-        this.scene.background = new Color( 0x000 );
-        this.scene.fog = new Fog( 0x34495E, 0, 80 );
+    setScene() {      
+        this.scene.background = new Color(0x000);
+        this.scene.fog = new Fog(0x34495E, 0, 80);
     }
     
-    setRenderer(){
+    setRenderer() {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(this.renderer.domElement)
     }
 
-    setCamera(){
-        this.camera.fov = 45
+    setCamera() {
+        this.camera.fov    = 45
         this.camera.aspect = window.innerWidth / window.innerHeight
-        this.camera.near = 0.1
-        this.camera.far = 1000        
+        this.camera.near   = 0.1
+        this.camera.far    = 1000        
         this.camera.position.set(0, 5, 8)
         this.camera.updateProjectionMatrix()   
     }
 
-    setAmbientLight(){
+    setAmbientLight() {
         this.ambientLight.intensity = .2
         this.scene.add(this.ambientLight)
     }
 
-    setGround(){
+    setGround() {
         this.scene.add(new Ground())
-        //this.scene.add(new GridHelper(100,100))
     }
 
     setAmbienceAudio() {
@@ -219,14 +209,9 @@ export default class Experience{
 
         const audioLoader = this.audioLoader;
 
-        // Causa 1 do bug: AudioContext fica suspended até um gesto do usuário.
-        // Solução: resumir o contexto antes de qualquer play(), e só chamar
-        // play() dentro do .then() para garantir que está running.
         const resumeAndPlay = async () => {
             const ctx = this.listener.context;
-            if (ctx.state === "suspended") {
-                await ctx.resume();
-            }
+            if (ctx.state === "suspended") await ctx.resume();
         };
 
         const playSound = (file: string) => {
@@ -238,17 +223,13 @@ export default class Experience{
                 sound.setRefDistance(5);
                 sound.setMaxDistance(30);
                 sound.setRolloffFactor(1);
-
                 await resumeAndPlay();
                 sound.play();
             });
         };
 
-        // Causa 2 do bug: playSound() chamado imediatamente na construção,
-        // antes de qualquer interação do usuário — AudioContext ainda suspended.
-        // Solução: aguardar o primeiro clique/tecla antes de iniciar o áudio.
         let currentTrack = "audio/auditorio.mp3";
-        let started = false;
+        let started      = false;
 
         const startOnInteraction = () => {
             if (started) return;
@@ -281,9 +262,7 @@ export default class Experience{
 
         const playSound = async (file: string) => {
             const ctx = this.listener.context;
-            if (ctx.state === "suspended") {
-                await ctx.resume();
-            }
+            if (ctx.state === "suspended") await ctx.resume();
             audioLoader.load(file, (buffer) => {
                 if (sound.isPlaying) sound.stop();
                 sound.setBuffer(buffer);
@@ -301,15 +280,10 @@ export default class Experience{
             playSound(currentTrack);
         })
     }
-    
-    
 
     async beep() {
         const ctx = this.listener.context;
-        if (ctx.state === "suspended") {
-            await ctx.resume();
-        }
-
+        if (ctx.state === "suspended") await ctx.resume();
         const sound = new Audio(this.listener);
         this.audioLoader.load("audio/beep.mp3", (buffer) => {
             sound.setBuffer(buffer);
@@ -319,31 +293,29 @@ export default class Experience{
         });
     }
   
-    setLight(){
-        const directionalLight = new DirectionalLight( 0x000000, .1 );
-        directionalLight.position.set( - 5, 25, - 1 );
+    setLight() {
+        const directionalLight = new DirectionalLight(0x000000, .1);
+        directionalLight.position.set(-5, 25, -1);
         directionalLight.castShadow = true;
-        directionalLight.shadow.camera.near = 0.01;
-        directionalLight.shadow.camera.far = 500;
-        directionalLight.shadow.camera.right = 30;
-        directionalLight.shadow.camera.left = - 30;
-        directionalLight.shadow.camera.top	= 30;
-        directionalLight.shadow.camera.bottom = - 30;
-        directionalLight.shadow.mapSize.width = 1024;
+        directionalLight.shadow.camera.near   = 0.01;
+        directionalLight.shadow.camera.far    = 500;
+        directionalLight.shadow.camera.right  = 30;
+        directionalLight.shadow.camera.left   = -30;
+        directionalLight.shadow.camera.top    = 30;
+        directionalLight.shadow.camera.bottom = -30;
+        directionalLight.shadow.mapSize.width  = 1024;
         directionalLight.shadow.mapSize.height = 1024;
         directionalLight.shadow.radius = 4;
-        directionalLight.shadow.bias = - 0.00006;
+        directionalLight.shadow.bias   = -0.00006;
         this.scene.add(directionalLight);
-
-        // this.scene.add(new DirectionalLightHelper(directionalLight, 1));
     }
 
-    setSoundStage(sound: PositionalAudio, object: Mesh){
+    setSoundStage(sound: PositionalAudio, object: Mesh) {
         object.add(sound)
     }
 
-    setOctree(helper = false){
-       helper && new OctreeHelper(this.octree);
+    setOctree(helper = false) {
+        helper && new OctreeHelper(this.octree);
     }  
 
     onResize = () => {        
@@ -352,18 +324,15 @@ export default class Experience{
         this.renderer.setSize(window.innerWidth, window.innerHeight); 
     }
 
-    setDriver(title: string, content: string){
+    setDriver(title: string, content: string) {
         const driverObj = driver();
         driverObj.highlight({
-          element: "#instruction",
-          popover: {
-            title: title,
-            description: content
-          }
+            element: "#instruction",
+            popover: { title, description: content }
         });
     }
 
-    setNpc(){
+    setNpc() {
         const npc = new NPC(
             "Inspetor", 
             this.scene, 
@@ -375,7 +344,7 @@ export default class Experience{
         this.entityManager.add(npc);
     }
 
-    update(delta: number){
+    update(delta: number) {
         this.playerController.update(delta)
 
         Guest.update(delta, this.camera)
@@ -383,11 +352,17 @@ export default class Experience{
         // Drena energia/vida e controla cooldown do terminal
         this.vitalSystem.update(delta)
 
+        // Label 2D do professor (update() do Yuka cuida do movimento)
+        this.teacherNPC.tick(this.camera)
+
         // Verifica zona da missão ativa
-        this.teacherNPC.tick(this.camera)  // label 2D (update() é pelo entityManager)
         this.missionManager.checkZone(this.playerController.playerModel.position)
 
+        // Yuka — atualiza todos os veículos (NPC + TeacherNPC)
         this.entityManager.update(delta)
+
+        // PathDebugger — atualiza labels 2D dos waypoints
+        this.pathDebugger.update(this.camera)
 
         this.renderer.render(this.scene, this.camera)
     }
