@@ -99,7 +99,7 @@ function hasLines(output: string, expected: string[]): boolean {
 // Ajuste os vetores para o layout real do mapa.
 
 const POS = {
-    professor: new Vector3(-15, 0, 25),   // NPC professor
+    professor: new Vector3(-5, 0, 25),   // NPC professor
     sala:      new Vector3(   0,    0,  10),   // zona de trabalho (terminal / C)
     servidor:  new Vector3(  -8,    1,  22),   // sala do servidor remoto
     auditorio: new Vector3(   0,    0,  -5),   // palco de encerramento

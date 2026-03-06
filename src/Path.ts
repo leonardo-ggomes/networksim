@@ -82,10 +82,10 @@ function reversePath(points: YUKA.Vector3[]): YUKA.Vector3[] {
 // ── Waypoints base (sem interpolação) — edite apenas estes ───────────────────
 // Depois de ajustar, rode __pathDebug.showAll() para visualizar na cena.
 const STAGE_WAYPOINTS: YUKA.Vector3[] = [
-    new YUKA.Vector3(-15, 0, 25),   // IDLE_POS — ponto de espera
-    new YUKA.Vector3(-15, 0, 15),   // desvio pelo corredor esquerdo
-    new YUKA.Vector3(-10, 0,  8),   // aproximando do corredor central
-    new YUKA.Vector3( 5, 0,  3),   // entrada do palco
+    new YUKA.Vector3(-22, 0, 25),   // IDLE_POS — ponto de espera
+    new YUKA.Vector3(-22, 0, 15),   // desvio pelo corredor esquerdo
+    new YUKA.Vector3(-22, 0,  8),   // aproximando do corredor central
+    new YUKA.Vector3( 0, .1,  3),   // entrada do palco
     new YUKA.Vector3( 0, .5,  0),   // STAGE_POS — palco
     new YUKA.Vector3( 0, 1,  0),   // STAGE_POS — palco
 ];
@@ -98,12 +98,12 @@ export const pathDefs: Record<string, PathDef> = {
         loop:  true,
         color: "#ff3c3c",
         points: interpolatePath([
-            new YUKA.Vector3(10, 0,  5),
-            new YUKA.Vector3(10, 0, 10),
-            new YUKA.Vector3(10, 0, 15),
-            new YUKA.Vector3(10, 0, 20),
-            new YUKA.Vector3(10, 0, 25),
-            new YUKA.Vector3(10, 0, 30),
+            new YUKA.Vector3(15, 0,  5),
+            new YUKA.Vector3(15, 0, 10),
+            new YUKA.Vector3(15, 0, 15),
+            new YUKA.Vector3(15, 0, 20),
+            new YUKA.Vector3(15, 0, 25),
+            new YUKA.Vector3(15, 0, 30),
         ], 3),
     },
 

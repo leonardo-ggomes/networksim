@@ -497,15 +497,14 @@
     <!-- Stage com os 2 personagens -->
     <div id="char-stage">
 
-      <!-- ── Agente 01 ── -->
-      <div class="char-card" data-model="models/asian_male_animated@base.glb">
+      <!-- ── Masculino ── -->
+      <div class="char-card" data-gender="male" data-model="">
         <div class="char-selected-badge">✓ Selecionado</div>
         <div class="char-border-left"></div>
         <div class="char-spotlight"></div>
 
         <div class="char-preview">
           <div class="char-silhouette">
-            <!-- Silhuete SVG — substitua por <img src="preview_kenji.png"> se tiver sprites -->
             <svg viewBox="0 0 100 220" fill="none" xmlns="http://www.w3.org/2000/svg">
               <ellipse cx="50" cy="22" rx="15" ry="17" fill="#c8956c"/>
               <path d="M36 16 Q50 3 64 16 Q64 6 50 4 Q36 6 36 16Z" fill="#1a0a02"/>
@@ -521,28 +520,27 @@
               <rect x="16" y="202" width="22" height="14" rx="3" fill="#111"/>
               <rect x="62" y="202" width="22" height="14" rx="3" fill="#111"/>
               <circle cx="50" cy="74" r="5" fill="none" stroke="#f0b90b" stroke-width="1.3" opacity=".7"/>
-              <text x="50" y="78" text-anchor="middle" font-size="6" fill="#f0b90b" opacity=".85" font-family="monospace">K</text>
+              <text x="50" y="78" text-anchor="middle" font-size="6" fill="#f0b90b" opacity=".85" font-family="monospace">♂</text>
             </svg>
           </div>
         </div>
 
         <div class="char-underline"></div>
         <div class="char-info">
-          <div class="char-number">AGENTE · 01</div>
-          <div class="char-name">Kenji</div>
-          <div class="char-desc">Especialista em sistemas.<br>Ágil e discreto em campo.</div>
+          <div class="char-number">AGENTE · MASCULINO</div>
+          <div class="char-name">Masculino</div>
+          <div class="char-desc">Personagem masculino.<br>Modelo sorteado aleatoriamente.</div>
           <div class="char-tags">
-            <span class="char-tag">Infiltração</span>
-            <span class="char-tag">Técnico</span>
-            <span class="char-tag">Ágil</span>
+            <span class="char-tag">male_1 – male_5</span>
+            <span class="char-tag" id="male-variant-tag">— sorteando...</span>
           </div>
         </div>
       </div>
 
       <div class="char-separator"></div>
 
-      <!-- ── Agente 02 ── -->
-      <div class="char-card" data-model="models/asian_male_animated@base.glb">
+      <!-- ── Feminino ── -->
+      <div class="char-card" data-gender="female" data-model="">
         <div class="char-selected-badge">✓ Selecionado</div>
         <div class="char-border-left"></div>
         <div class="char-spotlight"></div>
@@ -550,37 +548,37 @@
         <div class="char-preview">
           <div class="char-silhouette">
             <svg viewBox="0 0 100 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <ellipse cx="50" cy="22" rx="16" ry="18" fill="#7d4e2d"/>
-              <path d="M34 17 Q50 3 66 17 Q66 7 50 5 Q34 7 34 17Z" fill="#0a0500"/>
-              <rect x="44" y="38" width="12" height="10" fill="#7d4e2d"/>
-              <path d="M16 47 Q50 42 84 47 L87 116 Q50 122 13 116Z" fill="#2f3640"/>
-              <path d="M28 49 Q50 45 72 49 L74 98 Q50 101 26 98Z" fill="#353b48"/>
-              <rect x="31" y="62" width="13" height="9" rx="1" fill="#2a2f38"/>
-              <rect x="56" y="62" width="13" height="9" rx="1" fill="#2a2f38"/>
-              <path d="M16 49 Q6 72 8 99 L17 98 Q19 74 23 57Z" fill="#2f3640"/>
-              <path d="M84 49 Q94 72 92 99 L83 98 Q81 74 77 57Z" fill="#2f3640"/>
-              <ellipse cx="12" cy="102" rx="6" ry="7" fill="#7d4e2d"/>
-              <ellipse cx="88" cy="102" rx="6" ry="7" fill="#7d4e2d"/>
-              <path d="M18 116 L12 208 L36 208 L50 162 L64 208 L88 208 L82 116Z" fill="#1e272e"/>
-              <rect x="13" y="140" width="13" height="16" rx="1" fill="#2f3640"/>
-              <rect x="74" y="140" width="13" height="16" rx="1" fill="#2f3640"/>
-              <rect x="12" y="200" width="24" height="14" rx="3" fill="#111"/>
-              <rect x="64" y="200" width="24" height="14" rx="3" fill="#111"/>
-              <path d="M16 47 Q8 50 8 61 L18 59Z" fill="#f0b90b" opacity=".75"/>
-              <text x="50" y="80" text-anchor="middle" font-size="6" fill="#f0b90b" opacity=".8" font-family="monospace">M</text>
+              <ellipse cx="50" cy="21" rx="14" ry="16" fill="#e8b49a"/>
+              <path d="M36 15 Q50 1 64 15 Q60 3 50 2 Q40 3 36 15Z" fill="#2a0e00"/>
+              <path d="M34 22 Q28 32 30 42 Q40 48 60 48 Q70 32 66 22Z" fill="#2a0e00" opacity=".6"/>
+              <rect x="44" y="36" width="12" height="9" fill="#e8b49a"/>
+              <path d="M24 46 Q50 40 76 46 L74 88 Q50 93 26 88Z" fill="#8B2252"/>
+              <path d="M20 46 Q50 41 80 46 L82 70 Q50 73 18 70Z" fill="#9e2d60" opacity=".5"/>
+              <path d="M24 46 Q14 68 16 94 L25 93 Q27 70 30 56Z" fill="#8B2252"/>
+              <path d="M76 46 Q86 68 84 94 L75 93 Q73 70 70 56Z" fill="#8B2252"/>
+              <ellipse cx="18" cy="97" rx="5" ry="6" fill="#e8b49a"/>
+              <ellipse cx="82" cy="97" rx="5" ry="6" fill="#e8b49a"/>
+              <path d="M26 88 Q20 102 24 120 L34 118 Q34 104 32 92Z" fill="#8B2252"/>
+              <path d="M74 88 Q80 102 76 120 L66 118 Q66 104 68 92Z" fill="#8B2252"/>
+              <path d="M26 116 Q20 138 22 170 L36 170 L50 148 L64 170 L78 170 Q80 138 74 116Z" fill="#5a1a3a"/>
+              <path d="M34 116 Q50 120 66 116 L68 132 Q50 136 32 132Z" fill="#6e2047"/>
+              <rect x="22" y="162" width="14" height="52" rx="3" fill="#3d1228"/>
+              <rect x="64" y="162" width="14" height="52" rx="3" fill="#3d1228"/>
+              <rect x="20" y="207" width="18" height="10" rx="3" fill="#111"/>
+              <rect x="62" y="207" width="18" height="10" rx="3" fill="#111"/>
+              <text x="50" y="76" text-anchor="middle" font-size="6" fill="#f0b90b" opacity=".85" font-family="monospace">♀</text>
             </svg>
           </div>
         </div>
 
         <div class="char-underline"></div>
         <div class="char-info">
-          <div class="char-number">AGENTE · 02</div>
-          <div class="char-name">Marcus</div>
-          <div class="char-desc">Operativo de campo.<br>Força e resistência superiores.</div>
+          <div class="char-number">AGENTE · FEMININO</div>
+          <div class="char-name">Feminino</div>
+          <div class="char-desc">Personagem feminino.<br>Modelo sorteado aleatoriamente.</div>
           <div class="char-tags">
-            <span class="char-tag">Combate</span>
-            <span class="char-tag">Tático</span>
-            <span class="char-tag">Resiliente</span>
+            <span class="char-tag">female_1 – female_5</span>
+            <span class="char-tag" id="female-variant-tag">— sorteando...</span>
           </div>
         </div>
       </div>
@@ -627,10 +625,10 @@
     import { Clock, Scene } from 'three';
     import Loading     from './src/Loading';
     import SocketManager from './src/SocketManager';
-    import Stats       from 'three/addons/libs/stats.module.js';
+    // import Stats       from 'three/addons/libs/stats.module.js';
 
-    const stats  = new Stats();
-    document.body.appendChild(stats.dom);
+    // const stats  = new Stats();
+    // document.body.appendChild(stats.dom);
 
     const clock   = new Clock();
     const loading = new Loading();
@@ -648,13 +646,29 @@
     let selectedCard  = null;
     let selectedModel = null;
 
+    // Sorteia um número entre 1 e 5 para o gênero informado e atualiza data-model
+    function rollModel(card) {
+      const gender  = card.dataset.gender;           // "male" | "female"
+      const variant = Math.floor(Math.random() * 5) + 1;   // 1–5
+      const model   = `models/${gender}_${variant}.glb`;
+      card.dataset.model = model;
+
+      // Atualiza o tag de variante visível no card
+      const tagId  = gender === 'male' ? 'male-variant-tag' : 'female-variant-tag';
+      const tag    = document.getElementById(tagId);
+      if (tag) tag.textContent = `${gender}_${variant}`;
+
+      return model;
+    }
+
     function selectCard(card) {
       if (selectedCard) selectedCard.classList.remove('selected');
       selectedCard  = card;
-      selectedModel = card.dataset.model;
+      selectedModel = rollModel(card);   // sorteia novo modelo a cada clique
       card.classList.add('selected');
       confirmBtn.disabled = false;
-      btnLabel.textContent = `Entrar como ${card.querySelector('.char-name').textContent}`;
+      const genderLabel = card.dataset.gender === 'male' ? 'Masculino' : 'Feminino';
+      btnLabel.textContent = `Entrar como ${genderLabel}`;
     }
 
     cards.forEach(card => card.addEventListener('click', () => selectCard(card)));
@@ -703,7 +717,7 @@
           (function update() {
             const delta = clock.getDelta();
             requestAnimationFrame(update);
-            stats.update();
+            // stats.update();
             experience.update(delta);
           })();
         }

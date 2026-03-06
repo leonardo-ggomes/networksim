@@ -337,7 +337,7 @@ export default class Experience {
             "Inspetor", 
             this.scene, 
             this.loading, 
-            "models/asian_male_animated_v2.glb",
+            "models/teacher_npc.glb",
             npcPaths["patrol"],
             this.playerController.playerModel
         );

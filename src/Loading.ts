@@ -430,33 +430,31 @@ export default class Loading
         return await new Promise<void>(async (resolve) => {
 
             const animations = await Promise.all([
-                this.loader.loadAsync("models/asian_male_animated@base.glb"),              
-                this.loader.loadAsync("models/asian_male_animated@crounch_flashlight.glb"),              
-                this.loader.loadAsync("models/asian_male_animated@crouch_back.glb"),
-                this.loader.loadAsync("models/asian_male_animated@crouch_run.glb"),
-                this.loader.loadAsync("models/asian_male_animated@crouch_walk_right.glb"),
-                this.loader.loadAsync("models/asian_male_animated@crouch_walk_left.glb"),              
-                this.loader.loadAsync("models/asian_male_animated@sitting.glb"),              
-                this.loader.loadAsync("models/asian_male_animated@backward.glb"),              
-                this.loader.loadAsync("models/asian_male_animated@walk_left.glb"),              
-                this.loader.loadAsync("models/asian_male_animated@walk_right.glb"),              
+                this.loader.loadAsync("models/M_Standing_Idle_001.glb"),  
+                this.loader.loadAsync("models/M_Walk_001.glb"),  
+                this.loader.loadAsync("models/M_Walk_Backwards_001.glb"),
+                this.loader.loadAsync("models/M_Walk_Strafe_Left_002.glb"),
+                this.loader.loadAsync("models/M_Walk_Strafe_Right_002.glb"),
+                this.loader.loadAsync("models/M_Sitting.glb"),              
+                this.loader.loadAsync("models/M_Run_001.glb"),              
+                this.loader.loadAsync("models/M_Dances_011.glb")                         
             ]);
     
             this.globalAnimations = {
-                "Waving":     animations[0].animations[0],
-                "Idle":       animations[0].animations[1],
-                "Walk":       animations[0].animations[4],
-                "Running":    animations[0].animations[3],
-                "Sitting":    animations[6].animations[0],
-                "Crouch":     animations[5].animations[0],
-                "CrouchIdle": animations[6].animations[0],
-                "Backward":   animations[7].animations[0],
+                "Waving":     animations[7].animations[0],
+                "Idle":       animations[0].animations[0],
+                "Walk":       animations[1].animations[0],
+                "Running":    animations[6].animations[0],
+                "Sitting":    animations[5].animations[0],
+                "Crouch":     animations[0].animations[0],
+                "CrouchIdle": animations[0].animations[0],
+                "Backward":   animations[2].animations[0],
                 "CrouchBack": animations[2].animations[0],
-                "CrouchRun":  animations[3].animations[0],
+                "CrouchRun":  animations[6].animations[0],
                 "CrouchRight":animations[4].animations[0],
-                "CrouchLeft": animations[5].animations[0],
-                "WalkRight":  animations[9].animations[0],
-                "WalkLeft":   animations[8].animations[0]
+                "CrouchLeft": animations[3].animations[0],
+                "WalkRight":  animations[4].animations[0],
+                "WalkLeft":   animations[3].animations[0]
             };
 
             resolve()

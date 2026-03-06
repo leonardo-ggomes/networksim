@@ -174,7 +174,7 @@ export class TeacherNPC extends YUKA.Vehicle {
     // ─────────────────────────────────────────────────────────────────────────
     private loadModel() {
         this.loading.loader.load(
-            "models/asian_male_animated@base.glb",
+            "models/teacher_npc.glb",
             (gltf) => {
                 // SkeletonUtils.clone para não compartilhar bones com o player
                 this.npcMesh = (SkeletonUtils as any).clone(gltf.scene);

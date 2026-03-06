@@ -11,7 +11,7 @@ import Guest from './Guest'
 /**
  * Normaliza o dado de avatar recebido do servidor.
  * Suporta 3 formatos para garantir compatibilidade:
- *   1. string pura:        'models/asian_male_animated@base.glb'  (servidor antigo)
+ *   1. string pura:        'models/teacher_npc.glb'  (servidor antigo)
  *   2. objeto novo:        { url: '...', name: '...' }            (servidor atualizado)
  *   3. objeto aninhado:    { url: { url: '...', name: '...' } }   (bug de transição)
  */

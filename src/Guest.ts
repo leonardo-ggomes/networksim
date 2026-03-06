@@ -132,7 +132,7 @@ export default class Guest {
         playerName: string = 'Jogador'
     ): Promise<void> {
 
-        const modelUrl = urlAvatar || 'models/asian_male_animated@base.glb';
+        const modelUrl = urlAvatar || 'models/teacher_npc.glb';
         const baseGltf = await loadGLTF(loading, modelUrl);
         const cloned   = SkeletonUtils.clone(baseGltf.scene) as Object3D;
 
