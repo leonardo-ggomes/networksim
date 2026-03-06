@@ -407,6 +407,7 @@ function createTerminal() {
     const tabDefs = [
         { id:"terminal",  label:"Terminal",  icon:"bx-terminal" },
         { id:"editor-c",  label:"Editor C",  icon:"bx-code-alt" },
+        { id:"editor-js", label:"Editor JS", icon:"bxl-javascript" },
         { id:"processes", label:"Processos", icon:"bx-chip" },
         { id:"files",     label:"Arquivos",  icon:"bx-folder" },
     ];
@@ -731,6 +732,225 @@ function createTerminal() {
             const ta = document.getElementById("__c-editor") as HTMLTextAreaElement;
             if (ta) ta.value = `#include <stdio.h>\n\n${slide.code}`;
         }
+    });
+
+    const jsPanel = panels["editor-js"];
+    css(jsPanel, { flexDirection:"column", position:"relative" });
+
+    const jsHeader = document.createElement("div");
+    css(jsHeader, { padding:"7px 14px", borderBottom:`1px solid ${V.border}`,
+                    display:"flex", alignItems:"center", justifyContent:"space-between",
+                    fontFamily:"'Rajdhani',sans-serif", gap:"8px" });
+
+    const jsTitle = document.createElement("span");
+    css(jsTitle, { fontSize:"10px", letterSpacing:".15em", color:V.muted,
+                   textTransform:"uppercase", display:"flex", alignItems:"center", gap:"6px" });
+    jsTitle.innerHTML = `<i class='bx bxl-javascript' style="color:${V.yellow}"></i> INTERPRETADOR JS — HackOS Node`;
+
+    const jsActions = document.createElement("div");
+    jsActions.style.display = "flex"; jsActions.style.gap = "8px";
+
+    const jsRunBtn = document.createElement("button");
+    css(jsRunBtn, { fontFamily:"'Rajdhani',sans-serif", fontSize:"11px", fontWeight:"700",
+                    letterSpacing:".1em", textTransform:"uppercase", padding:"4px 14px",
+                    background:`rgba(240,185,11,0.1)`, border:`1px solid ${V.yellow}`,
+                    color:V.yellow, borderRadius:"3px", cursor:"pointer",
+                    display:"flex", alignItems:"center", gap:"5px" });
+    jsRunBtn.innerHTML = `<i class='bx bx-play-circle'></i> Executar`;
+
+    const jsClearBtn = document.createElement("button");
+    css(jsClearBtn, { fontFamily:"'Rajdhani',sans-serif", fontSize:"11px", fontWeight:"600",
+                      letterSpacing:".1em", textTransform:"uppercase", padding:"4px 10px",
+                      background:"transparent", border:`1px solid ${V.border}`,
+                      color:V.muted, borderRadius:"3px", cursor:"pointer" });
+    jsClearBtn.textContent = "Limpar";
+
+    jsActions.append(jsClearBtn, jsRunBtn);
+    jsHeader.append(jsTitle, jsActions);
+    jsPanel.appendChild(jsHeader);
+
+    const jsBody = document.createElement("div");
+    css(jsBody, { display:"flex", flex:"1", overflow:"hidden" });
+
+    // ── Editor (esquerda) ────────────────────────────────────────────────────
+    const jsEditorWrap = document.createElement("div");
+    css(jsEditorWrap, { flex:"1", display:"flex", flexDirection:"column",
+                        borderRight:`1px solid ${V.border}` });
+
+    const jsLangBadge = document.createElement("div");
+    css(jsLangBadge, { padding:"4px 14px", fontSize:"9px", letterSpacing:".14em",
+                       color:V.muted, textTransform:"uppercase", borderBottom:`1px solid ${V.border}`,
+                       display:"flex", gap:"10px", alignItems:"center" });
+    jsLangBadge.innerHTML = `<span style="color:${V.yellow}">JS</span> main.js &nbsp;|&nbsp; <span id="__js-status" style="color:${V.muted}">Pronto</span>`;
+
+    const jsTextarea = document.createElement("textarea");
+    jsTextarea.id = "__js-editor";
+    css(jsTextarea, { flex:"1", background:"transparent", border:"none", outline:"none",
+                      color:V.text, fontFamily:"'Share Tech Mono', monospace",
+                      fontSize:"12px", lineHeight:"1.7", padding:"12px 14px",
+                      resize:"none", tabSize:"4" });
+    jsTextarea.spellcheck = false;
+    jsTextarea.value = `// Olá, Mundo! em JavaScript\nconsole.log("Olá, Mundo!");`;
+
+    // Tab insere 4 espaços (igual ao Editor C)
+    jsTextarea.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Tab") {
+            e.preventDefault();
+            const s = jsTextarea.selectionStart;
+            jsTextarea.value = jsTextarea.value.slice(0, s) + "    " + jsTextarea.value.slice(s);
+            jsTextarea.selectionStart = jsTextarea.selectionEnd = s + 4;
+        }
+    });
+    jsTextarea.addEventListener("click",    e => e.stopPropagation());
+    jsTextarea.addEventListener("keypress", e => e.stopPropagation());
+    jsEditorWrap.append(jsLangBadge, jsTextarea);
+
+    // ── Saída (direita) ──────────────────────────────────────────────────────
+    const jsOutputWrap = document.createElement("div");
+    css(jsOutputWrap, { width:"260px", display:"flex", flexDirection:"column" });
+
+    const jsOutHeader = document.createElement("div");
+    css(jsOutHeader, { padding:"4px 14px", fontSize:"9px", letterSpacing:".14em",
+                       color:V.muted, textTransform:"uppercase", borderBottom:`1px solid ${V.border}`,
+                       display:"flex", alignItems:"center", gap:"6px" });
+    jsOutHeader.innerHTML = `<i class='bx bx-terminal' style="color:${V.yellow};font-size:12px"></i> CONSOLE`;
+
+    const jsOutput = document.createElement("pre");
+    jsOutput.id = "__js-output";
+    css(jsOutput, { flex:"1", overflowY:"auto", margin:"0", padding:"12px 14px",
+                    fontSize:"11px", lineHeight:"1.6", color:V.text,
+                    fontFamily:"'Share Tech Mono', monospace", whiteSpace:"pre-wrap",
+                    background:"rgba(0,0,0,0.2)" });
+    jsOutput.textContent = "// Execute para ver a saida";
+
+    jsOutputWrap.append(jsOutHeader, jsOutput);
+    jsBody.append(jsEditorWrap, jsOutputWrap);
+    jsPanel.appendChild(jsBody);
+    device.appendChild(jsPanel);
+
+    // ── Runner ───────────────────────────────────────────────────────────────
+    function runJSCode() {
+        const ta     = document.getElementById("__js-editor") as HTMLTextAreaElement;
+        const output = document.getElementById("__js-output")  as HTMLPreElement;
+        const status = document.getElementById("__js-status")  as HTMLSpanElement;
+        if (!ta || !output || !status) return;
+
+        const src = ta.value;
+        status.textContent = "Executando..."; status.style.color = V.yellow;
+        output.textContent = ""; output.style.color = V.text;
+
+        setTimeout(() => {
+            // ── Sandbox: captura console.log, bloqueia APIs perigosas ─────────
+            const lines: string[] = [];
+            const safeConsole = {
+                log:   (...args: unknown[]) => lines.push(args.map(a =>
+                    a === null ? "null" : a === undefined ? "undefined" :
+                    typeof a === "object" ? (() => { try { return JSON.stringify(a); } catch { return "[Object]"; } })() :
+                    String(a)).join(" ")),
+                error: (...args: unknown[]) => lines.push("[erro] "   + args.map(String).join(" ")),
+                warn:  (...args: unknown[]) => lines.push("[aviso] "  + args.map(String).join(" ")),
+                info:  (...args: unknown[]) => lines.push("[info] "   + args.map(String).join(" ")),
+            };
+
+            const deadline = Date.now() + 3000;
+            const __loopGuard = () => {
+                if (Date.now() > deadline) throw new Error("Tempo limite excedido (loop infinito?)");
+                return true;
+            };
+
+            // Palavras proibidas no código
+            const blocked = ["window","document","location","fetch","XMLHttpRequest",
+                             "WebSocket","localStorage","sessionStorage","eval","Function",
+                             "setTimeout","setInterval","__proto__","constructor","process","globalThis"];
+            const found = blocked.find(id => new RegExp(`\\b${id}\\b`).test(src));
+            if (found) {
+                status.textContent = "BLOQUEADO"; status.style.color = V.red;
+                output.style.color = V.red;
+                output.textContent = `[Segurança] '${found}' não está disponível no ambiente HackOS.`;
+                return;
+            }
+
+            // Injeta loop guard no while e for
+            let safe = src
+                .replace(/\bwhile\s*\(/g, "while (__loopGuard() && (")
+                .replace(/\bfor\s*\(([^;]*);([^;]*);/g,
+                    (_m: string, init: string, cond: string) =>
+                        `for (${init}; __loopGuard() && (${cond.trim() || "true"});`);
+
+            // Fecha parênteses extras do while guard
+            safe = (() => {
+                const MARKER = "while (__loopGuard() && (";
+                let result = ""; let i = 0;
+                while (i < safe.length) {
+                    const idx = safe.indexOf(MARKER, i);
+                    if (idx === -1) { result += safe.slice(i); break; }
+                    result += safe.slice(i, idx + MARKER.length);
+                    let depth = 1; let j = idx + MARKER.length;
+                    while (j < safe.length && depth > 0) {
+                        if (safe[j] === "(") depth++;
+                        else if (safe[j] === ")") depth--;
+                        if (depth > 0) result += safe[j];
+                        j++;
+                    }
+                    result += "))"; i = j;
+                }
+                return result;
+            })();
+
+            try {
+                // Identificadores reservados que não podem ser nomes de parâmetro
+                // em strict mode (eval, arguments, etc.) são bloqueados via detecção
+                // de uso no código, mas NÃO passados como parâmetros da função.
+                const RESERVED_PARAM_NAMES = new Set([
+                    "eval","arguments","implements","interface","let","package",
+                    "private","protected","public","static","yield","Function",
+                ]);
+
+                // APIs permitidas explicitamente no sandbox
+                const allowedKeys:   string[]  = ["console","Math","JSON","Number","String",
+                                                   "Boolean","Array","Object","parseInt",
+                                                   "parseFloat","isNaN","isFinite","__loopGuard"];
+                const allowedValues: unknown[] = [safeConsole,Math,JSON,Number,String,
+                                                   Boolean,Array,Object,parseInt,
+                                                   parseFloat,isNaN,isFinite,__loopGuard];
+
+                // APIs bloqueadas que podem ser passadas como parâmetro (shadow do escopo externo)
+                const shadowKeys:   string[]  = blocked.filter(id => !RESERVED_PARAM_NAMES.has(id));
+                const shadowValues: unknown[] = shadowKeys.map(() => undefined);
+
+                const keys   = [...allowedKeys,   ...shadowKeys];
+                const values = [...allowedValues, ...shadowValues];
+
+                // eslint-disable-next-line no-new-func
+                new Function(...keys, `"use strict";\n${safe}`)(...values);
+
+                const out = lines.join("\n").slice(0, 4000);
+                status.textContent = "OK"; status.style.color = V.yellow;
+                output.style.color = V.text;
+                output.textContent = out || "(sem saida)";
+
+                // Emite evento para o MissionManager — mesmo padrão de c:output
+                eventEmitter.dispatchEvent(new CustomEvent("js:output", {
+                    detail: { output: out, source: src }
+                }));
+
+            } catch (e: any) {
+                status.textContent = "ERRO"; status.style.color = V.red;
+                output.style.color = V.red;
+                output.textContent = `[Erro] ${e.message}`;
+            }
+        }, 60);
+    }
+
+    jsRunBtn.addEventListener("click", runJSCode);
+    jsClearBtn.addEventListener("click", () => {
+        const ta = document.getElementById("__js-editor") as HTMLTextAreaElement;
+        if (ta) ta.value = "// Digite seu código JavaScript aqui\n";
+        const out = document.getElementById("__js-output") as HTMLPreElement;
+        if (out) { out.textContent = "// Execute para ver a saida"; out.style.color = V.text; }
+        const st = document.getElementById("__js-status") as HTMLSpanElement;
+        if (st) { st.textContent = "Pronto"; st.style.color = V.muted; }
     });
 
     const filePanel = panels["files"];

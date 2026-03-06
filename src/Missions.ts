@@ -2,7 +2,7 @@
  * Missions.ts — HackOS
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * PROGRESSÃO PEDAGÓGICA — 16 missões em 5 fases
+ * PROGRESSÃO PEDAGÓGICA — 24 missões em 6 fases
  *
  * FASE 0 — ONBOARDING
  *   M00  Buscar o dispositivo com o professor           (collided)
@@ -30,8 +30,17 @@
  *   M14  Função customizada mult(4,5)                   (c:output)
  *   M15  Fibonacci recursivo — boss                     (c:output)
  *
- * FASE 5 — ENCERRAMENTO
- *   M16  Apresentação final no auditório                (collided)
+ * FASE 5 — PROGRAMAÇÃO EM JAVASCRIPT
+ *   M16  Olá, Mundo! em JS                              (js:output)
+ *   M17  Variáveis: let, const, template string         (js:output)
+ *   M18  Arrow function + retorno                       (js:output)
+ *   M19  Array + forEach                                (js:output)
+ *   M20  Objeto literal + acesso a propriedades         (js:output)
+ *   M21  Método de array: map + filter                  (js:output)
+ *   M22  Recursão: fatorial — boss                      (js:output)
+ *
+ * FASE 6 — ENCERRAMENTO
+ *   M23  Apresentação final no auditório                (collided)
  * ─────────────────────────────────────────────────────────────────────────────
  *
  * Eventos que ACTIONS.TS deve emitir (ver patch terminal-events):
@@ -45,6 +54,7 @@
  *   terminal:ssh      — detail: { address }
  *   remove_pid        — detail: { processes, isCollided }  (já existia)
  *   c:output          — detail: { output, source }          (já existia)
+ *   js:output         — detail: { output, source }          (emitido pelo JSInterpreter)
  *   collided          — detail: { collided }                (já existia)
  */
 
@@ -79,7 +89,7 @@ export type MissionDef = {
 
 // ── Helpers de validação ──────────────────────────────────────────────────────
 
-/** Normaliza saída do compilador C */
+/** Normaliza saída do compilador C / interpretador JS */
 function norm(s: string): string {
     return s.replace(/\r/g, '').trim().replace(/\s+/g, ' ');
 }
@@ -100,7 +110,7 @@ function hasLines(output: string, expected: string[]): boolean {
 
 const POS = {
     professor: new Vector3(-5, 0, 25),   // NPC professor
-    sala:      new Vector3(   0,    0,  10),   // zona de trabalho (terminal / C)
+    sala:      new Vector3(   0,    0,  10),   // zona de trabalho (terminal / C / JS)
     servidor:  new Vector3(  -8,    1,  22),   // sala do servidor remoto
     auditorio: new Vector3(   0,    0,  -5),   // palco de encerramento
 };
@@ -109,14 +119,15 @@ const POS = {
 
 const BRIEFING = `=== BRIEFING CONFIDENCIAL ===
 Agente, voce foi selecionado para o Programa HackOS.
-Sua missao: dominar o terminal Linux e a linguagem C
-antes que o sistema seja completamente comprometido.
+Sua missao: dominar o terminal Linux, a linguagem C
+e JavaScript antes que o sistema seja comprometido.
 
 Fases:
   1. Sistema de arquivos (ls cd pwd cat nano mkdir rm)
   2. Processos e seguranca (top ps kill)
   3. Rede (ifconfig ping ssh)
-  4. Programacao em C (7 desafios)
+  4. Programacao em C (6 desafios)
+  5. Programacao em JavaScript (7 desafios)
 
 Boa sorte. — Prof. Sistema`;
 
@@ -707,8 +718,8 @@ export function buildMissions(): MissionDef[] {
             check: (e) => {
                 const { output, source } = e.detail as any;
                 return /int\s+\w+\s*\(\s*int/.test(source)       // funcao com param int
-                    && /return\s+\w+\s*\(/.test(source)            // chamada recursiva
-                    && /if\s*\(.*<=?\s*1/.test(source)             // caso base
+                    && /return\s+\w+\s*\(/.test(source)           // chamada recursiva
+                    && /if\s*\(.*<=?\s*1/.test(source)            // caso base
                     && norm(output) === '13';
             },
             onComplete: () => {
@@ -718,14 +729,323 @@ export function buildMissions(): MissionDef[] {
                     'Sempre precisa de:\n' +
                     '  1. Caso base (para a recursao)\n' +
                     '  2. Chamada recursiva\n\n' +
-                    'Fibonacci e o exemplo classico!'
+                    'Fibonacci e o exemplo classico!\n\n' +
+                    'Proximo desafio: JavaScript!'
                 );
-                window.HUD?.notify('🏆 Boss Fibonacci concluído!', 'success');
+                window.HUD?.notify('🏆 Boss Fibonacci concluído! Fase JS desbloqueada!', 'success');
             },
         },
 
         // ══════════════════════════════════════════════════════════════════════
-        // FASE 5 — ENCERRAMENTO
+        // FASE 5 — PROGRAMAÇÃO EM JAVASCRIPT
+        // Todas usam listenTo: 'js:output' — detail: { output, source }
+        // Emitido automaticamente pelo JSInterpreter.ts
+        // ══════════════════════════════════════════════════════════════════════
+
+        {
+            id:    'js-hello',
+            title: '🟨 JS #1 — Olá, Mundo!',
+            instruction: 'No editor JS: use console.log() para imprimir  Olá, Mundo!',
+            position: POS.sala,
+            radius:   30,
+            reward:   { money: 300, energy: 15 },
+            helper:   true,
+            listenTo: 'js:output',
+            onStart: () => {
+                showInstruction(
+                    '🟨 JavaScript #1 — Hello World',
+                    'JavaScript roda direto no navegador!\n\n' +
+                    'console.log("Olá, Mundo!");\n\n' +
+                    'Use o editor JS no dispositivo\n' +
+                    'e clique em ▶ Executar.\n\n' +
+                    '── Diferença do C ──\n' +
+                    'C:  printf("Ola, Mundo!");\n' +
+                    'JS: console.log("Olá, Mundo!");'
+                );
+                window.HUD?.notify('🟨 Fase JS desbloqueada! Abra o editor JavaScript.', 'info');
+            },
+            check: (e) => {
+                const { output } = e.detail as any;
+                return norm(output) === 'Olá, Mundo!';
+            },
+            onComplete: () => {
+                showInstruction(
+                    '✅ console.log dominado!',
+                    'console.log() exibe mensagens\n' +
+                    'no terminal do navegador.\n\n' +
+                    'Em C usávamos printf().\n' +
+                    'Em JS usamos console.log() —\n' +
+                    'mais simples, sem formatadores!'
+                );
+                window.HUD?.notify('✅ Missão JS #1 concluída!', 'success');
+            },
+        },
+
+        {
+            id:    'js-vars',
+            title: '🟨 JS #2 — let e const',
+            instruction: 'Declare uma variável  nome  com seu nome e imprima:  Meu nome é [nome]',
+            position: POS.sala,
+            radius:   30,
+            reward:   { money: 350, energy: 10 },
+            helper:   true,
+            listenTo: 'js:output',
+            onStart: () => {
+                showInstruction(
+                    '🟨 JavaScript #2 — Variáveis',
+                    'let nome = "Hacker";\n' +
+                    'console.log(`Meu nome é ${nome}`);\n\n' +
+                    'let  → pode mudar depois\n' +
+                    'const → valor fixo\n\n' +
+                    'Template strings: use crase ` e ${variavel}\n\n' +
+                    '── Diferença do C ──\n' +
+                    'C:  char nome[] = "Hacker";\n' +
+                    'JS: let nome = "Hacker"; // sem tipo!'
+                );
+            },
+            check: (e) => {
+                const { output, source } = e.detail as any;
+                return /\b(let|const)\s+\w+/.test(source)        // declarou variável
+                    && /`[^`]*\$\{/.test(source)                  // usou template string
+                    && /Meu nome é .+/.test(output);              // saída correta
+            },
+            onComplete: () => {
+                showInstruction(
+                    '✅ Variáveis JS!',
+                    'Diferença C vs JS:\n\n' +
+                    '  C:  int x = 5;\n' +
+                    '  JS: let x = 5;   // qualquer tipo\n\n' +
+                    'JS é dinamicamente tipado —\n' +
+                    'não precisa declarar o tipo!\n\n' +
+                    'Template strings com crase\n' +
+                    'são muito mais práticas que printf!'
+                );
+                window.HUD?.notify('✅ Missão JS #2 concluída!', 'success');
+            },
+        },
+
+        {
+            id:    'js-arrow',
+            title: '🟨 JS #3 — Arrow Function',
+            instruction: 'Crie uma arrow function  soma(a, b)  que retorna a + b. Imprima soma(3, 7).',
+            position: POS.sala,
+            radius:   30,
+            reward:   { money: 400, energy: 10 },
+            helper:   false,
+            listenTo: 'js:output',
+            onStart: () => {
+                showInstruction(
+                    '🟨 JavaScript #3 — Arrow Function',
+                    'const soma = (a, b) => a + b;\n\n' +
+                    'console.log(soma(3, 7)); // 10\n\n' +
+                    '── Comparando com C ──\n' +
+                    'int soma(int a, int b) {\n' +
+                    '    return a + b;\n' +
+                    '}\n\n' +
+                    'Arrow functions são mais concisas!\n' +
+                    'O return é implícito na forma curta.'
+                );
+            },
+            check: (e) => {
+                const { output, source } = e.detail as any;
+                return /=>\s*([\w(]|\{)/.test(source)     // usou arrow function
+                    && norm(output).includes('10');        // soma(3,7) = 10
+            },
+            onComplete: () => {
+                showInstruction(
+                    '✅ Arrow Functions!',
+                    'Duas formas de arrow function:\n\n' +
+                    '  Curta:  const f = x => x * 2;\n' +
+                    '  Longa:  const f = x => {\n' +
+                    '              return x * 2;\n' +
+                    '          };\n\n' +
+                    'A forma curta retorna automaticamente!'
+                );
+                window.HUD?.notify('✅ Missão JS #3 concluída!', 'success');
+            },
+        },
+
+        {
+            id:    'js-array',
+            title: '🟨 JS #4 — Array e forEach',
+            instruction: 'Crie um array com 3 frutas e use forEach para imprimir cada uma.',
+            position: POS.sala,
+            radius:   30,
+            reward:   { money: 450, energy: 10 },
+            helper:   false,
+            listenTo: 'js:output',
+            onStart: () => {
+                showInstruction(
+                    '🟨 JavaScript #4 — Arrays',
+                    'const frutas = ["maça", "banana", "uva"];\n\n' +
+                    'frutas.forEach(f => {\n' +
+                    '    console.log(f);\n' +
+                    '});\n\n' +
+                    '── Diferença do C ──\n' +
+                    'C:   for (int i = 0; i < 3; i++)\n' +
+                    '         printf("%s", frutas[i]);\n\n' +
+                    'JS:  frutas.forEach(f => console.log(f));'
+                );
+            },
+            check: (e) => {
+                const { output, source } = e.detail as any;
+                const lines = output.split('\n').map((l: string) => l.trim()).filter(Boolean);
+                return /\[.*,.*,.*\]/.test(source)        // criou array com 3+ itens
+                    && /forEach/.test(source)              // usou forEach
+                    && lines.length >= 3;                  // imprimiu pelo menos 3 linhas
+            },
+            onComplete: () => {
+                showInstruction(
+                    '✅ Arrays em JS!',
+                    'Arrays JS têm métodos poderosos:\n\n' +
+                    '  .forEach()  — itera todos\n' +
+                    '  .map()      — transforma cada item\n' +
+                    '  .filter()   — filtra por condição\n' +
+                    '  .push()     — adiciona ao final\n' +
+                    '  .length     — tamanho do array\n\n' +
+                    'Próxima missão: map e filter!'
+                );
+                window.HUD?.notify('✅ Missão JS #4 concluída!', 'success');
+            },
+        },
+
+        {
+            id:    'js-object',
+            title: '🟨 JS #5 — Objetos',
+            instruction: 'Crie um objeto  agente  com  nome  e  nivel. Imprima: Agente [nome], nível [nivel].',
+            position: POS.sala,
+            radius:   30,
+            reward:   { money: 500, energy: 10 },
+            helper:   false,
+            listenTo: 'js:output',
+            onStart: () => {
+                showInstruction(
+                    '🟨 JavaScript #5 — Objetos',
+                    'const agente = {\n' +
+                    '    nome: "Neo",\n' +
+                    '    nivel: 7\n' +
+                    '};\n\n' +
+                    'console.log(\n' +
+                    '  `Agente ${agente.nome}, nível ${agente.nivel}`\n' +
+                    ');\n\n' +
+                    '── Diferença do C ──\n' +
+                    'C:  struct { char nome[20]; int nivel; };\n' +
+                    'JS: const obj = { nome: "x", nivel: 1 };'
+                );
+            },
+            check: (e) => {
+                const { output, source } = e.detail as any;
+                return /\{[\s\S]*nome\s*:/.test(source)         // tem prop nome
+                    && /\{[\s\S]*nivel\s*:/.test(source)        // tem prop nivel
+                    && /Agente .+, n[íi]vel \d+/.test(output);  // saída correta
+            },
+            onComplete: () => {
+                showInstruction(
+                    '✅ Objetos JS!',
+                    'Objetos agrupam dados relacionados.\n\n' +
+                    'Formas de acesso:\n' +
+                    '  obj.prop      — dot notation\n' +
+                    '  obj["prop"]   — bracket notation\n\n' +
+                    'Desestruturação:\n' +
+                    '  const { nome, nivel } = agente;\n\n' +
+                    'Objetos são a base do JS moderno!'
+                );
+                window.HUD?.notify('✅ Missão JS #5 concluída!', 'success');
+            },
+        },
+
+        {
+            id:    'js-map-filter',
+            title: '🟨 JS #6 — map e filter',
+            instruction: 'Dado o array [1,2,3,4,5]: filtre os pares e dobre cada um. Imprima o resultado.',
+            position: POS.sala,
+            radius:   30,
+            reward:   { money: 600, energy: 15 },
+            helper:   false,
+            listenTo: 'js:output',
+            onStart: () => {
+                showInstruction(
+                    '🟨 JavaScript #6 — map + filter',
+                    'const nums = [1, 2, 3, 4, 5];\n\n' +
+                    'const resultado = nums\n' +
+                    '    .filter(n => n % 2 === 0)  // pares: [2,4]\n' +
+                    '    .map(n => n * 2);           // dobrar: [4,8]\n\n' +
+                    'console.log(resultado);\n' +
+                    '// [4, 8]\n\n' +
+                    'Métodos encadeados com ponto!\n' +
+                    'Isso é programação funcional.'
+                );
+            },
+            check: (e) => {
+                const { output, source } = e.detail as any;
+                return /\.filter\(/.test(source)                              // usou filter
+                    && /\.map\(/.test(source)                                 // usou map
+                    && (output.includes('[4,8]') || output.includes('[4, 8]')); // resultado correto
+            },
+            onComplete: () => {
+                showInstruction(
+                    '✅ map e filter!',
+                    'Métodos funcionais de array:\n\n' +
+                    '  .filter(fn) → novo array com itens\n' +
+                    '               que passam na condição\n\n' +
+                    '  .map(fn)    → transforma cada item\n\n' +
+                    '  .reduce(fn) → combina tudo em 1 valor\n\n' +
+                    'Podem ser encadeados com ponto!\n' +
+                    'Último desafio JS chegando...'
+                );
+                window.HUD?.notify('✅ Missão JS #6 concluída!', 'success');
+            },
+        },
+
+        {
+            // Boss challenge — recursão em JS
+            id:    'js-recursion',
+            title: '🧠 JS #7 — Fatorial Recursivo',
+            instruction: 'Implemente fat(n) recursivo e imprima fat(5). Esperado: 120.',
+            position: POS.sala,
+            radius:   30,
+            reward:   { money: 1200, health: 20, energy: 20 },
+            helper:   false,
+            listenTo: 'js:output',
+            onStart: () => {
+                showInstruction(
+                    '🧠 JS #7 — Recursão (Boss)',
+                    'const fat = n => {\n' +
+                    '    if (n <= 1) return 1;\n' +
+                    '    return n * fat(n - 1);\n' +
+                    '};\n\n' +
+                    'console.log(fat(5)); // 120\n\n' +
+                    '5! = 5×4×3×2×1 = 120\n\n' +
+                    '── Mesmo conceito de C ──\n' +
+                    'int fib(int n) { return fib(n-1)+... }\n' +
+                    'Caso base + chamada recursiva!'
+                );
+                window.HUD?.notify('🧠 Boss Challenge JS: Fatorial recursivo!', 'warn');
+            },
+            check: (e) => {
+                const { output, source } = e.detail as any;
+                return (/=>\s*([\w(]|\{)/.test(source) || /function\s+\w+/.test(source))  // tem função
+                    && /return\s+\w+\s*\*\s*\w+/.test(source)   // retorna n * algo
+                    && /if\s*\(.*<=?\s*1/.test(source)           // caso base
+                    && norm(output) === '120';
+            },
+            onComplete: () => {
+                showInstruction(
+                    '🏆 Recursão JS dominada!',
+                    'Você aprendeu recursão em 2 linguagens!\n\n' +
+                    '  C:  int fat(int n) { ... }\n' +
+                    '  JS: const fat = n => ...\n\n' +
+                    'O conceito é o mesmo:\n' +
+                    '  1. Caso base (para a recursão)\n' +
+                    '  2. Chamada recursiva\n\n' +
+                    'Agora vá ao auditório, hacker!'
+                );
+                window.HUD?.notify('🏆 Boss JS Fatorial concluído! Formatura desbloqueada!', 'success');
+            },
+        },
+
+        // ══════════════════════════════════════════════════════════════════════
+        // FASE 6 — ENCERRAMENTO
         // ══════════════════════════════════════════════════════════════════════
 
         {
@@ -760,9 +1080,12 @@ export function buildMissions(): MissionDef[] {
                     '  ifconfig  ping  ssh\n\n' +
                     '✓ Programacao em C\n' +
                     '  printf  int  if/else  for  funcao  recursao\n\n' +
+                    '✓ Programacao em JavaScript\n' +
+                    '  console.log  let/const  arrow fn\n' +
+                    '  array  objeto  map/filter  recursao\n\n' +
                     'Voce esta pronto para o proximo nivel!'
                 );
-                window.HUD?.notify('🏆 HackOS completo! Você é um hacker!', 'success');
+                window.HUD?.notify('🏆 HackOS completo! Você é um hacker full-stack!', 'success');
             },
         },
     ];
@@ -846,8 +1169,13 @@ export class MissionManager {
     }
 
     private onAllComplete() {
-        showInstruction('🏆 Parabéns!', 'Você completou todas as missões do HackOS.');
-        elementos.showMsg('🏆 Todas as missões concluídas!');
+        showInstruction(
+            '🏆 Parabéns, Hacker Full-Stack!',
+            'Você completou todas as 24 missões do HackOS.\n\n' +
+            'Habilidades conquistadas:\n' +
+            '  Terminal Linux · C · JavaScript'
+        );
+        elementos.showMsg('🏆 Todas as 24 missões concluídas!');
     }
 
     // ── API pública ───────────────────────────────────────────────────────────
