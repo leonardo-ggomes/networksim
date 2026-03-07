@@ -65,7 +65,7 @@ import { infoPlayer }                      from "./InfoPlayer";
 import { eventEmitter, showInstruction }   from "./Actions";
 import elementos                           from "./Actions";
 
-declare global { interface Window { HUD?: any } }
+declare global { interface Window { HUD?: any; Phone?: any } }
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -371,6 +371,12 @@ export function buildMissions(): MissionDef[] {
                     );
                 }, 400);
                 window.HUD?.notify('⚠️ Processo malicioso detectado no sistema!', 'error');
+                window.Phone?.inbox.push({
+                    id:   'alert-malware',
+                    title: 'PROCESSO SUSPEITO DETECTADO',
+                    body:  'malware.exe — PID 4096 — 91% CPU\nUse top ou ps aux para identificar.\nDepois: kill -9 4096',
+                    type:  'alert',
+                });
             },
             check: (_e) => true,
             onComplete: () => {
@@ -483,6 +489,12 @@ export function buildMissions(): MissionDef[] {
                     'exit encerra a sessao.'
                 );
                 window.HUD?.notify('🔐 Aproxime-se do servidor remoto.', 'info');
+                window.Phone?.inbox.push({
+                    id:   'sys-ssh',
+                    title: 'ACESSO REMOTO DISPONÍVEL',
+                    body:  'Servidor SSH detectado na rede.\nEndereço: server@2025\nComando: ssh server@2025\nApós conectar, use exit para voltar.',
+                    type:  'system',
+                });
             },
             check: (e) => typeof (e.detail as any).address === 'string',
             onComplete: () => {
@@ -714,6 +726,12 @@ export function buildMissions(): MissionDef[] {
                     'fib(7) = 13'
                 );
                 window.HUD?.notify('🧠 Boss Challenge: Fibonacci recursivo!', 'warn');
+                window.Phone?.inbox.push({
+                    id:   'boss-c-fib',
+                    title: 'BOSS · FIBONACCI RECURSIVO',
+                    body:  'Implemente fib(n) em C.\nEsperado: fib(7) = 13\n\nDica:\nint fib(int n) {\n  if (n <= 1) return n;\n  return fib(n-1) + fib(n-2);\n}',
+                    type:  'alert',
+                });
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -763,6 +781,12 @@ export function buildMissions(): MissionDef[] {
                     'JS: console.log("Olá, Mundo!");'
                 );
                 window.HUD?.notify('🟨 Fase JS desbloqueada! Abra o editor JavaScript.', 'info');
+                window.Phone?.inbox.push({
+                    id:   'sys-js-unlocked',
+                    title: 'FASE JS DESBLOQUEADA',
+                    body:  'Editor JavaScript disponível no terminal.\nAbra o dispositivo (T) e acesse a aba JS.\nPrimeira missão: console.log("Olá, Mundo!");',
+                    type:  'system',
+                });
             },
             check: (e) => {
                 const { output } = e.detail as any;
@@ -1021,6 +1045,12 @@ export function buildMissions(): MissionDef[] {
                     'Caso base + chamada recursiva!'
                 );
                 window.HUD?.notify('🧠 Boss Challenge JS: Fatorial recursivo!', 'warn');
+                window.Phone?.inbox.push({
+                    id:   'boss-js-fat',
+                    title: 'BOSS · FATORIAL RECURSIVO',
+                    body:  'Implemente fat(n) em JavaScript.\nEsperado: fat(5) = 120\n\nDica:\nconst fat = n => {\n  if (n <= 1) return 1;\n  return n * fat(n - 1);\n};',
+                    type:  'alert',
+                });
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -1137,6 +1167,12 @@ export class MissionManager {
         this.active = mission;
 
         window.HUD?.setMission(def.id, def.title, def.instruction);
+        window.Phone?.inbox.push({
+            id:    def.id,
+            title: def.title,
+            body:  def.instruction,
+            type:  'mission',
+        });
 
         const eventName = def.listenTo ?? 'collided';
         mission.addGameListener(eventName, (e) => {
@@ -1162,6 +1198,7 @@ export class MissionManager {
         elementos.showMsg(`✅ ${def.title} — ${parts.join('  ')}`);
 
         window.HUD?.completeMission(def.id);
+        window.Phone?.inbox.complete(def.id);
         def.onComplete?.();
 
         this.index++;
@@ -1176,6 +1213,12 @@ export class MissionManager {
             '  Terminal Linux · C · JavaScript'
         );
         elementos.showMsg('🏆 Todas as 24 missões concluídas!');
+        window.Phone?.inbox.push({
+            id:   'finale-complete',
+            title: 'HACKOS · MISSÃO COMPLETA',
+            body:  'Parabéns, Hacker Full-Stack!\n\n✓ Terminal Linux\n  ls · cd · pwd · cat · nano · mkdir · rm\n\n✓ Processos & Segurança\n  top · ps · kill -9\n\n✓ Rede\n  ifconfig · ping · ssh\n\n✓ Programação em C\n  printf · int · if/else · for · função · recursão\n\n✓ JavaScript\n  console.log · let/const · arrow fn · array · objeto · map/filter · recursão',
+            type:  'system',
+        });
     }
 
     // ── API pública ───────────────────────────────────────────────────────────
