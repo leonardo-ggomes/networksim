@@ -62,7 +62,7 @@ import { Scene, Vector3 }                  from "three";
 import Mission                             from "./Mission";
 import Loading                             from "./Loading";
 import { infoPlayer }                      from "./InfoPlayer";
-import { eventEmitter, showInstruction }   from "./Actions";
+import { eventEmitter }                    from "./Actions";
 import elementos                           from "./Actions";
 
 declare global { interface Window { HUD?: any; Phone?: any } }
@@ -150,25 +150,31 @@ export function buildMissions(): MissionDef[] {
             helper:   true,
             listenTo: 'collided',
             onStart: () => {
-                showInstruction(
-                    '🎒 Bem-vindo ao HackOS',
-                    'Voce chegou ao evento de tecnologia.\n' +
-                    'O professor esta com seu notebook.\n\n' +
-                    'Siga o marcador no mapa e\n' +
-                    'aproxime-se para receber o dispositivo.'
-                );
-                window.HUD?.notify('📍 Encontre o professor para começar.', 'info');
+                window.Phone?.inbox.push({
+                    id:    '__si_1',
+                    title: `🎒 Bem-vindo ao HackOS`,
+                    body:  `Voce chegou ao evento de tecnologia.
+O professor esta com seu notebook.
+
+Siga o marcador no mapa e
+aproxime-se para receber o dispositivo.`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '📍 Encontre o professor para começar.');
             },
             check: (e) => (e.detail as any).collided === true,
             onComplete: () => {
                 infoPlayer.hasTerminal = true;
-                showInstruction(
-                    '✅ Notebook recebido!',
-                    'Voce ganhou um notebook HackOS.\n\n' +
-                    'Pressione T para ligar o terminal\n' +
-                    'e iniciar sua jornada de hacker.'
-                );
-                window.HUD?.notify('💻 Terminal desbloqueado! Pressione T.', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_2',
+                    title: `✅ Notebook recebido!`,
+                    body:  `Voce ganhou um notebook HackOS.
+
+Pressione T para ligar o terminal
+e iniciar sua jornada de hacker.`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '💻 Terminal desbloqueado! Pressione T.');
             },
         },
 
@@ -182,23 +188,30 @@ export function buildMissions(): MissionDef[] {
             helper:   true,
             listenTo: 'terminal:opened',
             onStart: () => {
-                showInstruction(
-                    '⚡ Primeiro Boot',
-                    'Pressione T para ligar o terminal.\n\n' +
-                    'Observe a sequencia de inicializacao:\n' +
-                    'isso e o boot do sistema operacional.\n\n' +
-                    'Depois tente: help'
-                );
-                window.HUD?.notify('Pressione T para ligar o terminal.', 'info');
+                window.Phone?.inbox.push({
+                    id:    '__si_3',
+                    title: `⚡ Primeiro Boot`,
+                    body:  `Pressione T para ligar o terminal.
+
+Observe a sequencia de inicializacao:
+isso e o boot do sistema operacional.
+
+Depois tente: help`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', 'Pressione T para ligar o terminal.');
             },
             check: (_e) => true,
             onComplete: () => {
-                showInstruction(
-                    '✅ HackOS Online!',
-                    'Terminal inicializado com sucesso.\n\n' +
-                    'Dica: always type help to see\n' +
-                    'all available commands.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_4',
+                    title: `✅ HackOS Online!`,
+                    body:  `Terminal inicializado com sucesso.
+
+Dica: always type help to see
+all available commands.`,
+                    type:  'info',
+                });
             },
         },
 
@@ -223,26 +236,33 @@ export function buildMissions(): MissionDef[] {
                     'Use cat briefing.txt para ler o briefing.\n' +
                     'Digite help para ver todos os comandos.'
                 );
-                showInstruction(
-                    '📂 Sistema de Arquivos',
-                    'Tres comandos essenciais:\n\n' +
-                    '  ls       → lista arquivos e pastas\n' +
-                    '  cd home  → entra em /home/\n' +
-                    '  pwd      → mostra onde voce esta\n\n' +
-                    'Objetivo: execute pwd dentro de /home/'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_5',
+                    title: `📂 Sistema de Arquivos`,
+                    body:  `Tres comandos essenciais:
+
+  ls       → lista arquivos e pastas
+  cd home  → entra em /home/
+  pwd      → mostra onde voce esta
+
+Objetivo: execute pwd dentro de /home/`,
+                    type:  'info',
+                });
             },
             check: (e) => {
                 const { dir } = (e.detail ?? {}) as any;
                 return typeof dir === 'string' && dir.includes('home');
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ Navegação dominada!',
-                    'ls, cd e pwd sao os comandos\n' +
-                    'mais usados no dia a dia Linux.\n\n' +
-                    'Agora leia o briefing secreto.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_6',
+                    title: `✅ Navegação dominada!`,
+                    body:  `ls, cd e pwd sao os comandos
+mais usados no dia a dia Linux.
+
+Agora leia o briefing secreto.`,
+                    type:  'info',
+                });
             },
         },
 
@@ -256,24 +276,31 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'terminal:cat',
             onStart: () => {
-                showInstruction(
-                    '📄 Leitura de Arquivo',
-                    'O arquivo briefing.txt foi plantado\n' +
-                    'em /home/ pelo professor.\n\n' +
-                    'Acesse-o com:\n' +
-                    '  cat briefing.txt\n\n' +
-                    'cat exibe o conteudo completo\n' +
-                    'de qualquer arquivo de texto.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_7',
+                    title: `📄 Leitura de Arquivo`,
+                    body:  `O arquivo briefing.txt foi plantado
+em /home/ pelo professor.
+
+Acesse-o com:
+  cat briefing.txt
+
+cat exibe o conteudo completo
+de qualquer arquivo de texto.`,
+                    type:  'info',
+                });
             },
             check: (e) => (e.detail as any).file === 'briefing.txt',
             onComplete: () => {
-                showInstruction(
-                    '✅ Briefing lido!',
-                    'cat e essencial para ler logs,\n' +
-                    'configs e codigo no terminal.\n\n' +
-                    'Agora crie seu proprio arquivo.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_8',
+                    title: `✅ Briefing lido!`,
+                    body:  `cat e essencial para ler logs,
+configs e codigo no terminal.
+
+Agora crie seu proprio arquivo.`,
+                    type:  'info',
+                });
             },
         },
 
@@ -287,15 +314,20 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'terminal:nano',
             onStart: () => {
-                showInstruction(
-                    '✏️ Criando Arquivos',
-                    'nano cria e edita arquivos.\n\n' +
-                    'Sintaxe:\n' +
-                    '  nano nome.ext "conteudo"\n\n' +
-                    'Execute:\n' +
-                    '  nano diario.txt "Missao iniciada"\n\n' +
-                    'Extensoes aceitas: .txt .js .py'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_9',
+                    title: `✏️ Criando Arquivos`,
+                    body:  `nano cria e edita arquivos.
+
+Sintaxe:
+  nano nome.ext "conteudo"
+
+Execute:
+  nano diario.txt "Missao iniciada"
+
+Extensoes aceitas: .txt .js .py`,
+                    type:  'info',
+                });
             },
             check: (e) => {
                 const { file, action } = (e.detail ?? {}) as any;
@@ -304,12 +336,14 @@ export function buildMissions(): MissionDef[] {
                     && action === 'created';
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ Arquivo criado!',
-                    'Use cat diario.txt para reler.\n' +
-                    'nano nome.txt "novo texto"\n' +
-                    'sobrescreve o conteudo existente.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_10',
+                    title: `✅ Arquivo criado!`,
+                    body:  `Use cat diario.txt para reler.
+nano nome.txt "novo texto"
+sobrescreve o conteudo existente.`,
+                    type:  'info',
+                });
             },
         },
 
@@ -323,24 +357,30 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'terminal:mkdir',
             onStart: () => {
-                showInstruction(
-                    '📁 Diretórios',
-                    'mkdir cria novas pastas.\n\n' +
-                    'Execute: mkdir projetos\n\n' +
-                    'Depois verifique:\n' +
-                    '  ls        → voce vera "projetos"\n' +
-                    '  cd projetos → entra na pasta\n' +
-                    '  pwd         → confirma o caminho'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_11',
+                    title: `📁 Diretórios`,
+                    body:  `mkdir cria novas pastas.
+
+Execute: mkdir projetos
+
+Depois verifique:
+  ls        → voce vera "projetos"
+  cd projetos → entra na pasta
+  pwd         → confirma o caminho`,
+                    type:  'info',
+                });
             },
             check: (e) => typeof (e.detail as any).dir === 'string',
             onComplete: () => {
-                showInstruction(
-                    '✅ Pasta criada!',
-                    'Organize seus projetos em pastas.\n' +
-                    'Use rm arquivo.txt para remover\n' +
-                    'arquivos que nao precisa mais.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_12',
+                    title: `✅ Pasta criada!`,
+                    body:  `Organize seus projetos em pastas.
+Use rm arquivo.txt para remover
+arquivos que nao precisa mais.`,
+                    type:  'info',
+                });
             },
         },
 
@@ -360,32 +400,33 @@ export function buildMissions(): MissionDef[] {
             onStart: () => {
                 elementos.setProcesses('malware.exe', 4096, 849.9, 91.2);
                 setTimeout(() => {
-                    showInstruction(
-                        '🔍 Ameaça Detectada',
-                        'O sistema esta lento!\n\n' +
-                        'Abra o terminal (T) e use:\n' +
-                        '  top      → monitor em tempo real\n' +
-                        '  ps aux   → lista todos os processos\n\n' +
-                        'Encontre o processo com maior %CPU\n' +
-                        'e anote o PID para eliminá-lo.'
-                    );
+                    window.Phone?.inbox.push({
+                        id:    '__si_13',
+                        title: `🔍 Ameaça Detectada`,
+                        body:  `O sistema esta lento!
+
+Abra o terminal (T) e use:
+  top      → monitor em tempo real
+  ps aux   → lista todos os processos
+
+Encontre o processo com maior %CPU
+e anote o PID para eliminá-lo.`,
+                        type:  'info',
+                    });
                 }, 400);
-                window.HUD?.notify('⚠️ Processo malicioso detectado no sistema!', 'error');
-                window.Phone?.inbox.push({
-                    id:   'alert-malware',
-                    title: 'PROCESSO SUSPEITO DETECTADO',
-                    body:  'malware.exe — PID 4096 — 91% CPU\nUse top ou ps aux para identificar.\nDepois: kill -9 4096',
-                    type:  'alert',
-                });
+                window.Phone?.chat.receive('ctOS', '⚠️ Processo malicioso detectado no sistema!');
             },
             check: (_e) => true,
             onComplete: () => {
-                showInstruction(
-                    '🔍 Processo identificado!',
-                    'malware.exe — PID 4096 — 91% CPU\n\n' +
-                    'Agora encerre-o com:\n' +
-                    '  kill -9 4096'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_14',
+                    title: `🔍 Processo identificado!`,
+                    body:  `malware.exe — PID 4096 — 91% CPU
+
+Agora encerre-o com:
+  kill -9 4096`,
+                    type:  'info',
+                });
             },
         },
 
@@ -399,17 +440,21 @@ export function buildMissions(): MissionDef[] {
             helper:   true,
             listenTo: 'remove_pid',
             onStart: () => {
-                setTimeout(() => showInstruction(
-                    '🦠 Elimine o Malware',
-                    'malware.exe (PID 4096) esta consumindo\n' +
-                    '91% do CPU — o sistema vai travar!\n\n' +
-                    'Comando:\n' +
-                    '  kill -9 4096\n\n' +
-                    '-9 e o sinal SIGKILL:\n' +
-                    'encerra o processo imediatamente,\n' +
-                    'sem chance de ignorar.'
-                ), 300);
-                window.HUD?.notify('🦠 Execute: kill -9 4096', 'error');
+                setTimeout(() => window.Phone?.inbox.push({
+                    id:    '__si_15',
+                    title: `🦠 Elimine o Malware`,
+                    body:  `malware.exe (PID 4096) esta consumindo
+91% do CPU — o sistema vai travar!
+
+Comando:
+  kill -9 4096
+
+-9 e o sinal SIGKILL:
+encerra o processo imediatamente,
+sem chance de ignorar.`,
+                    type:  'info',
+                }), 300);
+                window.Phone?.chat.receive('ctOS', '🦠 Execute: kill -9 4096');
             },
             check: (e) => {
                 const { processes } = e.detail as any;
@@ -419,16 +464,20 @@ export function buildMissions(): MissionDef[] {
                 return (processes as any[]).findIndex(p => p.pid === 4096) === -1;
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ Sistema limpo!',
-                    'malware.exe foi encerrado.\n\n' +
-                    'Lição: kill -9 [PID] encerra\n' +
-                    'qualquer processo pelo seu ID.\n\n' +
-                    'Use top para confirmar que sumiu.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_16',
+                    title: `✅ Sistema limpo!`,
+                    body:  `malware.exe foi encerrado.
+
+Lição: kill -9 [PID] encerra
+qualquer processo pelo seu ID.
+
+Use top para confirmar que sumiu.`,
+                    type:  'info',
+                });
                 (window as any).__experienceAmbientLight &&
                     ((window as any).__experienceAmbientLight.intensity = 0.8);
-                window.HUD?.notify('🛡️ Malware eliminado!', 'success');
+                window.Phone?.chat.receive('ctOS', '🛡️ Malware eliminado!');
             },
         },
 
@@ -446,25 +495,33 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'terminal:ping',
             onStart: () => {
-                showInstruction(
-                    '🌐 Rede & Conectividade',
-                    'Dois comandos essenciais:\n\n' +
-                    '  ifconfig\n' +
-                    '    mostra IP, mascara e gateway\n\n' +
-                    '  ping 192.168.1.1\n' +
-                    '    testa conexao com o roteador\n\n' +
-                    'Execute ambos para completar\n' +
-                    'o reconhecimento de rede.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_17',
+                    title: `🌐 Rede & Conectividade`,
+                    body:  `Dois comandos essenciais:
+
+  ifconfig
+    mostra IP, mascara e gateway
+
+  ping 192.168.1.1
+    testa conexao com o roteador
+
+Execute ambos para completar
+o reconhecimento de rede.`,
+                    type:  'info',
+                });
             },
             check: (e) => typeof (e.detail as any).host === 'string',
             onComplete: () => {
-                showInstruction(
-                    '✅ Rede mapeada!',
-                    'Voce sabe verificar configuracao\n' +
-                    'de rede e testar conectividade.\n\n' +
-                    'Proxima etapa: acesso remoto SSH.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_18',
+                    title: `✅ Rede mapeada!`,
+                    body:  `Voce sabe verificar configuracao
+de rede e testar conectividade.
+
+Proxima etapa: acesso remoto SSH.`,
+                    type:  'info',
+                });
             },
         },
 
@@ -478,34 +535,36 @@ export function buildMissions(): MissionDef[] {
             helper:   true,
             listenTo: 'terminal:ssh',
             onStart: () => {
-                showInstruction(
-                    '🔐 Acesso Remoto — SSH',
-                    'SSH (Secure Shell) permite acessar\n' +
-                    'maquinas remotas pelo terminal.\n\n' +
-                    'Aproxime-se do servidor e execute:\n' +
-                    '  ssh server@2025\n\n' +
-                    'Apos conectar, ls lista os\n' +
-                    'arquivos do servidor remoto.\n' +
-                    'exit encerra a sessao.'
-                );
-                window.HUD?.notify('🔐 Aproxime-se do servidor remoto.', 'info');
                 window.Phone?.inbox.push({
-                    id:   'sys-ssh',
-                    title: 'ACESSO REMOTO DISPONÍVEL',
-                    body:  'Servidor SSH detectado na rede.\nEndereço: server@2025\nComando: ssh server@2025\nApós conectar, use exit para voltar.',
-                    type:  'system',
+                    id:    '__si_19',
+                    title: `🔐 Acesso Remoto — SSH`,
+                    body:  `SSH (Secure Shell) permite acessar
+maquinas remotas pelo terminal.
+
+Aproxime-se do servidor e execute:
+  ssh server@2025
+
+Apos conectar, ls lista os
+arquivos do servidor remoto.
+exit encerra a sessao.`,
+                    type:  'info',
                 });
+                window.Phone?.chat.receive('ctOS', '🔐 Aproxime-se do servidor remoto.');
             },
             check: (e) => typeof (e.detail as any).address === 'string',
             onComplete: () => {
-                showInstruction(
-                    '🔐 Sessão SSH ativa!',
-                    'Voce esta no servidor remoto.\n\n' +
-                    'Os mesmos comandos funcionam:\n' +
-                    'ls, cat, nano, mkdir...\n\n' +
-                    'Use exit para voltar ao local.'
-                );
-                window.HUD?.notify('🔐 Sessão SSH estabelecida!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_20',
+                    title: `🔐 Sessão SSH ativa!`,
+                    body:  `Voce esta no servidor remoto.
+
+Os mesmos comandos funcionam:
+ls, cat, nano, mkdir...
+
+Use exit para voltar ao local.`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '🔐 Sessão SSH estabelecida!');
             },
         },
 
@@ -524,25 +583,28 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'c:output',
             onStart: () => {
-                showInstruction(
-                    '👨‍💻 C #1 — Olá Mundo',
-                    'Abra o terminal → aba "Editor C"\n\n' +
-                    '#include <stdio.h>\n\n' +
-                    'int main() {\n' +
-                    '    printf("Ola, Mundo!");\n' +
-                    '    return 0;\n' +
-                    '}\n\n' +
-                    'Pressione ▶ para compilar e rodar.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_21',
+                    title: `👨‍💻 C #1 — Olá Mundo`,
+                    body:  `Abra o terminal → aba "Editor C"
+
+#include <stdio.h>
+
+int main() {
+`,
+                    type:  'info',
+                })
             },
             check: (e) => norm((e.detail as any).output) === 'Ola, Mundo!',
             onComplete: () => {
-                showInstruction(
-                    '✅ Primeiro programa C!',
-                    'printf() imprime texto na tela.\n' +
-                    'Todo programa C comeca em main().\n' +
-                    'return 0 indica sucesso.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_22',
+                    title: `✅ Primeiro programa C!`,
+                    body:  `printf() imprime texto na tela.
+Todo programa C comeca em main().
+return 0 indica sucesso.`,
+                    type:  'info',
+                });
             },
         },
 
@@ -556,16 +618,14 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'c:output',
             onStart: () => {
-                showInstruction(
-                    '🔢 C #2 — Variáveis',
-                    'int a = 7;\n' +
-                    'int b = 3;\n' +
-                    'printf("%d", a + b);\n\n' +
-                    '• int   → tipo numero inteiro\n' +
-                    '• %d    → formata int no printf\n' +
-                    '• Qualquer soma valida e aceita!\n\n' +
-                    'A saida deve ser um numero inteiro.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_23',
+                    title: `🔢 C #2 — Variáveis`,
+                    body:  `int a = 7;
+int b = 3;
+`,
+                    type:  'info',
+                })
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -574,13 +634,16 @@ export function buildMissions(): MissionDef[] {
                     && /\+/.test(source);
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ Variáveis!',
-                    'int, float e char sao os tipos\n' +
-                    'basicos de C.\n\n' +
-                    '%d → int     %f → float\n' +
-                    '%c → char    %s → string'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_24',
+                    title: `✅ Variáveis!`,
+                    body:  `int, float e char sao os tipos
+basicos de C.
+
+%d → int     %f → float
+%c → char    %s → string`,
+                    type:  'info',
+                });
             },
         },
 
@@ -594,17 +657,14 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'c:output',
             onStart: () => {
-                showInstruction(
-                    '🔀 C #3 — if / else',
-                    'int n = 5;\n' +
-                    'if (n > 0) {\n' +
-                    '    printf("positivo");\n' +
-                    '} else {\n' +
-                    '    printf("negativo");\n' +
-                    '}\n\n' +
-                    'if/else toma decisoes em tempo\n' +
-                    'de execucao com base em condicoes.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_25',
+                    title: `🔀 C #3 — if / else`,
+                    body:  `int n = 5;
+if (n > 0) {
+`,
+                    type:  'info',
+                })
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -614,13 +674,16 @@ export function buildMissions(): MissionDef[] {
                         || output.toLowerCase().includes('negativo'));
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ Condicionais!',
-                    'if / else / else if permitem\n' +
-                    'que o programa tome decisoes.\n\n' +
-                    'Toda logica de negocio depende\n' +
-                    'de condicionais.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_26',
+                    title: `✅ Condicionais!`,
+                    body:  `if / else / else if permitem
+que o programa tome decisoes.
+
+Toda logica de negocio depende
+de condicionais.`,
+                    type:  'info',
+                });
             },
         },
 
@@ -634,16 +697,13 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'c:output',
             onStart: () => {
-                showInstruction(
-                    '🔁 C #4 — Loop for',
-                    'for (int i = 1; i <= 5; i++) {\n' +
-                    '    printf("%d\\n", i);\n' +
-                    '}\n\n' +
-                    '• i = 1   → comeca em 1\n' +
-                    '• i <= 5  → para quando i > 5\n' +
-                    '• i++     → incrementa 1 por vez\n' +
-                    '• \\n      → quebra de linha'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_27',
+                    title: `🔁 C #4 — Loop for`,
+                    body:  `for (int i = 1; i <= 5; i++) {
+`,
+                    type:  'info',
+                })
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -651,14 +711,17 @@ export function buildMissions(): MissionDef[] {
                     && hasLines(output, ['1','2','3','4','5']);
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ Loop dominado!',
-                    'Loops automatizam repeticoes.\n\n' +
-                    'C tem tres tipos de loop:\n' +
-                    '  for    → quando sabe quantas vezes\n' +
-                    '  while  → enquanto condicao for true\n' +
-                    '  do/while → executa ao menos 1 vez'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_28',
+                    title: `✅ Loop dominado!`,
+                    body:  `Loops automatizam repeticoes.
+
+C tem tres tipos de loop:
+  for    → quando sabe quantas vezes
+  while  → enquanto condicao for true
+  do/while → executa ao menos 1 vez`,
+                    type:  'info',
+                });
             },
         },
 
@@ -672,17 +735,17 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'c:output',
             onStart: () => {
-                showInstruction(
-                    '⚙️ C #5 — Funções',
-                    'int mult(int a, int b) {\n' +
-                    '    return a * b;\n' +
-                    '}\n\n' +
-                    'int main() {\n' +
-                    '    printf("%d", mult(4, 5));\n' +
-                    '    return 0;\n' +
-                    '}\n\n' +
-                    'Esperado: 20'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_29',
+                    title: `⚙️ C #5 — Funções`,
+                    body:  `int mult(int a, int b) {
+    return a * b;
+}
+
+int main() {
+`,
+                    type:  'info',
+                })
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -692,13 +755,17 @@ export function buildMissions(): MissionDef[] {
                     && norm(output) === '20';
             },
             onComplete: () => {
-                showInstruction(
-                    '🏆 Funções!',
-                    'Funcoes encapsulam logica reutilizavel.\n\n' +
-                    'tipo retorno  nome  (parametros)\n\n' +
-                    'Sao o pilar da programacao estruturada\n' +
-                    'e base para orientacao a objetos.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_30',
+                    title: `🏆 Funções!`,
+                    body:  `Funcoes encapsulam logica reutilizavel.
+
+tipo retorno  nome  (parametros)
+
+Sao o pilar da programacao estruturada
+e base para orientacao a objetos.`,
+                    type:  'info',
+                });
             },
         },
 
@@ -713,25 +780,15 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'c:output',
             onStart: () => {
-                showInstruction(
-                    '🧠 C #6 — Recursão (Boss)',
-                    'int fib(int n) {\n' +
-                    '    if (n <= 1) return n;\n' +
-                    '    return fib(n-1) + fib(n-2);\n' +
-                    '}\n' +
-                    'int main() {\n' +
-                    '    printf("%d", fib(7));\n' +
-                    '}\n\n' +
-                    'Sequencia: 0 1 1 2 3 5 8 13...\n' +
-                    'fib(7) = 13'
-                );
-                window.HUD?.notify('🧠 Boss Challenge: Fibonacci recursivo!', 'warn');
                 window.Phone?.inbox.push({
-                    id:   'boss-c-fib',
-                    title: 'BOSS · FIBONACCI RECURSIVO',
-                    body:  'Implemente fib(n) em C.\nEsperado: fib(7) = 13\n\nDica:\nint fib(int n) {\n  if (n <= 1) return n;\n  return fib(n-1) + fib(n-2);\n}',
-                    type:  'alert',
-                });
+                    id:    '__si_31',
+                    title: `🧠 C #6 — Recursão (Boss)`,
+                    body:  `int fib(int n) {
+    if (n <= 1) return n;
+`,
+                    type:  'info',
+                })
+                window.Phone?.chat.receive('ctOS', '🧠 Boss Challenge: Fibonacci recursivo!');
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -741,16 +798,21 @@ export function buildMissions(): MissionDef[] {
                     && norm(output) === '13';
             },
             onComplete: () => {
-                showInstruction(
-                    '🏆 Recursão dominada!',
-                    'Recursao = funcao que chama a si mesma.\n\n' +
-                    'Sempre precisa de:\n' +
-                    '  1. Caso base (para a recursao)\n' +
-                    '  2. Chamada recursiva\n\n' +
-                    'Fibonacci e o exemplo classico!\n\n' +
-                    'Proximo desafio: JavaScript!'
-                );
-                window.HUD?.notify('🏆 Boss Fibonacci concluído! Fase JS desbloqueada!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_32',
+                    title: `🏆 Recursão dominada!`,
+                    body:  `Recursao = funcao que chama a si mesma.
+
+Sempre precisa de:
+  1. Caso base (para a recursao)
+  2. Chamada recursiva
+
+Fibonacci e o exemplo classico!
+
+Proximo desafio: JavaScript!`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '🏆 Boss Fibonacci concluído! Fase JS desbloqueada!');
             },
         },
 
@@ -770,38 +832,33 @@ export function buildMissions(): MissionDef[] {
             helper:   true,
             listenTo: 'js:output',
             onStart: () => {
-                showInstruction(
-                    '🟨 JavaScript #1 — Hello World',
-                    'JavaScript roda direto no navegador!\n\n' +
-                    'console.log("Olá, Mundo!");\n\n' +
-                    'Use o editor JS no dispositivo\n' +
-                    'e clique em ▶ Executar.\n\n' +
-                    '── Diferença do C ──\n' +
-                    'C:  printf("Ola, Mundo!");\n' +
-                    'JS: console.log("Olá, Mundo!");'
-                );
-                window.HUD?.notify('🟨 Fase JS desbloqueada! Abra o editor JavaScript.', 'info');
                 window.Phone?.inbox.push({
-                    id:   'sys-js-unlocked',
-                    title: 'FASE JS DESBLOQUEADA',
-                    body:  'Editor JavaScript disponível no terminal.\nAbra o dispositivo (T) e acesse a aba JS.\nPrimeira missão: console.log("Olá, Mundo!");',
-                    type:  'system',
-                });
+                    id:    '__si_33',
+                    title: `🟨 JavaScript #1 — Hello World`,
+                    body:  `JavaScript roda direto no navegador!
+
+`,
+                    type:  'info',
+                })
+                window.Phone?.chat.receive('ctOS', '🟨 Fase JS desbloqueada! Abra o editor JavaScript.');
             },
             check: (e) => {
                 const { output } = e.detail as any;
                 return norm(output) === 'Olá, Mundo!';
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ console.log dominado!',
-                    'console.log() exibe mensagens\n' +
-                    'no terminal do navegador.\n\n' +
-                    'Em C usávamos printf().\n' +
-                    'Em JS usamos console.log() —\n' +
-                    'mais simples, sem formatadores!'
-                );
-                window.HUD?.notify('✅ Missão JS #1 concluída!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_34',
+                    title: `✅ console.log dominado!`,
+                    body:  `console.log() exibe mensagens
+no terminal do navegador.
+
+Em C usávamos printf().
+Em JS usamos console.log() —
+mais simples, sem formatadores!`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '✅ Missão JS #1 concluída!');
             },
         },
 
@@ -815,17 +872,13 @@ export function buildMissions(): MissionDef[] {
             helper:   true,
             listenTo: 'js:output',
             onStart: () => {
-                showInstruction(
-                    '🟨 JavaScript #2 — Variáveis',
-                    'let nome = "Hacker";\n' +
-                    'console.log(`Meu nome é ${nome}`);\n\n' +
-                    'let  → pode mudar depois\n' +
-                    'const → valor fixo\n\n' +
-                    'Template strings: use crase ` e ${variavel}\n\n' +
-                    '── Diferença do C ──\n' +
-                    'C:  char nome[] = "Hacker";\n' +
-                    'JS: let nome = "Hacker"; // sem tipo!'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_35',
+                    title: `🟨 JavaScript #2 — Variáveis`,
+                    body:  `let nome = "Hacker";
+`,
+                    type:  'info',
+                })
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -834,17 +887,22 @@ export function buildMissions(): MissionDef[] {
                     && /Meu nome é .+/.test(output);              // saída correta
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ Variáveis JS!',
-                    'Diferença C vs JS:\n\n' +
-                    '  C:  int x = 5;\n' +
-                    '  JS: let x = 5;   // qualquer tipo\n\n' +
-                    'JS é dinamicamente tipado —\n' +
-                    'não precisa declarar o tipo!\n\n' +
-                    'Template strings com crase\n' +
-                    'são muito mais práticas que printf!'
-                );
-                window.HUD?.notify('✅ Missão JS #2 concluída!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_36',
+                    title: `✅ Variáveis JS!`,
+                    body:  `Diferença C vs JS:
+
+  C:  int x = 5;
+  JS: let x = 5;   // qualquer tipo
+
+JS é dinamicamente tipado —
+não precisa declarar o tipo!
+
+Template strings com crase
+são muito mais práticas que printf!`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '✅ Missão JS #2 concluída!');
             },
         },
 
@@ -858,17 +916,14 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'js:output',
             onStart: () => {
-                showInstruction(
-                    '🟨 JavaScript #3 — Arrow Function',
-                    'const soma = (a, b) => a + b;\n\n' +
-                    'console.log(soma(3, 7)); // 10\n\n' +
-                    '── Comparando com C ──\n' +
-                    'int soma(int a, int b) {\n' +
-                    '    return a + b;\n' +
-                    '}\n\n' +
-                    'Arrow functions são mais concisas!\n' +
-                    'O return é implícito na forma curta.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_37',
+                    title: `🟨 JavaScript #3 — Arrow Function`,
+                    body:  `const soma = (a, b) => a + b;
+
+`,
+                    type:  'info',
+                });
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -876,16 +931,20 @@ export function buildMissions(): MissionDef[] {
                     && norm(output).includes('10');        // soma(3,7) = 10
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ Arrow Functions!',
-                    'Duas formas de arrow function:\n\n' +
-                    '  Curta:  const f = x => x * 2;\n' +
-                    '  Longa:  const f = x => {\n' +
-                    '              return x * 2;\n' +
-                    '          };\n\n' +
-                    'A forma curta retorna automaticamente!'
-                );
-                window.HUD?.notify('✅ Missão JS #3 concluída!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_38',
+                    title: `✅ Arrow Functions!`,
+                    body:  `Duas formas de arrow function:
+
+  Curta:  const f = x => x * 2;
+  Longa:  const f = x => {
+              return x * 2;
+          };
+
+A forma curta retorna automaticamente!`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '✅ Missão JS #3 concluída!');
             },
         },
 
@@ -899,17 +958,15 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'js:output',
             onStart: () => {
-                showInstruction(
-                    '🟨 JavaScript #4 — Arrays',
-                    'const frutas = ["maça", "banana", "uva"];\n\n' +
-                    'frutas.forEach(f => {\n' +
-                    '    console.log(f);\n' +
-                    '});\n\n' +
-                    '── Diferença do C ──\n' +
-                    'C:   for (int i = 0; i < 3; i++)\n' +
-                    '         printf("%s", frutas[i]);\n\n' +
-                    'JS:  frutas.forEach(f => console.log(f));'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_39',
+                    title: `🟨 JavaScript #4 — Arrays`,
+                    body:  `const frutas = ["maça", "banana", "uva"];
+
+frutas.forEach(f => {
+`,
+                    type:  'info',
+                })
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -919,17 +976,21 @@ export function buildMissions(): MissionDef[] {
                     && lines.length >= 3;                  // imprimiu pelo menos 3 linhas
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ Arrays em JS!',
-                    'Arrays JS têm métodos poderosos:\n\n' +
-                    '  .forEach()  — itera todos\n' +
-                    '  .map()      — transforma cada item\n' +
-                    '  .filter()   — filtra por condição\n' +
-                    '  .push()     — adiciona ao final\n' +
-                    '  .length     — tamanho do array\n\n' +
-                    'Próxima missão: map e filter!'
-                );
-                window.HUD?.notify('✅ Missão JS #4 concluída!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_40',
+                    title: `✅ Arrays em JS!`,
+                    body:  `Arrays JS têm métodos poderosos:
+
+  .forEach()  — itera todos
+  .map()      — transforma cada item
+  .filter()   — filtra por condição
+  .push()     — adiciona ao final
+  .length     — tamanho do array
+
+Próxima missão: map e filter!`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '✅ Missão JS #4 concluída!');
             },
         },
 
@@ -943,19 +1004,19 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'js:output',
             onStart: () => {
-                showInstruction(
-                    '🟨 JavaScript #5 — Objetos',
-                    'const agente = {\n' +
-                    '    nome: "Neo",\n' +
-                    '    nivel: 7\n' +
-                    '};\n\n' +
-                    'console.log(\n' +
-                    '  `Agente ${agente.nome}, nível ${agente.nivel}`\n' +
-                    ');\n\n' +
-                    '── Diferença do C ──\n' +
-                    'C:  struct { char nome[20]; int nivel; };\n' +
-                    'JS: const obj = { nome: "x", nivel: 1 };'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_41',
+                    title: `🟨 JavaScript #5 — Objetos`,
+                    body:  `const agente = {
+    nome: "Neo",
+    nivel: 7
+};
+
+console.log(
+  \`Agente \${agente.nome}, nível \${agente.nivel}\`
+`,
+                    type:  'info',
+                })
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -964,17 +1025,22 @@ export function buildMissions(): MissionDef[] {
                     && /Agente .+, n[íi]vel \d+/.test(output);  // saída correta
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ Objetos JS!',
-                    'Objetos agrupam dados relacionados.\n\n' +
-                    'Formas de acesso:\n' +
-                    '  obj.prop      — dot notation\n' +
-                    '  obj["prop"]   — bracket notation\n\n' +
-                    'Desestruturação:\n' +
-                    '  const { nome, nivel } = agente;\n\n' +
-                    'Objetos são a base do JS moderno!'
-                );
-                window.HUD?.notify('✅ Missão JS #5 concluída!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_42',
+                    title: `✅ Objetos JS!`,
+                    body:  `Objetos agrupam dados relacionados.
+
+Formas de acesso:
+  obj.prop      — dot notation
+  obj["prop"]   — bracket notation
+
+Desestruturação:
+  const { nome, nivel } = agente;
+
+Objetos são a base do JS moderno!`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '✅ Missão JS #5 concluída!');
             },
         },
 
@@ -988,17 +1054,17 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'js:output',
             onStart: () => {
-                showInstruction(
-                    '🟨 JavaScript #6 — map + filter',
-                    'const nums = [1, 2, 3, 4, 5];\n\n' +
-                    'const resultado = nums\n' +
-                    '    .filter(n => n % 2 === 0)  // pares: [2,4]\n' +
-                    '    .map(n => n * 2);           // dobrar: [4,8]\n\n' +
-                    'console.log(resultado);\n' +
-                    '// [4, 8]\n\n' +
-                    'Métodos encadeados com ponto!\n' +
-                    'Isso é programação funcional.'
-                );
+                window.Phone?.inbox.push({
+                    id:    '__si_43',
+                    title: `🟨 JavaScript #6 — map + filter`,
+                    body:  `const nums = [1, 2, 3, 4, 5];
+
+const resultado = nums
+    .filter(n => n % 2 === 0)  // pares: [2,4]
+`,
+                    type:  'info',
+                });          
+                    
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -1007,17 +1073,23 @@ export function buildMissions(): MissionDef[] {
                     && (output.includes('[4,8]') || output.includes('[4, 8]')); // resultado correto
             },
             onComplete: () => {
-                showInstruction(
-                    '✅ map e filter!',
-                    'Métodos funcionais de array:\n\n' +
-                    '  .filter(fn) → novo array com itens\n' +
-                    '               que passam na condição\n\n' +
-                    '  .map(fn)    → transforma cada item\n\n' +
-                    '  .reduce(fn) → combina tudo em 1 valor\n\n' +
-                    'Podem ser encadeados com ponto!\n' +
-                    'Último desafio JS chegando...'
-                );
-                window.HUD?.notify('✅ Missão JS #6 concluída!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_44',
+                    title: `✅ map e filter!`,
+                    body:  `Métodos funcionais de array:
+
+  .filter(fn) → novo array com itens
+               que passam na condição
+
+  .map(fn)    → transforma cada item
+
+  .reduce(fn) → combina tudo em 1 valor
+
+Podem ser encadeados com ponto!
+Último desafio JS chegando...`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '✅ Missão JS #6 concluída!');
             },
         },
 
@@ -1032,25 +1104,15 @@ export function buildMissions(): MissionDef[] {
             helper:   false,
             listenTo: 'js:output',
             onStart: () => {
-                showInstruction(
-                    '🧠 JS #7 — Recursão (Boss)',
-                    'const fat = n => {\n' +
-                    '    if (n <= 1) return 1;\n' +
-                    '    return n * fat(n - 1);\n' +
-                    '};\n\n' +
-                    'console.log(fat(5)); // 120\n\n' +
-                    '5! = 5×4×3×2×1 = 120\n\n' +
-                    '── Mesmo conceito de C ──\n' +
-                    'int fib(int n) { return fib(n-1)+... }\n' +
-                    'Caso base + chamada recursiva!'
-                );
-                window.HUD?.notify('🧠 Boss Challenge JS: Fatorial recursivo!', 'warn');
                 window.Phone?.inbox.push({
-                    id:   'boss-js-fat',
-                    title: 'BOSS · FATORIAL RECURSIVO',
-                    body:  'Implemente fat(n) em JavaScript.\nEsperado: fat(5) = 120\n\nDica:\nconst fat = n => {\n  if (n <= 1) return 1;\n  return n * fat(n - 1);\n};',
-                    type:  'alert',
-                });
+                    id:    '__si_45',
+                    title: `🧠 JS #7 — Recursão (Boss)`,
+                    body:  `const fat = n => {
+    if (n <= 1) return 1;
+`,
+                    type:  'info',
+                })
+                window.Phone?.chat.receive('ctOS', '🧠 Boss Challenge JS: Fatorial recursivo!');
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -1060,17 +1122,22 @@ export function buildMissions(): MissionDef[] {
                     && norm(output) === '120';
             },
             onComplete: () => {
-                showInstruction(
-                    '🏆 Recursão JS dominada!',
-                    'Você aprendeu recursão em 2 linguagens!\n\n' +
-                    '  C:  int fat(int n) { ... }\n' +
-                    '  JS: const fat = n => ...\n\n' +
-                    'O conceito é o mesmo:\n' +
-                    '  1. Caso base (para a recursão)\n' +
-                    '  2. Chamada recursiva\n\n' +
-                    'Agora vá ao auditório, hacker!'
-                );
-                window.HUD?.notify('🏆 Boss JS Fatorial concluído! Formatura desbloqueada!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_46',
+                    title: `🏆 Recursão JS dominada!`,
+                    body:  `Você aprendeu recursão em 2 linguagens!
+
+  C:  int fat(int n) { ... }
+  JS: const fat = n => ...
+
+O conceito é o mesmo:
+  1. Caso base (para a recursão)
+  2. Chamada recursiva
+
+Agora vá ao auditório, hacker!`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '🏆 Boss JS Fatorial concluído! Formatura desbloqueada!');
             },
         },
 
@@ -1088,34 +1155,46 @@ export function buildMissions(): MissionDef[] {
             helper:   true,
             listenTo: 'collided',
             onStart: () => {
-                showInstruction(
-                    '🎤 Hora da Formatura',
-                    'Voce completou todos os desafios!\n\n' +
-                    'Dirija-se ao auditório e\n' +
-                    'sente-se para a cerimonia final.\n\n' +
-                    'Parabens, Hacker!'
-                );
-                window.HUD?.notify('🎤 Vá ao auditório para a formatura!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_47',
+                    title: `🎤 Hora da Formatura`,
+                    body:  `Voce completou todos os desafios!
+
+Dirija-se ao auditório e
+sente-se para a cerimonia final.
+
+Parabens, Hacker!`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '🎤 Vá ao auditório para a formatura!');
             },
             check: (e) => (e.detail as any).collided === true,
             onComplete: () => {
-                showInstruction(
-                    '🏆 Parabéns, Hacker!',
-                    'Voce concluiu o HackOS!\n\n' +
-                    '✓ Sistema de arquivos\n' +
-                    '  ls  cd  pwd  cat  nano  mkdir  rm\n\n' +
-                    '✓ Processos e seguranca\n' +
-                    '  top  ps  kill -9\n\n' +
-                    '✓ Rede\n' +
-                    '  ifconfig  ping  ssh\n\n' +
-                    '✓ Programacao em C\n' +
-                    '  printf  int  if/else  for  funcao  recursao\n\n' +
-                    '✓ Programacao em JavaScript\n' +
-                    '  console.log  let/const  arrow fn\n' +
-                    '  array  objeto  map/filter  recursao\n\n' +
-                    'Voce esta pronto para o proximo nivel!'
-                );
-                window.HUD?.notify('🏆 HackOS completo! Você é um hacker full-stack!', 'success');
+                window.Phone?.inbox.push({
+                    id:    '__si_48',
+                    title: `🏆 Parabéns, Hacker!`,
+                    body:  `Voce concluiu o HackOS!
+
+✓ Sistema de arquivos
+  ls  cd  pwd  cat  nano  mkdir  rm
+
+✓ Processos e seguranca
+  top  ps  kill -9
+
+✓ Rede
+  ifconfig  ping  ssh
+
+✓ Programacao em C
+  printf  int  if/else  for  funcao  recursao
+
+✓ Programacao em JavaScript
+  console.log  let/const  arrow fn
+  array  objeto  map/filter  recursao
+
+Voce esta pronto para o proximo nivel!`,
+                    type:  'info',
+                });
+                window.Phone?.chat.receive('ctOS', '🏆 HackOS completo! Você é um hacker full-stack!');
             },
         },
     ];
@@ -1206,19 +1285,16 @@ export class MissionManager {
     }
 
     private onAllComplete() {
-        showInstruction(
-            '🏆 Parabéns, Hacker Full-Stack!',
-            'Você completou todas as 24 missões do HackOS.\n\n' +
-            'Habilidades conquistadas:\n' +
-            '  Terminal Linux · C · JavaScript'
-        );
-        elementos.showMsg('🏆 Todas as 24 missões concluídas!');
         window.Phone?.inbox.push({
-            id:   'finale-complete',
-            title: 'HACKOS · MISSÃO COMPLETA',
-            body:  'Parabéns, Hacker Full-Stack!\n\n✓ Terminal Linux\n  ls · cd · pwd · cat · nano · mkdir · rm\n\n✓ Processos & Segurança\n  top · ps · kill -9\n\n✓ Rede\n  ifconfig · ping · ssh\n\n✓ Programação em C\n  printf · int · if/else · for · função · recursão\n\n✓ JavaScript\n  console.log · let/const · arrow fn · array · objeto · map/filter · recursão',
-            type:  'system',
+            id:    '__si_49',
+            title: `🏆 Parabéns, Hacker Full-Stack!`,
+            body:  `Você completou todas as 24 missões do HackOS.
+
+Habilidades conquistadas:
+  Terminal Linux · C · JavaScript`,
+            type:  'info',
         });
+        elementos.showMsg('🏆 Todas as 24 missões concluídas!');
     }
 
     // ── API pública ───────────────────────────────────────────────────────────
