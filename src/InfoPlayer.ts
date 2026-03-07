@@ -20,7 +20,7 @@ const _raw = {
     energy:         100,
     health:         100,
     hasTerminal:    false,
-    hasFlashlight:  false,
+    toggleDrone :  true,
     id:             '',
     role:           'player',
     isRadialMenuActive: false,

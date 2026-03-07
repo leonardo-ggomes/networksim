@@ -50,7 +50,13 @@ class SocketManager{
 
     constructor(){
        
-        this.io = io('http://localhost:3000') //io('https://networksim-server-production.up.railway.app/')
+        this.io = io('http://localhost:3000')
+        // this.io = io("https://onleo.online", {
+        //     path: "/socket.io/", 
+        //     transports: ["websocket", "polling"], // O servidor aceita ambos
+        //     reconnection: true,
+        //     reconnectionAttempts: 5
+        // });
 
         this.io.on('connect', () => {
             console.log('Conectado')
@@ -107,6 +113,8 @@ class SocketManager{
 
                 Guest.loadModel(this.loading, urlAvatar, id, playerName).then(() => {
                     this.scene?.add(Guest.models[id].obj);
+                    // Drone do guest também vive direto na Scene (evita jitter)
+                    this.scene?.add((Guest.models[id].obj as any).droneGroup);
                     Guest.models[id].obj.visible = false
                     this.players[id] = Guest.models[id].obj;
                 });
@@ -151,6 +159,8 @@ class SocketManager{
                 guestLoaded.then(() => {
                     if(this.io.id != undefined){
                         this.scene?.add(Guest.models[player.id].obj)
+                        // Drone do guest também vive direto na Scene (evita jitter)
+                        this.scene?.add((Guest.models[player.id].obj as any).droneGroup)
                         this.players[player.id] = Guest.models[player.id].obj
                     }
                 })
@@ -162,6 +172,9 @@ class SocketManager{
     exitTheRoom = (id: any) => {
         console.log('exit the room')
         this.scene?.remove(this.players[id])
+        // Remove também o droneGroup do guest da Scene
+        const droneGroup = (Guest.models[id]?.obj as any)?.droneGroup
+        if (droneGroup) this.scene?.remove(droneGroup)
         Guest.dispose(id)          // libera geometria, material e collider
         delete this.players[id]
     }
@@ -187,8 +200,23 @@ class SocketManager{
             Guest.setAnimation(
                 instanceAnims?.[data.clip],
                 data.id
-            )   
-                        
+            )
+
+            // ── Sincroniza drone do guest ──────────────────────────────────
+            // toggleDrone() apenas liga/desliga — o loop de animação
+            // é feito em Guest.update() que chama playerModel.updateDrone()
+            const guestModel = Guest.models[data.id]?.obj as any
+            if (guestModel?.toggleDrone) {
+                const shouldBeOn = !!data.isLatern
+                if (guestModel.IsDroneActive !== shouldBeOn) {
+                    guestModel.toggleDrone(shouldBeOn)
+                }
+            }
+            // updateDrone com a posição recebida do servidor (sem delta real,
+            // mas a frequência de 20Hz do socket é suficiente para o lerp)
+            if (guestModel?.IsDroneActive && guestModel?.updateDrone) {
+                guestModel.updateDrone(0.05, new Vector3(data.x, data.y, data.z))
+            }
         }
 
     }

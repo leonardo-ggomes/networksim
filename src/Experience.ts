@@ -191,7 +191,7 @@ export default class Experience {
     }
 
     setAmbientLight() {
-        this.ambientLight.intensity = .2
+        this.ambientLight.intensity = 1
         this.scene.add(this.ambientLight)
     }
 

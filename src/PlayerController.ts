@@ -17,14 +17,12 @@ import Loading from "./Loading";
 import { Auditorio, infoPlayer, othersPlayers, roles } from "./InfoPlayer";
 import Items, { ChairInstance } from "./Items";
 import { colliders } from "./Colliders";
-import { BVHCollision } from "./BVHCollision"; // ← NOVO
+import { BVHCollision } from "./BVHCollision";
 
 export default class PlayerController {
-  // Referência estática — permite que Guest.ts reconstrua o BVH
-  // quando um jogador remoto entra ou sai da cena
   static instance: PlayerController | null = null;
 
-  playerImpulse = new Vector3(0, 0, 0);
+  playerImpulse   = new Vector3(0, 0, 0);
   playerDirection = new Vector3(0, 0, 0);
   playerModel: PlayerModel;
   keyBoard: any = {};
@@ -38,38 +36,57 @@ export default class PlayerController {
 
   isSitting = false;
 
-  prevPlayerPosition = new Vector3();
+  prevPlayerPosition  = new Vector3();
   prevPlayerQuaternion = new Quaternion();
 
   // ── Física ───────────────────────────────────────────────────────────────
-  velocityY = 0;
-  gravity = -18;                  // mais forte → personagem não "flutua"
-  groundSnapSpeed = 12;           // velocidade de snap suave ao chão (lerp)
-  isOnGround = false;
+  velocityY       = 0;
+  gravity         = -18;
+  groundSnapSpeed = 12;
+  isOnGround      = false;
 
-  // ── Cápsula (visual debug) ───────────────────────────────────────────────
+  // ── Cápsula debug ────────────────────────────────────────────────────────
   playerCapsule: Mesh;
   capsuleHeight = 1.5;
   capsuleRadius = 0.3;
 
-  // ── BVH ─────────────────────────────────────────────────────────────────
-  bvh: BVHCollision;             // ← substitui checkCollision / Box3
+  // ── BVH ──────────────────────────────────────────────────────────────────
+  bvh: BVHCollision;
   private bvhReady = false;
 
-  socket = SocketManager;
-  clipName = "Idle";
+  socket    = SocketManager;
+  clipName  = "Idle";
   actions: any = {};
-  loading: Loading;
+  loading:  Loading;
   urlAvatar: string;
 
-  chair = "";
+  chair        = "";
   lastPosition = new Vector3();
-  lastClip = "";
+  lastClip     = "";
   private lastEmitTime = 0;
   private lastQx = 0;
   private lastQy = 0;
   private lastQz = 0;
   private lastQw = 1;
+  private lastIsLatern = false;
+
+  // ── Vetores reutilizáveis — zero alloc por frame ──────────────────────────
+  private _camPos    = new Vector3();
+  private _modelPos  = new Vector3();
+  private _forward   = new Vector3();
+  private _right     = new Vector3();
+  private _left      = new Vector3();
+  private _axisY     = new Vector3(0, 1, 0);
+  private _guestPos  = new Vector3();
+  private _pushVec   = new Vector3();
+  private _slideX    = new Vector3();
+  private _slideZ    = new Vector3();
+  private _slideXDir = new Vector3();
+  private _slideZDir = new Vector3();
+  private _droneWorldPos = new Vector3();
+
+  // ── Estado de palco: evita disparar CustomEvent toda frame ───────────────
+  private _wasOnStage = false;
 
   constructor(
     scene: Scene,
@@ -78,9 +95,9 @@ export default class PlayerController {
     loading: Loading,
     urlAvatar: string
   ) {
-    this.loading = loading;
+    this.loading   = loading;
     this.urlAvatar = urlAvatar;
-    this.camera = camera;
+    this.camera    = camera;
     this.followCamera = new FollowCamera(this.camera);
     this.items = items;
     this.scene = scene;
@@ -88,6 +105,9 @@ export default class PlayerController {
     this.playerModel = new PlayerModel(this.loading, false, this.urlAvatar);
     this.playerModel.position.set(0, 0, 0);
     this.scene.add(this.playerModel);
+
+    // Drone vive na Scene (não na hierarquia do player) para evitar jitter
+    this.scene.add(this.playerModel.droneGroup);
 
     // ── Cápsula debug ────────────────────────────────────────────────────
     const capsuleGeometry = new CapsuleGeometry(
@@ -97,39 +117,30 @@ export default class PlayerController {
       16
     );
     const capsuleMaterial = new MeshBasicMaterial({
-      color: 0xff0000,
+      color:     0xff0000,
       wireframe: true,
-      visible: false, // mude para true para debugar
+      visible:   false,
     });
     this.playerCapsule = new Mesh(capsuleGeometry, capsuleMaterial);
     this.playerCapsule.position.set(0, this.capsuleHeight / 2, 0);
     this.playerModel.add(this.playerCapsule);
 
-    // ── BVH: cria instância e aguarda colliders carregarem ───────────────
     this.bvh = new BVHCollision(scene);
     this.initBVH();
 
     document.addEventListener("keydown", this.onKeydown);
-    document.addEventListener("keyup", this.onKeydown);
+    document.addEventListener("keyup",   this.onKeydown);
     this.actions["terminal"] = false;
     PlayerController.instance = this;
   }
 
-  /**
-   * Aguarda todos os GLTFs assíncronos carregarem antes de buildar o BVH.
-   * Ajuste o delay conforme o tempo de loading da sua cena.
-   */
   private async initBVH() {
-    // Aguarda modelos carregarem (o setItems usa loadAsync internamente)
     await new Promise((r) => setTimeout(r, 3000));
     this.bvh.buildFromColliders(colliders);
     this.bvhReady = true;
     console.log("[PlayerController] BVH pronto.");
   }
 
-  /**
-   * Chame após carregar novos GLTFs em runtime para manter o BVH atualizado.
-   */
   refreshBVH() {
     this.bvh.rebuild(colliders);
   }
@@ -150,8 +161,14 @@ export default class PlayerController {
       } else {
         elementos.hideTerminal();
         this.actions["terminal"] = false;
-    PlayerController.instance = this;
       }
+    }
+
+    // ── Tecla L: toggle do drone holofote ─────────────────────────────────
+    if (event.type === "keydown" && event.code === "KeyL") {
+      const isOn = !this.playerModel.IsDroneActive;
+      this.playerModel.toggleDrone(isOn);
+      this.lastEmitTime = 0;
     }
   }
 
@@ -178,28 +195,20 @@ export default class PlayerController {
 
   // ── Cadeira ──────────────────────────────────────────────────────────────
 
-  /**
-   * Senta o personagem na cadeira.
-   * A cadeira já tem rotação correta (CHAIR_ROTATION_Y aplicado em Items.ts),
-   * então apenas copiamos o quaternion dela.
-   */
   toSit(chair: ChairInstance) {
     if (this.isSitting) return;
     if (!this.keyBoard["KeyF"]) return;
 
-    // Cadeira ocupada — verifica lista do servidor (atualizada via socket chair:list)
     if (Auditorio.chairs.includes(chair.name)) {
       console.log(`[PlayerController] Cadeira "${chair.name}" já está ocupada.`);
       return;
     }
 
-    // Segurança extra: verifica se há algum guest sentado na mesma posição
     const SEAT_RADIUS = 0.6;
     for (const obj of colliders) {
       if (!obj.name.startsWith('guest.')) continue;
-      const guestPos = new Vector3();
-      obj.getWorldPosition(guestPos);
-      if (guestPos.distanceTo(chair.position) < SEAT_RADIUS) {
+      obj.getWorldPosition(this._guestPos);
+      if (this._guestPos.distanceTo(chair.position) < SEAT_RADIUS) {
         console.log(`[PlayerController] Guest detectado na cadeira "${chair.name}".`);
         return;
       }
@@ -212,26 +221,19 @@ export default class PlayerController {
       this.isSitting = true;
       this.followCamera.mouseMoveActived = true;
 
-      // Copia a rotação da cadeira (já está virada para o palco)
       this.playerModel.quaternion.copy(chair.quaternion);
-
       this.followCamera.setFollowMode(false);
 
-      // Posiciona o personagem levemente acima e à frente do assento
-      // O offset (0, 0.17, -0.4) é no espaço LOCAL da cadeira
       const seatOffset = new Vector3(0, 0.17, 0.2)
-        .applyQuaternion(chair.quaternion); // converte para world-space
+        .applyQuaternion(chair.quaternion);
 
       this.playerModel.position.copy(chair.position.clone().add(seatOffset));
 
       this.chair = chair.name;
       SocketManager.io.emit("chair:add", this.chair);
-    }, 300); // reduzido de 1000ms para resposta mais rápida
+    }, 300);
   }
 
-  /**
-   * Levanta da cadeira.
-   */
   private leaveSit() {
     setTimeout(() => {
       this.isSitting = false;
@@ -244,37 +246,28 @@ export default class PlayerController {
     }, 300);
   }
 
-  /**
-   * Verifica interações por proximidade (cadeiras e outros players).
-   * Usa items.getNearestChair() que itera chairInstances internamente.
-   */
   private checkInteractionByProximity() {
     const pos = this.playerModel.position;
-    const INTERACT_RADIUS = 1.0; // metros — ajuste conforme o tamanho do modelo
+    const INTERACT_RADIUS = 1.0;
 
-    // ── Cadeiras ──────────────────────────────────────────────────────────────
-    // getNearestChair já itera chairInstances internamente e retorna a mais próxima
     const nearestChair = this.items.getNearestChair(pos, INTERACT_RADIUS);
     if (nearestChair) {
       this.toSit(nearestChair);
       return;
     }
 
-    // ── Outros players (guests) ───────────────────────────────────────────────
     for (const obj of colliders) {
       if (!obj.name.includes("guest.")) continue;
 
-      const objPos = new Vector3();
-      obj.getWorldPosition(objPos);
+      obj.getWorldPosition(this._guestPos);
 
-      if (pos.distanceTo(objPos) <= INTERACT_RADIUS * 1.5) {
+      if (pos.distanceTo(this._guestPos) <= INTERACT_RADIUS * 1.5) {
         const id = obj.name.split(".")[1];
         this.toInteract(id);
         return;
       }
     }
 
-    // Nenhuma colisão de interação
     othersPlayers.collideId = "";
   }
 
@@ -282,29 +275,22 @@ export default class PlayerController {
     othersPlayers.collideId = id;
   }
 
-  /**
-   * Separa o player local de guests que estejam sobrepostos.
-   * Roda após a física BVH — aplica um impulso de separação suave.
-   */
   private resolvePlayerCollisions() {
-    const PLAYER_RADIUS = 0.45; // raio da cápsula do player em metros
+    const PLAYER_RADIUS = 0.45;
     const myPos = this.playerModel.position;
 
     for (const obj of colliders) {
       if (!obj.name.startsWith('guest.')) continue;
 
-      const guestPos = new Vector3();
-      obj.getWorldPosition(guestPos);
-      guestPos.y = myPos.y; // compara só no plano XZ
+      obj.getWorldPosition(this._guestPos);
+      this._guestPos.y = myPos.y;
 
-      const dist = myPos.distanceTo(guestPos);
+      const dist    = myPos.distanceTo(this._guestPos);
       const minDist = PLAYER_RADIUS * 2;
 
       if (dist < minDist && dist > 0.001) {
-        // Vetor de separação: empurra o player local para longe do guest
-        const push = myPos.clone().sub(guestPos).normalize();
-        const overlap = (minDist - dist) * 0.5; // divide separação entre os dois
-        this.playerModel.position.addScaledVector(push, overlap);
+        this._pushVec.subVectors(myPos, this._guestPos).normalize();
+        this.playerModel.position.addScaledVector(this._pushVec, (minDist - dist) * 0.5);
       }
     }
   }
@@ -319,120 +305,96 @@ export default class PlayerController {
     }
 
     this.playerModel.update(delta);
-    this.followCamera.updateCamera(this.playerModel, this.items.raycasterView);
+
+    // Drone: lerp suave sem alloc — reutiliza _droneWorldPos
+    if (this.playerModel.IsDroneActive) {
+      this._droneWorldPos.copy(this.playerModel.position);
+      this.playerModel.updateDrone(delta, this._droneWorldPos);
+    }
+
+    this.followCamera.updateCamera(this.playerModel, this.items.raycasterView, delta);
     this.emitPositionIfChanged();
   }
 
   // ── Movimento ────────────────────────────────────────────────────────────
 
   private updateMovement(delta: number) {
-    // ── Extrai o yaw (rotação horizontal) da câmera ───────────────────────
-    // Usa a posição da câmera relativa ao player: ignora pitch completamente.
-    // Isso garante que forward/right/left são sempre vetores horizontais puros,
-    // independente do ângulo vertical da câmera.
-    const camPos   = new Vector3();
-    const modelPos = new Vector3();
-    this.camera.getWorldPosition(camPos);
-    this.playerModel.getWorldPosition(modelPos);
+    // Reutiliza vetores pré-alocados — sem new Vector3() por frame
+    this.camera.getWorldPosition(this._camPos);
+    this.playerModel.getWorldPosition(this._modelPos);
 
-    // forward = direção do player para a câmera, projetada no plano XZ, invertida
-    // (câmera fica atrás — queremos para onde o player está "olhando", não de onde a câmera vem)
-    const forward = new Vector3(
-      modelPos.x - camPos.x,
+    this._forward.set(
+      this._modelPos.x - this._camPos.x,
       0,
-      modelPos.z - camPos.z
+      this._modelPos.z - this._camPos.z
     ).normalize();
 
-    // Se câmera estiver exatamente em cima do player (sem posição relativa),
-    // fallback para getWorldDirection como antes
-    if (forward.lengthSq() < 0.001) {
-      this.camera.getWorldDirection(forward);
-      forward.y = 0;
-      forward.normalize();
+    if (this._forward.lengthSq() < 0.001) {
+      this.camera.getWorldDirection(this._forward);
+      this._forward.y = 0;
+      this._forward.normalize();
     }
 
-    this.playerDirection.copy(forward);
+    this.playerDirection.copy(this._forward);
 
-    // right = rotação de -90° em Y aplicada ao forward
-    // cross(forward, up) = (fz, 0, -fx) → strafe direita
-    const right = new Vector3( -forward.z, 0, forward.x);
-    // left  = oposto
-    const left  = new Vector3(forward.z, 0,  -forward.x);
+    this._right.set(-this._forward.z, 0,  this._forward.x);
+    this._left.set( this._forward.z,  0, -this._forward.x);
 
-    // Quaternion de face do player (para onde ele está olhando = forward)
-    const angle = Math.atan2(forward.x, forward.z);
-    this.quaternion.setFromAxisAngle(new Vector3(0, 1, 0), angle);
+    const angle = Math.atan2(this._forward.x, this._forward.z);
+    this.quaternion.setFromAxisAngle(this._axisY, angle);
 
-    const isCrouch = this.playerModel.IsTurnOnFlashlight;
     let moveInput = false;
 
     // ── Input ──────────────────────────────────────────────────────────────
     if (this.keyBoard["KeyW"] && !this.keyBoard["ShiftLeft"]) {
-      const clip = isCrouch ? "Crouch" : "Walk";
-      this.setAction(this.playerModel.animationsAction[clip]);
-      this.clipName = clip;
+      this.setAction(this.playerModel.animationsAction["Walk"]);
+      this.clipName = "Walk";
       this.smoothRotate(delta);
-      this.playerImpulse.add(
-        forward.clone().multiplyScalar(this.velocity * delta)
-      );
+      this.playerImpulse.addScaledVector(this._forward, this.velocity * delta);
       moveInput = true;
     } else if (this.keyBoard["KeyW"] && this.keyBoard["ShiftLeft"]) {
-      const clip = isCrouch ? "CrouchRun" : "Running";
-      this.setAction(this.playerModel.animationsAction[clip]);
-      this.clipName = clip;
+      this.setAction(this.playerModel.animationsAction["Running"]);
+      this.clipName = "Running";
       this.smoothRotate(delta);
-      this.playerImpulse.add(
-        forward.clone().multiplyScalar(this.velocity * 2.4 * delta)
-      );
+      this.playerImpulse.addScaledVector(this._forward, this.velocity * 2.4 * delta);
       moveInput = true;
     } else if (this.keyBoard["KeyS"]) {
-      const clip = isCrouch ? "CrouchBack" : "Backward";
-      this.setAction(this.playerModel.animationsAction[clip]);
-      this.clipName = clip;
+      this.setAction(this.playerModel.animationsAction["Backward"]);
+      this.clipName = "Backward";
       this.smoothRotate(delta);
-      this.playerImpulse.add(
-        forward.clone().multiplyScalar(-(this.velocity - 1) * delta)
-      );
+      this.playerImpulse.addScaledVector(this._forward, -(this.velocity - 1) * delta);
       moveInput = true;
     } else if (this.keyBoard["KeyA"]) {
-      const clip = isCrouch ? "CrouchLeft" : "WalkLeft";
-      this.setAction(this.playerModel.animationsAction[clip]);
-      this.clipName = clip;
+      this.setAction(this.playerModel.animationsAction["WalkLeft"]);
+      this.clipName = "WalkLeft";
       this.smoothRotate(delta);
-      this.playerImpulse.add(
-        left.clone().multiplyScalar((this.velocity - 1) * delta)
-      );
+      this.playerImpulse.addScaledVector(this._left, (this.velocity - 1) * delta);
       moveInput = true;
     } else if (this.keyBoard["KeyD"]) {
-      const clip = isCrouch ? "CrouchRight" : "WalkRight";
-      this.setAction(this.playerModel.animationsAction[clip]);
-      this.clipName = clip;
+      this.setAction(this.playerModel.animationsAction["WalkRight"]);
+      this.clipName = "WalkRight";
       this.smoothRotate(delta);
-      this.playerImpulse.add(
-        right.clone().multiplyScalar((this.velocity - 1) * delta)
-      );
+      this.playerImpulse.addScaledVector(this._right, (this.velocity - 1) * delta);
       moveInput = true;
     } else if (this.keyBoard["KeyV"]) {
-      this.playerModel.turnFlashlight(false);
       this.setAction(this.playerModel.animationsAction["Waving"]);
       this.clipName = "Waving";
     } else {
-      const clip = isCrouch ? "CrouchIdle" : "Idle";
-      this.setAction(this.playerModel.animationsAction[clip]);
-      this.clipName = clip;
+      this.setAction(this.playerModel.animationsAction["Idle"]);
+      this.clipName = "Idle";
     }
 
     // ── Física BVH ────────────────────────────────────────────────────────
     if (!this.bvhReady) {
-      // Antes do BVH estar pronto: física simples no chão = 0
       this.playerModel.position.add(this.playerImpulse);
       if (this.playerModel.position.y < 0) this.playerModel.position.y = 0;
       this.playerImpulse.set(0, 0, 0);
       return;
     }
 
-    const candidatePos = this.playerModel.position.clone().add(this.playerImpulse);
-    const moveDir = this.playerImpulse.clone().normalize();
+    // candidatePos reutiliza _slideX temporariamente para evitar alloc
+    const candidatePos = this._slideX.copy(this.playerModel.position).add(this.playerImpulse);
+    const moveDir      = this.playerImpulse.clone().normalize(); // necessário para BVH
 
     const result = this.bvh.check(candidatePos, moveDir);
 
@@ -440,37 +402,33 @@ export default class PlayerController {
     if (result.onGround && result.groundY !== null) {
       const targetY = result.groundY + this.bvh.skinWidth;
 
-      // Lerp suave: elimina "teleporte" dos degraus
       this.playerModel.position.y = this.lerp(
         this.playerModel.position.y,
         targetY,
         Math.min(1, this.groundSnapSpeed * delta)
       );
 
-      this.velocityY = 0;
+      this.velocityY  = 0;
       this.isOnGround = true;
 
-      // Detecta evento de palco/apresentador ao subir (substitui o nome "degrau")
-      if (targetY > 0.5) {
-        if (infoPlayer.role === roles.PRESENTER || infoPlayer.role === roles.ADMIN) {
-          eventEmitter.dispatchEvent(new CustomEvent("init_micro", { detail: true }));
+      // Dispara evento de palco apenas quando o estado MUDA — não toda frame
+      const onStage = targetY > 0.5;
+      if (onStage !== this._wasOnStage) {
+        this._wasOnStage = onStage;
+        const isPresenter = infoPlayer.role === roles.PRESENTER || infoPlayer.role === roles.ADMIN;
+        if (isPresenter) {
+          eventEmitter.dispatchEvent(new CustomEvent("init_micro", { detail: onStage }));
         }
-      } else {
-        othersPlayers.collideId = "";
-        if (infoPlayer.role === roles.PRESENTER || infoPlayer.role === roles.ADMIN) {
-          eventEmitter.dispatchEvent(new CustomEvent("init_micro", { detail: false }));
-        }
+        if (!onStage) othersPlayers.collideId = "";
       }
     } else {
-      // Gravidade
       this.velocityY += this.gravity * delta;
       this.playerModel.position.y += this.velocityY * delta;
       this.isOnGround = false;
 
-      // Chão de segurança
       if (this.playerModel.position.y <= 0) {
         this.playerModel.position.y = 0;
-        this.velocityY = 0;
+        this.velocityY  = 0;
         this.isOnGround = true;
       }
     }
@@ -479,36 +437,28 @@ export default class PlayerController {
     if (!result.wallBlocked || !moveInput) {
       this.playerModel.position.x = candidatePos.x;
       this.playerModel.position.z = candidatePos.z;
-    }
-    // Slide ao longo da parede (desliza em X ou Z, evita "travar")
-    else {
-      const slideX = this.playerModel.position
-        .clone()
-        .add(new Vector3(this.playerImpulse.x, 0, 0));
-      const slideZ = this.playerModel.position
-        .clone()
-        .add(new Vector3(0, 0, this.playerImpulse.z));
+    } else {
+      // Slide: reutiliza _slideX e _slideZ sem alloc
+      this._slideX.copy(this.playerModel.position);
+      this._slideX.x += this.playerImpulse.x;
+      this._slideZ.copy(this.playerModel.position);
+      this._slideZ.z += this.playerImpulse.z;
 
-      const rx = this.bvh.check(slideX, new Vector3(Math.sign(this.playerImpulse.x), 0, 0));
-      const rz = this.bvh.check(slideZ, new Vector3(0, 0, Math.sign(this.playerImpulse.z)));
+      this._slideXDir.set(Math.sign(this.playerImpulse.x), 0, 0);
+      this._slideZDir.set(0, 0, Math.sign(this.playerImpulse.z));
 
-      if (!rx.wallBlocked) this.playerModel.position.x = slideX.x;
-      if (!rz.wallBlocked) this.playerModel.position.z = slideZ.z;
+      const rx = this.bvh.check(this._slideX, this._slideXDir);
+      const rz = this.bvh.check(this._slideZ, this._slideZDir);
+
+      if (!rx.wallBlocked) this.playerModel.position.x = this._slideX.x;
+      if (!rz.wallBlocked) this.playerModel.position.z = this._slideZ.z;
     }
 
     this.playerImpulse.set(0, 0, 0);
 
-    // ── Colisão com poltronas / guests (mantida por nome, sem Box3) ────
-    // O BVH cuida da física; esta parte dispara interações E separação entre players.
     this.checkInteractionByProximity();
     this.resolvePlayerCollisions();
   }
-
-  /**
-   * Verifica interações por proximidade (cadeiras e outros players).
-   * Muito mais leve que iterar Box3 de todos os colliders.
-   */
-  
 
   private updateSitting() {
     this.setAction(this.playerModel.animationsAction["Sitting"]);
@@ -532,38 +482,39 @@ export default class PlayerController {
   }
 
   private emitPositionIfChanged() {
-    // Throttle: no máximo 20 emits por segundo (50ms entre cada)
     const now = performance.now();
     if (now - this.lastEmitTime < 50) return;
 
-    const q  = this.playerModel.quaternion;
-    const p  = this.playerModel.position;
+    const q = this.playerModel.quaternion;
+    const p = this.playerModel.position;
 
-    const posChanged  = p.distanceTo(this.lastPosition) > 0.02;
-    const clipChanged = this.lastClip !== this.clipName;
-    const rotChanged  =
+    const posChanged   = p.distanceTo(this.lastPosition) > 0.02;
+    const clipChanged  = this.lastClip !== this.clipName;
+    const rotChanged   =
       Math.abs(q.x - this.lastQx) > 0.005 ||
       Math.abs(q.y - this.lastQy) > 0.005 ||
       Math.abs(q.w - this.lastQw) > 0.005;
+    const laternChanged = this.playerModel.IsDroneActive !== this.lastIsLatern;
 
-    if (!posChanged && !clipChanged && !rotChanged) return;
+    if (!posChanged && !clipChanged && !rotChanged && !laternChanged) return;
 
-    // Envia floats com precisão reduzida (2 casas) para poupar bytes
     this.socket.io.emit("updatePosition", {
-      x:    Math.fround(p.x),
-      y:    Math.fround(p.y),
-      z:    Math.fround(p.z),
-      qx:   +q.x.toFixed(3),
-      qy:   +q.y.toFixed(3),
-      qz:   +q.z.toFixed(3),
-      qw:   +q.w.toFixed(3),
-      clip: this.clipName,
+      x:       Math.fround(p.x),
+      y:       Math.fround(p.y),
+      z:       Math.fround(p.z),
+      qx:      +q.x.toFixed(3),
+      qy:      +q.y.toFixed(3),
+      qz:      +q.z.toFixed(3),
+      qw:      +q.w.toFixed(3),
+      clip:    this.clipName,
+      isLatern: this.playerModel.IsDroneActive,
     });
 
     this.lastPosition.copy(p);
     this.lastClip = this.clipName;
     this.lastQx = q.x; this.lastQy = q.y;
     this.lastQz = q.z; this.lastQw = q.w;
+    this.lastIsLatern = this.playerModel.IsDroneActive;
     this.lastEmitTime = now;
   }
 }
