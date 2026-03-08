@@ -2,6 +2,348 @@ import { CCompiler } from "./Compiler";
 import { infoPlayer, othersPlayers, roles } from "./InfoPlayer";
 import SocketManager from "./SocketManager";
 
+// ══════════════════════════════════════════════════════════════════════════════
+// REDE VIRTUAL — Motor de estado de rede por player
+// Estado local: _netState (este player)
+// Estado remoto: window.__netPeers (outros players, atualizado via socket)
+// ══════════════════════════════════════════════════════════════════════════════
+
+interface _NetIface  { name:string; ip?:string; prefix:number; mac:string; up:boolean }
+interface _NetRoute  { dest:string; via?:string; dev:string; metric:number }
+interface _NetService{ name:string; port:number; running:boolean; pid:number; crashMsg?:string }
+interface _NetNode   { socketId:string; playerName:string; hostname:string;
+                       interfaces:_NetIface[]; routes:_NetRoute[]; services:_NetService[] }
+
+function _randMac(){ return Array.from({length:6},()=>Math.floor(Math.random()*256).toString(16).padStart(2,"0")).join(":") }
+function _ipNum(ip:string){ return ip.split(".").reduce((a,o)=>(a<<8)+parseInt(o),0)>>>0 }
+function _numIp(n:number){ return [(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255].join(".") }
+function _inSubnet(ip:string,cidr:string){
+    const [net,bits]=cidr.split("/"); const mask=bits?(0xFFFFFFFF<<(32-+bits))>>>0:0xFFFFFFFF;
+    return (_ipNum(ip)&mask)===(_ipNum(net)&mask);
+}
+function _prefixMask(p:number){ return _numIp(p===0?0:(0xFFFFFFFF<<(32-p))>>>0) }
+function _netAddr(ip:string,p:number){ return _numIp(_ipNum(ip)&((0xFFFFFFFF<<(32-p))>>>0)) }
+function _bcastAddr(ip:string,p:number){
+    const m=(0xFFFFFFFF<<(32-p))>>>0; return _numIp((_ipNum(ip)&m)|(~m>>>0));
+}
+
+const _netState: _NetNode = {
+    socketId: "",
+    playerName: "player",
+    hostname: "hackos-pc",
+    interfaces: [
+        { name:"lo",   ip:"127.0.0.1", prefix:8,  mac:"00:00:00:00:00:00", up:true  },
+        { name:"eth0", ip:undefined,   prefix:24, mac:_randMac(),           up:false },
+    ],
+    routes: [],
+    services: [
+        { name:"sshd", port:22, running:true,  pid:891  },
+        { name:"cron", port:0,  running:true,  pid:1042 },
+    ],
+};
+
+// Expõe peers e FS para uso em NetworkCommands / curl
+(window as any).__netPeers = {};
+(window as any).__netState = _netState;
+
+// ── Inicializa quando o socket conectar ──────────────────────────────────────
+// SocketManager.io.on("connect", () => {
+//     _netState.socketId = SocketManager.io.id ?? "";
+//     _netState.playerName = (window as any).__playerName ?? "player";
+//     _netState.hostname = `${_netState.playerName.toLowerCase().replace(/\s+/g,"-")}-pc`;
+//     _netBroadcast();
+// });
+
+// ── Recebe estado de rede de outros players ───────────────────────────────────
+// SocketManager.io.on("net:state", (node: _NetNode) => {
+//     (window as any).__netPeers[node.socketId] = node;
+// });
+
+// // ── Recebe bug injetado pelo professor ────────────────────────────────────────
+// SocketManager.io.on("net:bug", (data:{type:string}) => {
+//     _netInjectBug(data.type);
+//     const msgs: Record<string,string> = {
+//         "link-down":     "⚠ eth0 caiu! Use: ip link set eth0 up",
+//         "ip-conflict":   "⚠ Conflito de IP! Reconfigure: ip addr add ...",
+//         "service-crash": "⚠ apache2 crashou! Use: apache2 start",
+//         "route-lost":    "⚠ Rotas perdidas! Use: ip route add default via ...",
+//     };
+//     const msg = msgs[data.type] ?? "⚠ Falha de rede detectada.";
+//     (window as any).HUD?.notify(msg, "error");
+//     (window as any).Phone?.chat?.receive("ctOS", msg);
+// });
+
+// // ── Responde a requisição HTTP virtual de outro player ────────────────────────
+// SocketManager.io.on("net:http-req", (data:{fromId:string;targetIp:string}) => {
+//     const eth0 = _netState.interfaces.find(i=>i.name==="eth0");
+//     if (eth0?.ip === data.targetIp) {
+//         const resp = _httpServe(data.targetIp);
+//         SocketManager.io.emit("net:http-res", { toId:data.fromId, ...resp });
+//     }
+// });
+
+// // ── Recebe resposta HTTP (curl para outro player) ─────────────────────────────
+// SocketManager.io.on("net:http-res", (data:{status:number;body:string;from:string}) => {
+//     (window as any).__netHttpRes = data;
+//     (window as any).Phone?.browser?.load?.(data.body, data.status, data.from);
+// });
+
+function _netBroadcast(){
+    SocketManager.io.emit("net:state", _netState);
+}
+
+// ── Ping virtual ──────────────────────────────────────────────────────────────
+function _netPing(host:string):{ok:boolean;msg:string;ms?:number;hops?:string[]}{
+    if (host==="127.0.0.1"||host==="localhost") return {ok:true,msg:"",ms:0.05};
+    const upIface = _netState.interfaces.find(i=>i.up&&i.ip&&i.name!=="lo");
+    if (!upIface) return {ok:false,msg:"Network unreachable — configure IP: ip addr add <IP>/24 dev eth0"};
+    const route = _netFindRoute(host);
+    if (!route) return {ok:false,msg:`No route to host — adicione: ip route add default via <gateway>`};
+    const peer = _netFindPeerByIP(host);
+    if (!peer) return {ok:false,msg:`Request timeout — ${host} não está na rede virtual (ninguém com esse IP)`};
+    const ms = parseFloat((1+Math.random()*6).toFixed(2));
+    const hops = route.via ? [route.via, host] : [host];
+    return {ok:true,msg:"",ms,hops};
+}
+
+function _netFindRoute(ip:string):_NetRoute|undefined{
+    return _netState.routes.find(r=>{
+        const [,bits]=r.dest.split("/");
+        if (!bits) return r.dest===ip;
+        return _inSubnet(ip,r.dest);
+    });
+}
+
+function _netFindPeerByIP(ip:string):_NetNode|undefined{
+    const peers = (window as any).__netPeers as Record<string,_NetNode>;
+    return Object.values(peers).find(n=>n.interfaces.some(i=>i.ip===ip));
+}
+
+// ── ifconfig ──────────────────────────────────────────────────────────────────
+function _netIfconfig(ifaceName?:string):string{
+    const ifaces = ifaceName
+        ? _netState.interfaces.filter(i=>i.name===ifaceName)
+        : _netState.interfaces;
+    if (!ifaces.length) return `${ifaceName}: Device not found`;
+    return ifaces.map(i=>[
+        `${i.name}: flags=${i.up?"4163<UP,BROADCAST,RUNNING,MULTICAST>":"4098<BROADCAST,MULTICAST>"}  mtu 1500`,
+        i.ip
+            ? `        inet ${i.ip}  netmask ${_prefixMask(i.prefix)}  broadcast ${_bcastAddr(i.ip,i.prefix)}`
+            : `        [sem endereço — use: ip addr add <IP>/<prefix> dev ${i.name}]`,
+        `        ether ${i.mac}`,
+    ].join("\n")).join("\n\n");
+}
+
+// ── set IP ────────────────────────────────────────────────────────────────────
+function _netSetIP(ifaceName:string, ip:string, prefix=24):string{
+    if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return `Erro: IP inválido: ${ip}`;
+    // Verifica conflito com peers
+    const peers = (window as any).__netPeers as Record<string,_NetNode>;
+    for (const n of Object.values(peers)){
+        if (n.interfaces.some(i=>i.ip===ip))
+            return `Erro: IP ${ip} já em uso por ${n.playerName} (${n.hostname})`;
+    }
+    const iface = _netState.interfaces.find(i=>i.name===ifaceName);
+    if (!iface) return `Erro: interface ${ifaceName} não encontrada`;
+    iface.ip=ip; iface.prefix=prefix; iface.up=true;
+    // Rota de rede local automática (como Linux)
+    const net = _netAddr(ip,prefix);
+    _netRouteAdd(`${net}/${prefix}`, undefined, ifaceName, 0);
+    _netBroadcast();
+    return ` ${ifaceName}: inet ${ip}/\${prefix}  mac ${iface.mac}\n  Link: UP`;
+}
+
+function _netDelIP(ifaceName:string):string{
+    const iface = _netState.interfaces.find(i=>i.name===ifaceName);
+    if (!iface) return `interface ${ifaceName} não encontrada`;
+    iface.ip=undefined; iface.up=false; _netBroadcast();
+    return `IP removido de \${ifaceName}`;
+}
+
+function _netLinkSet(ifaceName:string, up:boolean):string{
+    const iface = _netState.interfaces.find(i=>i.name===ifaceName);
+    if (!iface) return `interface \${ifaceName} não encontrada`;
+    iface.up=up; _netBroadcast();
+    return `  ${ifaceName}: link ${up} \"UP\":\"DOWN \"}`;
+}
+
+// ── rotas ─────────────────────────────────────────────────────────────────────
+function _netRouteAdd(dest:string, via?:string, dev="eth0", metric=100):string{
+    if (_netState.routes.find(r=>r.dest===dest&&r.via===via)) return `Rota ${dest} já existe.`;
+    _netState.routes.push({dest,via,dev,metric});
+    _netState.routes.sort((a,b)=>{
+        const ba=parseInt(a.dest.split("/")[1]??"32"); const bb=parseInt(b.dest.split("/")[1]??"32");
+        return bb!==ba?bb-ba:a.metric-b.metric;
+    });
+    _netBroadcast();
+    return `Rota adicionada: \${dest} \${via?"via "+via:"direta"} dev \${dev}`;
+}
+
+function _netRouteDel(dest:string):string{
+    const before=_netState.routes.length;
+    _netState.routes=_netState.routes.filter(r=>r.dest!==dest);
+    if (_netState.routes.length===before) return `Erro: rota \${dest} não encontrada`;
+    _netBroadcast();
+    return `Rota ${dest} removida.`;
+}
+
+function _netRouteShow():string{
+    if (!_netState.routes.length)
+        return "  Tabela vazia — use: ip route add default via <gateway>";
+    const hdr=`Kernel IP routing table\n\${"Destino".padEnd(20)}\${"Gateway".padEnd(16)}\${"Máscara".padEnd(16)}Iface`;
+    const rows=_netState.routes.map(r=>{
+        const [net,bits]=r.dest.split("/");
+        return `\${net.padEnd(20)}\${(r.via??"0.0.0.0").padEnd(16)}\${_prefixMask(parseInt(bits??"32")).padEnd(16)}\${r.dev}`;
+    });
+    return [hdr,...rows].join("\n");
+}
+
+// ── netstat / arp / nmap ──────────────────────────────────────────────────────
+function _netNetstat():string{
+    const hdr=`Active Internet connections\n\${"Proto".padEnd(8)}\${"Local Address".padEnd(22)}\${"State".padEnd(12)}Service`;
+    const rows=_netState.services.filter(s=>s.running&&s.port>0)
+        .map(s=>`\${"tcp".padEnd(8)}\${("0.0.0.0:"+s.port).padEnd(22)}\${"LISTEN".padEnd(12)}\${s.name}`);
+    return rows.length?[hdr,...rows].join("\n"):"Nenhuma porta aberta.";
+}
+
+function _netArp():string{
+    const peers=(window as any).__netPeers as Record<string,_NetNode>;
+    const lines=["Address          HWtype  HWaddress           Iface       Player"];
+    for (const n of Object.values(peers)){
+        const e=n.interfaces.find(i=>i.name==="eth0");
+        if (e?.ip&&e.up)
+            lines.push(`\${e.ip.padEnd(17)}ether   \${e.mac.padEnd(20)}\${("eth0").padEnd(12)}\${n.playerName}`);
+    }
+    return lines.length>1?lines.join("\n"):"Tabela ARP vazia — faça ping para popular.";
+}
+
+function _netNmap(ip:string):string{
+    if (ip==="127.0.0.1"||ip===((_netState.interfaces.find(i=>i.name==="eth0"))?.ip)){
+        const ports=_netState.services.filter(s=>s.running&&s.port>0)
+            .map(s=>`\${String(s.port).padEnd(8)}tcp  open  \${s.name}`);
+        return [`Nmap scan: \${ip} (\${_netState.hostname})`,`Host is up.`,"PORT     STATE SERVICE",...ports,`Done: 1 host`].join("\n");
+    }
+    const peer=_netFindPeerByIP(ip);
+    if (!peer) return `Nmap scan: \${ip}\nHost seems down.`;
+    const ports=peer.services.filter(s=>s.running&&s.port>0)
+        .map(s=>`\${String(s.port).padEnd(8)}tcp  open  \${s.name}`);
+    return [`Nmap scan: \${ip} (\${peer.hostname})`,`Host is up.`,"PORT     STATE SERVICE",...ports,`Done: 1 host`].join("\n");
+}
+
+// ── Serviços ──────────────────────────────────────────────────────────────────
+function _svcStart(name:string):string{
+    if (name==="apache2"){
+        const eth0=_netState.interfaces.find(i=>i.name==="eth0");
+        if (!eth0?.ip) return "Erro: configure IP primeiro — ip addr add <IP>/24 dev eth0";
+        if (!eth0.up)  return "Erro: interface eth0 está DOWN — ip link set eth0 up";
+        // Verifica se existe index.html no FS
+        let hasHtml=false;
+        for (const dir of Object.values(diretories)){
+            if ((dir as any).contentFile?.some((f:any)=>f.name.endsWith(".html"))){ hasHtml=true; break; }
+        }
+        if (!hasHtml) return `Erro: nenhum arquivo .html encontrado.\nCrie um com: nano index.html "<h1>Meu Site</h1>"`;
+    }
+    let svc=_netState.services.find(s=>s.name===name);
+    if (svc){
+        if (svc.running) return `\${name} já está rodando (PID \${svc.pid}).`;
+        svc.running=true; svc.pid=Math.floor(Math.random()*20000)+10000; svc.crashMsg=undefined;
+    } else {
+        const portMap:Record<string,number>={apache2:80,nginx:80,sshd:22,ftpd:21,dhcpd:67,nodejs:3000};
+        svc={name,port:portMap[name]??8080,running:true,pid:Math.floor(Math.random()*20000)+10000};
+        _netState.services.push(svc);
+    }
+    processes.push({pid:svc.pid,user:"www-data",cpu:0.3,mem:1.2,command:name,state:"S"});
+    _netBroadcast();
+    return `Starting \${name}...\n  * Starting web server apache2  [ OK ]\n  PID: \${svc.pid}  porta: \${svc.port}`;
+}
+
+function _svcStop(name:string):string{
+    const svc=_netState.services.find(s=>s.name===name);
+    if (!svc||!svc.running) return `\${name} não está rodando.`;
+    svc.running=false;
+    const idx=processes.findIndex(p=>p.pid===svc.pid);
+    if (idx!==-1) processes.splice(idx,1);
+    _netBroadcast();
+    return `Stopping \${name}...  [ OK ]`;
+}
+
+function _svcStatus(name:string):string{
+    const svc=_netState.services.find(s=>s.name===name);
+    if (!svc) return `\${name}: serviço não encontrado.`;
+    if (svc.running) return `● \${name} - ativo (running)\n  PID: \${svc.pid}  porta: \${svc.port}\n  Ativo desde o início da sessão.`;
+    return `○ \${name} - inativo\${svc.crashMsg?"\n  Erro: "+svc.crashMsg:""}`;
+}
+
+// ── Injeção de bugs ───────────────────────────────────────────────────────────
+function _netInjectBug(type:string){
+    switch(type){
+        case "link-down":{ const e=_netState.interfaces.find(i=>i.name==="eth0"); if(e) e.up=false; break; }
+        case "ip-conflict":{
+            // Duplica o IP de um peer aleatório no estado local — cria conflito
+            const peers=Object.values((window as any).__netPeers as Record<string,_NetNode>);
+            const victim=peers.find(n=>n.interfaces.some(i=>i.name==="eth0"&&i.ip));
+            if (victim){ const vIp=victim.interfaces.find(i=>i.name==="eth0")!.ip!;
+                const eth0=_netState.interfaces.find(i=>i.name==="eth0"); if(eth0) eth0.ip=vIp; }
+            break;
+        }
+        case "service-crash":{
+            const a=_netState.services.find(s=>s.name==="apache2");
+            if(a){ a.running=false; a.crashMsg="Segmentation fault (core dumped)"; }
+            break;
+        }
+        case "route-lost":{ _netState.routes=_netState.routes.filter(r=>r.dest!=="0.0.0.0/0"); break; }
+    }
+    _netBroadcast();
+}
+
+// ── HTTP virtual — serve index.html do FS para curl/Phone ─────────────────────
+function _httpServe(targetIp:string):{status:number;body:string;from:string}{
+    const apache=_netState.services.find(s=>s.name==="apache2"&&s.running);
+    if (!apache) return {status:503,from:_netState.hostname,
+        body:`<h1>503 — apache2 offline</h1><p>Use: <code>apache2 start</code></p>`};
+    // Busca index.html no FS virtual
+    for (const dir of Object.values(diretories)){
+        const f=(dir as any).contentFile?.find((f:any)=>f.name==="index.html"||f.name.endsWith(".html"));
+        if (f) return {status:200,from:_netState.hostname,body:f.content};
+    }
+    return {status:404,from:_netState.hostname,
+        body:`<h1>404 — Not Found</h1><p>Crie: <code>nano index.html "&lt;h1&gt;Olá&lt;/h1&gt;"</code></p>`};
+}
+
+function _openBrowserPhone(url:string, targetIp:string){
+    // Tenta servir localmente primeiro; senão pede ao peer via socket
+    const myIp=_netState.interfaces.find(i=>i.name==="eth0")?.ip;
+    if (myIp===targetIp){
+        const resp=_httpServe(targetIp);
+        (window as any).Phone?.browser?.load?.(resp.body, resp.status, resp.from);
+    } else {
+        SocketManager.io.emit("net:http-req",{targetIp});
+        // Resposta chegará via "net:http-res" listener acima
+    }
+}
+
+// ── Browser navigate bridge — phone.js delega aqui ──────────────────────────
+document.addEventListener('browser:navigate', (e: any) => {
+    const url: string = e.detail.url;
+    const m = url.match(/https?:\/\/([\d.]+)/);
+    if (!m) { (window as any).Phone?.browser?.load?.('<h1>URL inválida</h1><p>Use formato http://IP</p>', 400, 'local'); return; }
+    const targetIp = m[1];
+    const ping = _netPing(targetIp);
+    if (!ping.ok) {
+        (window as any).Phone?.browser?.load?.(
+            `<h1>Erro de Rede</h1><p>${ping.msg}</p>`, 503, targetIp
+        );
+        return;
+    }
+    (window as any).Phone?.browser?.setUrl?.(url);
+    _openBrowserPhone(url, targetIp);
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FIM REDE VIRTUAL
+// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 //Compartilhado globalmente
 export const eventEmitter = new EventTarget();
@@ -1274,18 +1616,28 @@ export function addNewCommandLine(terminal: HTMLDivElement) {
 // Dicionário de comandos do terminal
 const commands: Record<string, (args: string[]) => string> = {
     "ping": (args) => {
-        const _h = args[0] || "127.0.0.1";
-        eventEmitter.dispatchEvent(new CustomEvent("terminal:ping", { detail: { host: _h } }));
-        return `  PING ${_h}: 56 data bytes\n64 bytes from ${_h}: icmp_seq=1 ttl=64 time=0.5 ms`;
+        if (!args[0]) return "Uso: ping <IP ou hostname>";
+        const host = args[0];
+        eventEmitter.dispatchEvent(new CustomEvent("terminal:ping", { detail: { host } }));
+        const result = _netPing(host);
+        if (!result.ok) return result.msg;
+        const lines = [
+            `PING ${host}: 56 data bytes`,
+            ...Array.from({ length: 4 }, (_, i) =>
+                `64 bytes from ${host}: icmp_seq=${i+1} ttl=64 time=${(result.ms! + Math.random()*0.4).toFixed(2)} ms`
+            ),
+            `--- ${host} ping statistics ---`,
+            `4 packets transmitted, 4 received, 0% packet loss`,
+        ];
+        return lines.join("\n");
     },
     "pwd": () => {
         eventEmitter.dispatchEvent(new CustomEvent("terminal:pwd", { detail: { dir: currentDir } }));
         return currentDir;
     },
-    "ifconfig": (_) => {
-        const _h = "127.0.0.1";
-        eventEmitter.dispatchEvent(new CustomEvent("terminal:ifconfig", { detail: { host: _h } }));
-        return `  eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n gateway 192.168.1.1`;
+    "ifconfig": (args) => {
+        eventEmitter.dispatchEvent(new CustomEvent("terminal:ifconfig", {}));
+        return _netIfconfig(args[0]);
     },
     "help": () => [
         "╔══════════════════════════════════════════════════════╗",
@@ -1308,6 +1660,22 @@ const commands: Record<string, (args: string[]) => string> = {
         "  ifconfig            Exibe interfaces de rede",
         "  ssh [user@host]     Conecta a servidor remoto",
         "  exit                Encerra sessão remota",
+        "",
+        "── REDE VIRTUAL ────────────────────────────────────────",
+        "  ip addr show                    Interfaces de rede",
+        "  ip addr add <IP>/<pfx> dev eth0  Configura IP",
+        "  ip link set eth0 up|down         Liga/desliga interface",
+        "  ip route show                    Tabela de rotas",
+        "  ip route add default via <gw>    Rota padrão",
+        "  route -n                         Tabela de rotas (legado)",
+        "  netstat -an                      Portas abertas",
+        "  arp -a                           Tabela ARP",
+        "  nmap <IP>                        Scan de portas",
+        "  traceroute <IP>                  Rastreia rota",
+        "  apache2 start|stop|status        Servidor HTTP virtual",
+        "  service <nome> start|stop        Serviços",
+        "  curl http://<IP>                 Abre site no Phone",
+        "  net:status                       Visão geral da rede",
         "",
         "── PROCESSOS ───────────────────────────────────────────",
         "  top                 Monitor em tempo real (q para sair)",
@@ -1440,12 +1808,12 @@ const commands: Record<string, (args: string[]) => string> = {
     },
     "nano": (args) => {
         if (args.length < 2) {
-            return "Uso: nano [arquivo.ext] \"conteúdo\" (extensões: .txt, .js, .py)";
+            return "Uso: nano [arquivo.ext] \"conteúdo\" (extensões: .txt, .html, .css, .js, .py)";
         }
 
         const fileName = args[0];
         const contentMatch = args.join(" ").match(/\"(.*?)\"/);
-        const allowedExtensions = [".txt", ".js", ".py"];
+        const allowedExtensions = [".txt", ".js", ".py", ".html", ".css"];
 
         if (!contentMatch) {
             return "Erro: O conteúdo deve estar entre aspas. Exemplo: nano arquivo.txt \"seu texto aqui\"";
@@ -1692,8 +2060,138 @@ const commands: Record<string, (args: string[]) => string> = {
         }
 
         return `Subcomando desconhecido: '${sub}'. Digite: teach list`;
-    }
-};
+    },
+// ── Rede Virtual — ip / route / apache2 / curl etc ──────────────────────────
+    "ip" : (args: any) => {
+        const sub = args[0]; const sub2 = args[1];
+        if (sub === "addr" || sub === "address") {
+            if (!sub2 || sub2 === "show") return _netIfconfig();
+            if (sub2 === "add") {
+                const cidr = args[2]; const dev = args[4] ?? "eth0";
+                if (!cidr) return "Uso: ip addr add <IP>/<prefix> dev <interface>";
+                const [ip, pfx] = cidr.split("/");
+                return _netSetIP(dev, ip, parseInt(pfx ?? "24"));
+            }
+            if (sub2 === "del" || sub2 === "delete") {
+                const dev = args[4] ?? "eth0";
+                return _netDelIP(dev);
+            }
+        }
+        if (sub === "link") {
+            if (!sub2 || sub2 === "show") return _netIfconfig();
+            if (sub2 === "set") {
+                const dev = args[2]; const state = args[3];
+                if (!dev || !state) return "Uso: ip link set <interface> up|down";
+                return _netLinkSet(dev, state === "up");
+            }
+        }
+        if (sub === "route") {
+            if (!sub2 || sub2 === "show") return _netRouteShow();
+            if (sub2 === "add") {
+                const dest = args[2] === "default" ? "0.0.0.0/0" : args[2];
+                const via  = args[4]; const dev = args[6] ?? "eth0";
+                if (!dest) return "Uso: ip route add <destino> via <gateway> [dev <iface>]";
+                return _netRouteAdd(dest, via, dev);
+            }
+            if (sub2 === "del" || sub2 === "delete") {
+                const dest = args[2] === "default" ? "0.0.0.0/0" : args[2];
+                return _netRouteDel(dest);
+            }
+        }
+        return [
+            "Uso: ip <objeto> <comando>",
+            "  ip addr show                        Interfaces",
+            "  ip addr add <IP>/<prefix> dev eth0  Configura IP",
+            "  ip link set eth0 up|down             Liga/desliga",
+            "  ip route show                        Rotas",
+            "  ip route add default via <gateway>   Rota padrão",
+        ].join("\n");
+    },
+    "route": (args) => {
+        if (!args[0] || args[0] === "-n") return _netRouteShow();
+        if (args[0] === "add") {
+            const dest = args[1] === "default" ? "0.0.0.0/0" : args[1];
+            return _netRouteAdd(dest, args[3], args[5] ?? "eth0");
+        }
+        if (args[0] === "del") return _netRouteDel(args[1] === "default" ? "0.0.0.0/0" : args[1]);
+        return "Uso: route -n | route add default gw <IP>";
+    },
+    "traceroute": (args) => {
+        if (!args[0]) return "Uso: traceroute <IP>";
+        const r = _netPing(args[0]);
+        if (!r.ok) return `traceroute: ${r.msg}`;
+        const hops = r.hops ?? [args[0]];
+        return `traceroute to ${args[0]}, max 30 hops\n` +
+            hops.map((h, i) => `  ${i+1}  ${h}  ${(1+Math.random()*4).toFixed(2)} ms`).join("\n");
+    },
+    "netstat": (_args) => _netNetstat(),
+    "arp": (_args) => _netArp(),
+    "nmap": (args) => {
+        if (!args[0]) return "Uso: nmap <IP>";
+        return _netNmap(args[0]);
+    },
+    "hostname": (args) => {
+        if (args[0]) { _netState.hostname = args[0]; return `hostname: ${args[0]}`; }
+        return _netState.hostname;
+    },
+    "apache2": (args) => {
+        const sub = args[0];
+        if (!sub) return "Uso: apache2 [start|stop|restart|status]";
+        if (sub === "start" || sub === "restart") return _svcStart("apache2");
+        if (sub === "stop")   return _svcStop("apache2");
+        if (sub === "status") return _svcStatus("apache2");
+        return `apache2: subcomando desconhecido: ${sub}`;
+    },
+    "service": (args) => {
+        const name = args[0]; const sub = args[1];
+        if (!name || !sub) return "Uso: service <nome> start|stop|status";
+        if (sub === "start")  return _svcStart(name);
+        if (sub === "stop")   return _svcStop(name);
+        if (sub === "status") return _svcStatus(name);
+        return `service: ação desconhecida: ${sub}`;
+    },
+    "systemctl": (args) => {
+        const sub = args[0]; const name = args[1];
+        if (!sub || !name) return "Uso: systemctl [start|stop|restart|status] <serviço>";
+        if (sub === "start" || sub === "restart") return _svcStart(name);
+        if (sub === "stop")   return _svcStop(name);
+        if (sub === "status") return _svcStatus(name);
+        if (sub === "enable" || sub === "disable") return `${name} ${sub}d. (simulado)`;
+        return `systemctl: operação desconhecida: ${sub}`;
+    },
+    "curl": (args) => {
+        const url = args[0];
+        if (!url) return "Uso: curl http://<IP>";
+        const m = url.match(/https?:\/\/([\d.]+)/);
+        if (!m) return "Erro: use formato http://<IP>";
+        const targetIp = m[1];
+        const ping = _netPing(targetIp);
+        if (!ping.ok) return `curl: (7) Failed to connect to ${targetIp}: ${ping.msg}`;
+        _openBrowserPhone(url, targetIp);
+        return `  Conectando a ${targetIp}... abrindo no Phone > Browser`;
+    },
+    "net:status": (_args) => {
+        const nodes: string[] = ["══ REDE VIRTUAL ══════════════════════════════════════"];
+        const peers = (window as any).__netPeers as Record<string, any> ?? {};
+        const me = _netState;
+        const eth0 = me.interfaces.find((i:any) => i.name === "eth0");
+        nodes.push(` ● (você) ${me.hostname.padEnd(22)} ${(eth0?.ip ?? "—").padEnd(16)} apache2:${_netState.services.find((s:any)=>s.name==="apache2")?.running?"▶":"■"}`);
+        for (const [id, n] of Object.entries(peers)) {
+            const e = (n as any).interfaces?.find((i:any) => i.name === "eth0");
+            nodes.push(` ○ ${(n as any).playerName?.padEnd(16) ?? id.slice(0,8).padEnd(16)} ${((n as any).hostname ?? "").padEnd(22)} ${(e?.ip ?? "—").padEnd(16)} apache2:${(n as any).services?.find((s:any)=>s.name==="apache2")?.running?"▶":"■"}`);
+        }
+        return nodes.join("\n");
+    },
+    "net:bug": (args) => {
+        const isAdmin = infoPlayer.role === "admin" || infoPlayer.role === "moderator";
+        if (!isAdmin) return "Permissão negada. Apenas admin ou moderador.";
+        const bug = args[0]; const target = args[1];
+        const valid = ["link-down","ip-conflict","service-crash","route-lost"];
+        if (!valid.includes(bug)) return `Bugs: ${valid.join(", ")}\nUso: net:bug <tipo> [socketId]`;
+        SocketManager.io.emit("net:bug:inject", { type: bug, targetId: target ?? null });
+        return `Bug "${bug}" injetado${target ? ` em ${target}` : " em todos"}.`;
+    },
+}
 
 // Executar um comando digitado
 function executeCommand(command: string, terminal: HTMLDivElement) {

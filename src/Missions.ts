@@ -184,7 +184,7 @@ e iniciar sua jornada de hacker.`,
             instruction: 'Pressione T para abrir o terminal e aguarde o boot do HackOS completar.',
             position: POS.sala,
             radius:   30,
-            reward:   { money: 15, energy: 10 },
+            reward:   { money: 150, energy: 10 },
             helper:   true,
             listenTo: 'terminal:opened',
             onStart: () => {
@@ -225,7 +225,7 @@ all available commands.`,
             instruction: 'No terminal: use ls para listar arquivos, cd home para entrar na pasta, pwd para ver onde está.',
             position: POS.sala,
             radius:   30,
-            reward:   { money: 20, energy: 5 },
+            reward:   { money: 200, energy: 5 },
             helper:   false,
             listenTo: 'terminal:pwd',
             onStart: () => {
@@ -272,7 +272,7 @@ Agora leia o briefing secreto.`,
             instruction: 'Dentro de /home/, execute: cat briefing.txt',
             position: POS.sala,
             radius:   30,
-            reward:   { money: 15 },
+            reward:   { money: 200 },
             helper:   false,
             listenTo: 'terminal:cat',
             onStart: () => {
@@ -310,7 +310,7 @@ Agora crie seu proprio arquivo.`,
             instruction: 'Crie um arquivo com nano: nano diario.txt "Missao iniciada"',
             position: POS.sala,
             radius:   30,
-            reward:   { money: 5, health: 5 },
+            reward:   { money: 250, health: 5 },
             helper:   false,
             listenTo: 'terminal:nano',
             onStart: () => {
@@ -353,7 +353,7 @@ sobrescreve o conteudo existente.`,
             instruction: 'Crie uma pasta para seus projetos: mkdir projetos',
             position: POS.sala,
             radius:   30,
-            reward:   { money: 10 },
+            reward:   { money: 200 },
             helper:   false,
             listenTo: 'terminal:mkdir',
             onStart: () => {
@@ -391,10 +391,10 @@ arquivos que nao precisa mais.`,
         {
             id:    'find-malware',
             title: '🔍 Identifique o processo suspeito',
-            instruction: 'Abra o terminal e use top para encontrar o processo consumindo mais CPU. Digite ls para listar.',
+            instruction: 'Abra o terminal e use top ou ps aux para encontrar o processo consumindo mais CPU.',
             position: POS.professor,
             radius:   3,
-            reward:   { money: 2 },
+            reward:   { money: 250 },
             helper:   true,
             listenTo: 'terminal:ls',   // ls é o evento mais genérico — confirma que o terminal foi aberto
             onStart: () => {
@@ -436,7 +436,7 @@ Agora encerre-o com:
             instruction: 'No terminal, encerre o processo malicioso: kill -9 4096',
             position: POS.professor,
             radius:   3,
-            reward:   { money: 85, health: 20, energy: 15 },
+            reward:   { money: 500, health: 20, energy: 15 },
             helper:   true,
             listenTo: 'remove_pid',
             onStart: () => {
@@ -491,7 +491,7 @@ Use top para confirmar que sumiu.`,
             instruction: 'Execute ifconfig para ver seu IP, depois ping 192.168.1.1 para testar a conexão.',
             position: POS.sala,
             radius:   30,
-            reward:   { money: 10, energy: 10 },
+            reward:   { money: 300, energy: 10 },
             helper:   false,
             listenTo: 'terminal:ifconfig',
             onStart: () => {
@@ -531,7 +531,7 @@ Proxima etapa: acesso remoto SSH.`,
             instruction: 'Aproxime-se do servidor e conecte via SSH: ssh server@2025',
             position: POS.servidor,
             radius:   3,
-            reward:   { money: 90, energy: 15 },
+            reward:   { money: 600, energy: 15 },
             helper:   true,
             listenTo: 'terminal:ssh',
             onStart: () => {
@@ -579,7 +579,7 @@ Use exit para voltar ao local.`,
             instruction: 'Abra o Editor C e imprima exatamente: Ola, Mundo!',
             position: POS.sala,
             radius:   30,
-            reward:   { money: 10, energy: 10 },
+            reward:   { money: 300, energy: 10 },
             helper:   false,
             listenTo: 'c:output',
             onStart: () => {
@@ -614,7 +614,7 @@ return 0 indica sucesso.`,
             instruction: 'Declare dois int, some-os e imprima o resultado. Ex: a=7, b=3 → 10.',
             position: POS.sala,
             radius:   30,
-            reward:   { money: 15, energy: 5 },
+            reward:   { money: 400, energy: 5 },
             helper:   false,
             listenTo: 'c:output',
             onStart: () => {
@@ -923,7 +923,7 @@ são muito mais práticas que printf!`,
 
 `,
                     type:  'info',
-                });
+                })
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -1063,8 +1063,7 @@ const resultado = nums
     .filter(n => n % 2 === 0)  // pares: [2,4]
 `,
                     type:  'info',
-                });          
-                    
+                })
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -1269,6 +1268,11 @@ export class MissionManager {
         if (def.reward.money)  infoPlayer.money  += def.reward.money;
         if (def.reward.health) infoPlayer.health  = Math.min(100, infoPlayer.health + def.reward.health);
         if (def.reward.energy) infoPlayer.energy  = Math.min(100, infoPlayer.energy + def.reward.energy);
+
+        // Atualiza o saldo e recarrega os cards da loja imediatamente.
+        // Sem isso a aba Loja continua mostrando o saldo antigo até o player
+        // fechar e reabrir o Phone manualmente.
+        window.Phone?.refreshShop?.();
 
         const parts: string[] = [];
         if (def.reward.money)  parts.push(`+$${def.reward.money}`);

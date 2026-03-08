@@ -132,6 +132,9 @@ export default class PlayerController {
     document.addEventListener("keyup",   this.onKeydown);
     this.actions["terminal"] = false;
     PlayerController.instance = this;
+    // Expõe em window para phone.js e outros módulos não-TypeScript acederem.
+    // phone.js busca: window.PlayerController?.instance ?? window.__playerController
+    (window as any).PlayerController = PlayerController;
   }
 
   private async initBVH() {

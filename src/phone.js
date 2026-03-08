@@ -191,6 +191,90 @@
       position: relative;
     }
 
+
+    /* ──────── BROWSER PAGE ──────── */
+    #ctos-browser-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-bottom: 1px solid rgba(0,207,255,0.08);
+      flex-shrink: 0;
+    }
+    #ctos-browser-url {
+      flex: 1;
+      background: rgba(0,207,255,0.05);
+      border: 1px solid rgba(0,207,255,0.15);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: rgba(255,255,255,0.7);
+      outline: none;
+      letter-spacing: .05em;
+    }
+    #ctos-browser-url:focus { border-color: rgba(0,207,255,0.45); }
+    #ctos-browser-go {
+      background: rgba(0,207,255,0.12);
+      border: 1px solid rgba(0,207,255,0.25);
+      border-radius: 5px;
+      color: #00cfff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      padding: 4px 9px;
+      cursor: pointer;
+      letter-spacing: .08em;
+    }
+    #ctos-browser-go:hover { background: rgba(0,207,255,0.22); }
+    #ctos-browser-status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      letter-spacing: .12em;
+      padding: 3px 10px;
+      flex-shrink: 0;
+    }
+    #ctos-browser-status.ok  { color: #00ff88; }
+    #ctos-browser-status.err { color: #ff4444; }
+    #ctos-browser-frame {
+      flex: 1;
+      background: #fff;
+      border: none;
+      min-height: 0;
+    }
+    #ctos-browser-splash {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px;
+    }
+    #ctos-browser-splash .ctos-br-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      color: rgba(0,207,255,0.6);
+      letter-spacing: .2em;
+    }
+    #ctos-browser-splash .ctos-br-hint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: .08em;
+      text-align: center;
+      line-height: 1.8;
+    }
+    #ctos-browser-splash .ctos-br-steps {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: rgba(0,207,255,0.35);
+      border: 1px solid rgba(0,207,255,0.1);
+      border-radius: 6px;
+      padding: 10px 14px;
+      line-height: 2;
+      margin-top: 4px;
+    }
+
     /* ── App bar (tabs) ── */
     #ctos-appbar {
       display: flex;
@@ -789,6 +873,12 @@
 
   // ── SVG icons ──────────────────────────────────────────────────────────────
   const SVG = {
+    browser: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <rect x="2" y="4" width="20" height="16" rx="2"/>
+      <line x1="2" y1="9" x2="22" y2="9"/>
+      <circle cx="6" cy="6.5" r="1"/><circle cx="10" cy="6.5" r="1"/>
+      <rect x="14" y="5.5" width="6" height="2" rx="1"/>
+    </svg>`,
     phone: `<svg viewBox="0 0 24 24" fill="none" stroke="#00cfff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.4 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.81a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.02z"/></svg>`,
     chat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
     inbox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`,
@@ -862,6 +952,10 @@
               ${SVG.shop}
               <span class="ctos-tab-label">Loja</span>
             </button>
+            <button class="ctos-tab" data-tab="browser">
+              ${SVG.browser}
+              <span class="ctos-tab-label">Browser</span>
+            </button>
           </div>
 
           <!-- Chat page -->
@@ -909,6 +1003,26 @@
             <div id="ctos-shop-list">
               <!-- Preenchido por renderShop() -->
             </div>
+          </div>
+
+          <!-- Browser page -->
+          <div class="ctos-page" id="ctos-page-browser">
+            <div id="ctos-browser-bar">
+              <input id="ctos-browser-url" type="text" placeholder="http://192.168.1.10" spellcheck="false"/>
+              <button id="ctos-browser-go">IR</button>
+            </div>
+            <div id="ctos-browser-status" class="ok" style="display:none"></div>
+            <div id="ctos-browser-splash">
+              <div class="ctos-br-title">ctOS BROWSER</div>
+              <div class="ctos-br-hint">Acesse um servidor HTTP virtual<br>configurado por você ou outro player.</div>
+              <div class="ctos-br-steps">
+                1. nano index.html "&lt;h1&gt;Meu Site&lt;/h1&gt;"<br>
+                2. ip addr add 192.168.1.10/24 dev eth0<br>
+                3. apache2 start<br>
+                4. curl http://192.168.1.10
+              </div>
+            </div>
+            <iframe id="ctos-browser-frame" style="display:none" sandbox="allow-scripts allow-same-origin"></iframe>
           </div>
         </div>
 
@@ -975,6 +1089,9 @@
     if (_activeTab === 'shop') {
       renderShop();
     }
+    if (_activeTab === 'browser') {
+      // nada a limpar
+    }
   }
   function closePhone() {
     _open = false;
@@ -998,6 +1115,7 @@
     if (id === 'chat')  { _unreadChat  = 0; setTimeout(scrollToBottom, 30); }
     if (id === 'inbox') { _unreadInbox = 0; markAllInboxRead(); }
     if (id === 'shop')  { renderShop(); }
+    if (id === 'browser') { /* browser já gerencia estado interno */ }
     updateBadges();
   });
 
@@ -1261,22 +1379,23 @@
   }
 
   // ── Renderiza a loja ───────────────────────────────────────────────────────
-  function renderShop() {
+  // Referências vivas dos elementos por item.id — criados UMA vez em buildShop()
+  // e atualizados em-place por renderShop(). Nunca destrói o DOM na hot path.
+  const _shopRefs = {}; // { [item.id]: { card, fill, statLbl, droneLbl, btn } }
+  let   _shopBuilt = false;
+
+  // Constrói o DOM da loja UMA única vez
+  function buildShop() {
     const list = document.getElementById('ctos-shop-list');
-    const balEl = document.getElementById('ctos-shop-balance-val');
     if (!list) return;
+    list.innerHTML = '';
+    _shopBuilt = true;
 
-    const money = getMoney();
-    if (balEl) balEl.textContent = money.toLocaleString('pt-BR');
-
-    // Agrupa por categoria
     const cats = {};
     SHOP_ITEMS.forEach(item => {
       if (!cats[item.category]) cats[item.category] = [];
       cats[item.category].push(item);
     });
-
-    list.innerHTML = '';
 
     Object.entries(cats).forEach(([cat, items]) => {
       const sec = document.createElement('div');
@@ -1285,105 +1404,127 @@
       list.appendChild(sec);
 
       items.forEach(item => {
-        const card = buildShopCard(item, money);
+        const isDrone = item.id === 'drone_toggle';
+        const card = document.createElement('div');
+        card.className = 'ctos-shop-card ' + item.type;
+
+        // Ícone
+        const iconEl = document.createElement('div');
+        iconEl.className = 'ctos-shop-icon';
+        iconEl.textContent = item.icon;
+        card.appendChild(iconEl);
+
+        // Info
+        const infoEl = document.createElement('div');
+        infoEl.className = 'ctos-shop-info';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'ctos-shop-name';
+        nameEl.textContent = item.name;
+        infoEl.appendChild(nameEl);
+
+        const descEl = document.createElement('div');
+        descEl.className = 'ctos-shop-desc';
+        descEl.textContent = item.desc;
+        infoEl.appendChild(descEl);
+
+        // Barra de stat (referência guardada para update em-place)
+        let fill = null, statLbl = null;
+        if (item.stat) {
+          const statRow = document.createElement('div');
+          statRow.className = 'ctos-shop-stat';
+          const bar = document.createElement('div');
+          bar.className = 'ctos-shop-stat-bar';
+          fill = document.createElement('div');
+          fill.className = 'ctos-shop-stat-fill';
+          bar.appendChild(fill);
+          statLbl = document.createElement('span');
+          statLbl.className = 'ctos-shop-stat-label';
+          statRow.appendChild(bar);
+          statRow.appendChild(statLbl);
+          infoEl.appendChild(statRow);
+        }
+
+        // Label de estado do drone (referência guardada)
+        let droneLbl = null;
+        if (isDrone) {
+          droneLbl = document.createElement('div');
+          droneLbl.className = 'ctos-shop-desc';
+          droneLbl.style.marginTop = '3px';
+          infoEl.appendChild(droneLbl);
+        }
+
+        card.appendChild(infoEl);
+
+        // Botão + preço
+        const buyCol = document.createElement('div');
+        buyCol.className = 'ctos-shop-buy';
+
+        const priceEl = document.createElement('div');
+        priceEl.className = 'ctos-shop-price';
+        if (item.price === 0) {
+          priceEl.textContent = 'GRÁTIS';
+          priceEl.style.color = 'rgba(255,255,255,0.3)';
+          priceEl.style.fontSize = '8px';
+        } else {
+          priceEl.innerHTML = '<span>₢</span>' + item.price.toLocaleString('pt-BR');
+        }
+        buyCol.appendChild(priceEl);
+
+        const btn = document.createElement('button');
+        btn.className = 'ctos-shop-btn';
+        btn.textContent = isDrone ? 'Ligar' : (item.price === 0 ? 'Usar' : 'Comprar');
+        btn.addEventListener('click', () => {
+          if (btn.disabled) return;
+          executePurchase(item, card, btn);
+        });
+        buyCol.appendChild(btn);
+        card.appendChild(buyCol);
+
         list.appendChild(card);
+
+        // Guarda referências vivas para update em-place
+        _shopRefs[item.id] = { card, fill, statLbl, droneLbl, btn };
       });
     });
   }
 
-  function buildShopCard(item, money) {
-    const canAfford = item.price === 0 || money >= item.price;
-    const isDrone   = item.id === 'drone_toggle';
+  // Atualiza apenas os valores dinâmicos — sem tocar no DOM estrutural
+  function renderShop() {
+    if (!_shopBuilt) buildShop();
 
-    const card = document.createElement('div');
-    card.className = 'ctos-shop-card ' + item.type + (canAfford ? '' : ' disabled');
+    const balEl = document.getElementById('ctos-shop-balance-val');
+    const money = getMoney();
+    if (balEl) balEl.textContent = money.toLocaleString('pt-BR');
 
-    // Ícone
-    const iconEl = document.createElement('div');
-    iconEl.className = 'ctos-shop-icon';
-    iconEl.textContent = item.icon;
-    card.appendChild(iconEl);
+    SHOP_ITEMS.forEach(item => {
+      const refs = _shopRefs[item.id];
+      if (!refs) return;
+      const { card, fill, statLbl, droneLbl, btn } = refs;
+      const isDrone    = item.id === 'drone_toggle';
+      const canAfford  = item.price === 0 || money >= item.price;
 
-    // Info
-    const info = document.createElement('div');
-    info.className = 'ctos-shop-info';
+      // Card: disabled visual
+      card.classList.toggle('disabled', !canAfford);
 
-    const nameEl = document.createElement('div');
-    nameEl.className = 'ctos-shop-name';
-    nameEl.textContent = item.name;
-    info.appendChild(nameEl);
+      // Barra de stat
+      if (fill && statLbl && item.stat) {
+        const cur = getStat(item.stat);
+        fill.style.width   = cur + '%';
+        statLbl.textContent = cur + '%';
+      }
 
-    const descEl = document.createElement('div');
-    descEl.className = 'ctos-shop-desc';
-    descEl.textContent = item.desc;
-    info.appendChild(descEl);
+      // Drone: estado ON/OFF
+      if (isDrone && droneLbl) {
+        const pc  = window.PlayerController?.instance ?? window.__playerController;
+        const isOn = pc?.playerModel?.IsDroneActive ?? false;
+        droneLbl.textContent = 'Status: ' + (isOn ? '🟢 ATIVO' : '⚫ INATIVO');
+        btn.textContent = isOn ? 'Desligar' : 'Ligar';
+        btn.classList.toggle('drone-on', isOn);
+      }
 
-    // Barra de stat (só para itens com stat)
-    if (item.stat) {
-      const statRow = document.createElement('div');
-      statRow.className = 'ctos-shop-stat';
-
-      const bar = document.createElement('div');
-      bar.className = 'ctos-shop-stat-bar';
-      const fill = document.createElement('div');
-      fill.className = 'ctos-shop-stat-fill';
-      const cur = getStat(item.stat);
-      fill.style.width = cur + '%';
-      bar.appendChild(fill);
-
-      const lbl = document.createElement('span');
-      lbl.className = 'ctos-shop-stat-label';
-      lbl.textContent = cur + '%';
-
-      statRow.appendChild(bar);
-      statRow.appendChild(lbl);
-      info.appendChild(statRow);
-    }
-
-    // Stat do drone: mostra ON/OFF
-    if (isDrone) {
-      const pc = window.PlayerController?.instance ?? window.__playerController;
-      const isOn = pc?.playerModel?.IsDroneActive ?? false;
-      const lbl = document.createElement('div');
-      lbl.className = 'ctos-shop-desc';
-      lbl.textContent = 'Status: ' + (isOn ? '🟢 ATIVO' : '⚫ INATIVO');
-      lbl.style.marginTop = '3px';
-      info.appendChild(lbl);
-    }
-
-    card.appendChild(info);
-
-    // Botão + preço
-    const buyCol = document.createElement('div');
-    buyCol.className = 'ctos-shop-buy';
-
-    const priceEl = document.createElement('div');
-    priceEl.className = 'ctos-shop-price';
-    if (item.price === 0) {
-      priceEl.textContent = 'GRÁTIS';
-      priceEl.style.color = 'rgba(255,255,255,0.3)';
-      priceEl.style.fontSize = '8px';
-    } else {
-      priceEl.innerHTML = '<span>₢</span>' + item.price.toLocaleString('pt-BR');
-    }
-    buyCol.appendChild(priceEl);
-
-    const btn = document.createElement('button');
-    btn.className = 'ctos-shop-btn' + (isDrone && (window.PlayerController?.instance ?? window.__playerController)?.playerModel?.IsDroneActive ? ' drone-on' : '');
-    btn.disabled  = !canAfford;
-    btn.textContent = isDrone
-      ? ((window.PlayerController?.instance ?? window.__playerController)?.playerModel?.IsDroneActive ? 'Desligar' : 'Ligar')
-      : (item.price === 0 ? 'Usar' : 'Comprar');
-
-    btn.addEventListener('click', () => {
-      if (!canAfford || btn.disabled) return;
-      executePurchase(item, card, btn);
+      btn.disabled = !canAfford;
     });
-
-    buyCol.appendChild(btn);
-    card.appendChild(buyCol);
-
-    return card;
   }
 
   function executePurchase(item, card, btn) {
@@ -1402,20 +1543,16 @@
     const result = item.action(info);
 
     if (result.ok) {
-      // Debita o dinheiro
-      if (item.price > 0) {
-        info.money = money - item.price;
-      }
+      if (item.price > 0) info.money = money - item.price;
 
-      // Feedback visual na card
+      // Feedback visual na card — só animação, sem reconstruir DOM
       card.classList.remove('bought');
-      void card.offsetWidth; // reflow para reiniciar animation
+      void card.offsetWidth;
       card.classList.add('bought');
 
-      // Notifica via chat do Phone
       window.Phone?.chat.receive('ctOS', result.msg);
 
-      // Re-renderiza para atualizar barras, balanço e status do drone
+      // Atualiza em-place após a compra (sem flash)
       setTimeout(renderShop, 150);
 
     } else {
@@ -1432,6 +1569,56 @@
 
 
   // ── API pública ───────────────────────────────────────────────────────────
+
+  // ── Browser — lógica interna ──────────────────────────────────────────────
+  (function() {
+    const urlInput  = document.getElementById('ctos-browser-url');
+    const goBtn     = document.getElementById('ctos-browser-go');
+    const statusEl  = document.getElementById('ctos-browser-status');
+    const frame     = document.getElementById('ctos-browser-frame');
+    const splash    = document.getElementById('ctos-browser-splash');
+
+    function loadContent(html, statusCode, from) {
+      splash.style.display = 'none';
+      frame.style.display  = 'block';
+      statusEl.style.display = 'block';
+      statusEl.className = statusCode === 200 ? 'ok' : 'err';
+      statusEl.textContent = `HTTP ${statusCode}  ·  ${from || ''}`;
+      // Escreve HTML no iframe via srcdoc para máxima compatibilidade
+      frame.srcdoc = html;
+    }
+
+    function goToUrl() {
+      const url = urlInput.value.trim();
+      if (!url) return;
+      // Delega ao motor de rede via evento — Actions.ts ouve
+      const ev = new CustomEvent('browser:navigate', { detail: { url } });
+      document.dispatchEvent(ev);
+    }
+
+    goBtn.addEventListener('click', goToUrl);
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.stopPropagation(); goToUrl(); }
+      e.stopPropagation(); // evita ativar atalhos do jogo
+    });
+    urlInput.addEventListener('click', (e) => e.stopPropagation());
+
+    // API pública para receber conteúdo (chamada por Actions.ts / socket)
+    window.Phone = window.Phone || {};
+    window.Phone.browser = {
+      load(html, statusCode, from) {
+        loadContent(html, statusCode, from);
+        // Muda para aba browser automaticamente
+        const tab = document.querySelector('.ctos-tab[data-tab="browser"]');
+        if (tab) tab.click();
+        if (!_open) openPhone();
+      },
+      setUrl(url) {
+        urlInput.value = url;
+      }
+    };
+  })();
+
   window.Phone = {
 
     onSend: null, // hook legado
