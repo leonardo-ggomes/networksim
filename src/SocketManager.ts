@@ -36,6 +36,8 @@ function extractAvatarData(data: any): { url: string; name: string } {
     }
 }
 
+declare global { interface Window { HUD?: any; Phone?: any } }
+
 class SocketManager{
    
     loading?: Loading
@@ -100,6 +102,7 @@ class SocketManager{
         this.io.on("npc:state",   this.updateNpcState);
         this.io.on("slide:npc",   this.receiveNpcSlide);
         this.io.on("slide:npc:end", this.receiveNpcSlideEnd);
+        this.io.on("chat:message",  this.receiveChatMessage);
     }
 
     loadPlayers = (players: any) => {
@@ -306,6 +309,17 @@ class SocketManager{
             currentDir,
             file
         })
+    }
+
+    // ── Chat em rede ──────────────────────────────────────────────────────────
+    receiveChatMessage = (data: { from: string; text: string }) => {
+        window.Phone?.chat.receive(data.from, data.text);
+    }
+
+    // Conecta o Phone ao socket para chat em rede.
+    // Chamar após phone.js carregar (ex: no Experience.ts após buildHUD).
+    connectPhone() {
+        window.Phone?.setSocket(this.io);
     }
 
     // Registra avatar e nome, avisa o servidor

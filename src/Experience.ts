@@ -96,6 +96,8 @@ export default class Experience {
             }
         })
 
+        SocketManager.connectPhone()
+
         // Gerenciador de Voz
         this.voiceChatManager = new VoiceChatManager(this.listener);
 

@@ -2,6 +2,7 @@
  * phone.js — ctOS Mobile Device
  *
  * API pública (window.Phone):
+ *   Phone.setSocket(socketInstance)           — conecta ao Socket.IO para chat em rede
  *   Phone.toggle()                          — abre/fecha o smartphone (tecla P)
  *   Phone.open()  / Phone.close()
  *
@@ -20,9 +21,12 @@
 (function () {
   'use strict';
 
+  // ── Socket.IO — referência injetada via Phone.setSocket() ─────────────────
+  let _socket = null;
+
   // ── Estilos ────────────────────────────────────────────────────────────────
   const CSS = `
-    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap');
 
     /* ── Botão flutuante (ícone do phone no HUD) ── */
     #ctos-phone-btn {
@@ -53,7 +57,7 @@
       width: 14px; height: 14px;
       background: #ff3c00;
       border-radius: 50%;
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 8px;
       color: #fff;
       display: flex; align-items: center; justify-content: center;
@@ -165,13 +169,13 @@
       z-index: 5;
     }
     #ctos-statusbar .ctos-time {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 10px;
       color: rgba(255,255,255,0.5);
       letter-spacing: .1em;
     }
     #ctos-statusbar .ctos-sys {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 8px;
       color: rgba(0,207,255,0.45);
       letter-spacing: .2em;
@@ -221,7 +225,7 @@
     .ctos-tab svg { width:16px; height:16px; opacity:0.5; transition:opacity .15s; }
     .ctos-tab.active svg { opacity:1; }
     .ctos-tab-label {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 7px;
       letter-spacing: .2em;
       color: rgba(255,255,255,0.3);
@@ -234,7 +238,7 @@
       width: 12px; height: 12px;
       background: #ff3c00;
       border-radius: 50%;
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 7px;
       color: #fff;
       display: none;
@@ -267,7 +271,7 @@
       text-transform: uppercase;
     }
     #ctos-chat-header .ctos-ch-sub {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 8px;
       letter-spacing: .14em;
       color: rgba(255,255,255,0.2);
@@ -283,7 +287,7 @@
     }
     .ctos-online-dot.you { background: #00cfff; box-shadow: 0 0 4px #00cfff; }
     #ctos-online-label {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 8px;
       color: rgba(255,255,255,0.2);
       letter-spacing: .1em;
@@ -317,7 +321,7 @@
     .ctos-msg.recv { align-self: flex-start; align-items: flex-start; }
 
     .ctos-msg-from {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 8px;
       letter-spacing: .12em;
       color: rgba(0,207,255,0.5);
@@ -328,7 +332,7 @@
 
     .ctos-msg-bubble {
       padding: 7px 11px;
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
       line-height: 1.5;
       color: rgba(255,255,255,0.85);
@@ -347,7 +351,7 @@
       color: rgba(255,255,255,0.9);
     }
     .ctos-msg-time {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 7px;
       color: rgba(255,255,255,0.15);
       margin-top: 2px;
@@ -357,7 +361,7 @@
     /* Separador de data */
     .ctos-date-sep {
       align-self: center;
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 8px;
       letter-spacing: .2em;
       color: rgba(255,255,255,0.12);
@@ -382,7 +386,7 @@
       border: 1px solid rgba(0,207,255,0.18);
       border-radius: 6px;
       padding: 8px 10px;
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
       color: #fff;
       outline: none;
@@ -430,7 +434,7 @@
       color: #00cfff;
     }
     #ctos-inbox-clear {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 8px;
       letter-spacing: .15em;
       color: rgba(255,60,0,0.5);
@@ -463,7 +467,7 @@
     }
     #ctos-inbox-empty svg { width:32px; height:32px; opacity:0.5; }
     #ctos-inbox-empty span {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 9px;
       letter-spacing: .2em;
       color: rgba(255,255,255,0.4);
@@ -498,7 +502,7 @@
       display: flex; align-items: center; gap: 6px; margin-bottom: 3px;
     }
     .ctos-ib-type-badge {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 7px;
       letter-spacing: .18em;
       padding: 1px 5px;
@@ -520,13 +524,13 @@
       flex: 1;
     }
     .ctos-ib-time {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 8px;
       color: rgba(255,255,255,0.15);
       flex-shrink: 0;
     }
     .ctos-ib-body {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 10px;
       color: rgba(255,255,255,0.4);
       line-height: 1.45;
@@ -542,7 +546,7 @@
     }
     .ctos-inbox-item.expanded .ctos-ib-expanded { display: block; }
     .ctos-ib-full-body {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 10px;
       color: rgba(255,255,255,0.55);
       line-height: 1.6;
@@ -566,6 +570,215 @@
     }
     #ctos-homebar-pill:hover { background: rgba(255,255,255,0.25); }
 
+
+    /* ──────── SHOP PAGE ──────── */
+    #ctos-shop-header {
+      padding: 10px 16px 8px;
+      border-bottom: 1px solid rgba(0,207,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    #ctos-shop-header .ctos-sh-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      color: #00cfff;
+      text-transform: uppercase;
+    }
+    #ctos-shop-balance {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #f0b90b;
+      text-shadow: 0 0 8px rgba(240,185,11,0.4);
+    }
+    #ctos-shop-balance svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    #ctos-shop-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0,207,255,0.1) transparent;
+    }
+    #ctos-shop-list::-webkit-scrollbar { width: 3px; }
+    #ctos-shop-list::-webkit-scrollbar-thumb { background: rgba(0,207,255,0.15); }
+
+    .ctos-shop-card {
+      background: rgba(0,207,255,0.04);
+      border: 1px solid rgba(0,207,255,0.12);
+      border-radius: 4px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: ctos-msg-in .2s cubic-bezier(0.2,0,0.4,1) both;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .2s, background .2s;
+    }
+    .ctos-shop-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+    }
+    .ctos-shop-card.energy  { border-left: none; }
+    .ctos-shop-card.energy::before  { background: linear-gradient(180deg, #00cfff, #0066ff); }
+    .ctos-shop-card.health  { border-left: none; }
+    .ctos-shop-card.health::before  { background: linear-gradient(180deg, #00ff9d, #00cc7a); }
+    .ctos-shop-card.drone   { border-left: none; }
+    .ctos-shop-card.drone::before   { background: linear-gradient(180deg, #a78bfa, #7c3aed); }
+    .ctos-shop-card.ammo    { border-left: none; }
+    .ctos-shop-card.ammo::before    { background: linear-gradient(180deg, #ff3c00, #ff6b00); }
+
+    .ctos-shop-card:hover:not(.disabled) {
+      border-color: rgba(0,207,255,0.3);
+      background: rgba(0,207,255,0.07);
+    }
+    .ctos-shop-card.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .ctos-shop-icon {
+      width: 36px; height: 36px;
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
+    .ctos-shop-card.energy .ctos-shop-icon  { background: rgba(0,207,255,0.08); }
+    .ctos-shop-card.health .ctos-shop-icon  { background: rgba(0,255,157,0.08); }
+    .ctos-shop-card.drone  .ctos-shop-icon  { background: rgba(167,139,250,0.08); }
+    .ctos-shop-card.ammo   .ctos-shop-icon  { background: rgba(255,60,0,0.08); }
+
+    .ctos-shop-info { flex: 1; min-width: 0; }
+    .ctos-shop-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
+    .ctos-shop-desc {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: rgba(255,255,255,0.3);
+      line-height: 1.4;
+    }
+    .ctos-shop-stat {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .ctos-shop-stat-bar {
+      flex: 1;
+      height: 2px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 1px;
+      overflow: hidden;
+      max-width: 80px;
+    }
+    .ctos-shop-stat-fill {
+      height: 100%;
+      border-radius: 1px;
+      transition: width .4s ease;
+    }
+    .ctos-shop-card.energy .ctos-shop-stat-fill { background: #00cfff; }
+    .ctos-shop-card.health .ctos-shop-stat-fill { background: #00ff9d; }
+    .ctos-shop-card.drone  .ctos-shop-stat-fill { background: #a78bfa; }
+    .ctos-shop-stat-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: rgba(255,255,255,0.25);
+      flex-shrink: 0;
+    }
+
+    .ctos-shop-buy {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .ctos-shop-price {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: #f0b90b;
+      letter-spacing: .06em;
+    }
+    .ctos-shop-price span {
+      font-size: 7px;
+      color: rgba(240,185,11,0.5);
+      margin-right: 1px;
+    }
+    .ctos-shop-btn {
+      padding: 4px 10px;
+      background: rgba(0,207,255,0.1);
+      border: 1px solid rgba(0,207,255,0.3);
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      letter-spacing: .1em;
+      color: #00cfff;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background .15s, box-shadow .15s, transform .1s;
+      pointer-events: all;
+      white-space: nowrap;
+    }
+    .ctos-shop-btn:hover:not(:disabled) {
+      background: rgba(0,207,255,0.2);
+      box-shadow: 0 0 10px rgba(0,207,255,0.2);
+    }
+    .ctos-shop-btn:active:not(:disabled) { transform: scale(0.95); }
+    .ctos-shop-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .ctos-shop-btn.drone-on {
+      border-color: rgba(167,139,250,0.5);
+      color: #a78bfa;
+      background: rgba(167,139,250,0.12);
+    }
+    .ctos-shop-btn.drone-on:hover {
+      background: rgba(167,139,250,0.22);
+      box-shadow: 0 0 10px rgba(167,139,250,0.2);
+    }
+
+    /* Flash de feedback ao comprar */
+    @keyframes ctos-shop-flash {
+      0%   { opacity: 0.8; transform: scale(1.02); }
+      100% { opacity: 1;   transform: scale(1); }
+    }
+    .ctos-shop-card.bought {
+      animation: ctos-shop-flash .3s ease both;
+    }
+
+    /* Seção de título de categoria */
+    .ctos-shop-section {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7px;
+      letter-spacing: .25em;
+      color: rgba(255,255,255,0.12);
+      text-transform: uppercase;
+      padding: 2px 0 4px;
+    }
+
     /* ── Animação de abertura ── */
     @keyframes ctos-boot {
       from { opacity:0; }
@@ -580,6 +793,8 @@
     inbox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`,
     send: `<svg viewBox="0 0 24 24" fill="none" stroke="#00cfff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
     empty: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12H16L14 15H10L8 12H2"/><path d="M5.45 5.11L2 12V18A2 2 0 004 20H20A2 2 0 0022 18V12L18.55 5.11A2 2 0 0016.76 4H7.24A2 2 0 005.45 5.11Z"/></svg>`,
+    shop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`,
+    coin: `<svg viewBox="0 0 24 24" fill="none" stroke="#f0b90b" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v2m0 8v2M9.5 9.5C9.5 8.1 10.6 7 12 7s2.5 1.1 2.5 2.5c0 3-5 3-5 6.5 0 1.4 1.1 2 2.5 2s2.5-.6 2.5-2"/></svg>`,
   };
 
   // ── Injetar CSS ────────────────────────────────────────────────────────────
@@ -642,6 +857,10 @@
               ${SVG.inbox}
               <span class="ctos-tab-label">Mensagens</span>
             </button>
+            <button class="ctos-tab" data-tab="shop">
+              ${SVG.shop}
+              <span class="ctos-tab-label">Loja</span>
+            </button>
           </div>
 
           <!-- Chat page -->
@@ -674,6 +893,20 @@
                 ${SVG.empty}
                 <span>Sem mensagens</span>
               </div>
+            </div>
+          </div>
+
+          <!-- Shop page -->
+          <div class="ctos-page" id="ctos-page-shop">
+            <div id="ctos-shop-header">
+              <span class="ctos-sh-title">ctOS Market</span>
+              <div id="ctos-shop-balance">
+                ${SVG.coin}
+                <span id="ctos-shop-balance-val">0</span>
+              </div>
+            </div>
+            <div id="ctos-shop-list">
+              <!-- Preenchido por renderShop() -->
             </div>
           </div>
         </div>
@@ -738,6 +971,9 @@
       _unreadInbox = 0;
       updateBadges();
     }
+    if (_activeTab === 'shop') {
+      renderShop();
+    }
   }
   function closePhone() {
     _open = false;
@@ -760,6 +996,7 @@
 
     if (id === 'chat')  { _unreadChat  = 0; setTimeout(scrollToBottom, 30); }
     if (id === 'inbox') { _unreadInbox = 0; markAllInboxRead(); }
+    if (id === 'shop')  { renderShop(); }
     updateBadges();
   });
 
@@ -803,6 +1040,11 @@
     appendMessage('Você', text, 'sent');
     input.value = '';
     input.style.height = 'auto';
+    // Emite via Socket.IO se conectado
+    if (_socket?.connected) {
+      _socket.emit('chat:message', { text });
+    }
+    // Hook legado (compatibilidade)
     if (typeof window.Phone?.onSend === 'function') window.Phone.onSend(text);
   }
 
@@ -901,12 +1143,319 @@
     renderInboxEmpty();
   });
 
+
+  // ── SHOP ──────────────────────────────────────────────────────────────────
+
+  // Catálogo de itens
+  const SHOP_ITEMS = [
+    {
+      id: 'energy_sm',
+      category: 'Vitais',
+      type: 'energy',
+      icon: '🔋',
+      name: 'Recarga Parcial',
+      desc: '+35% energia no dispositivo',
+      price: 150,
+      stat: 'energy',
+      statGain: 35,
+      action(info) {
+        if (info.energy >= 100) return { ok: false, msg: 'Energia já está cheia.' };
+        info.energy = Math.min(100, info.energy + 35);
+        // Garante que o terminal volte a funcionar se estava bloqueado
+        if (info.energy > 0) info.hasTerminal = true;
+        return { ok: true, msg: '🔋 +35% energia restaurada.' };
+      }
+    },
+    {
+      id: 'energy_lg',
+      category: 'Vitais',
+      type: 'energy',
+      icon: '⚡',
+      name: 'Carga Completa',
+      desc: 'Restaura 100% da bateria',
+      price: 350,
+      stat: 'energy',
+      statGain: 100,
+      action(info) {
+        if (info.energy >= 100) return { ok: false, msg: 'Energia já está cheia.' };
+        info.energy = 100;
+        info.hasTerminal = true;
+        return { ok: true, msg: '⚡ Bateria carregada ao máximo!' };
+      }
+    },
+    {
+      id: 'health_sm',
+      category: 'Vitais',
+      type: 'health',
+      icon: '💊',
+      name: 'Kit Básico',
+      desc: '+30% de vida recuperada',
+      price: 120,
+      stat: 'health',
+      statGain: 30,
+      action(info) {
+        if (info.health >= 100) return { ok: false, msg: 'Vida já está cheia.' };
+        info.health = Math.min(100, info.health + 30);
+        return { ok: true, msg: '💊 +30% vida restaurada.' };
+      }
+    },
+    {
+      id: 'health_lg',
+      category: 'Vitais',
+      type: 'health',
+      icon: '❤️',
+      name: 'Med-Pack Avançado',
+      desc: 'Restaura 100% da vida',
+      price: 300,
+      stat: 'health',
+      statGain: 100,
+      action(info) {
+        if (info.health >= 100) return { ok: false, msg: 'Vida já está cheia.' };
+        info.health = 100;
+        return { ok: true, msg: '❤️ Vida totalmente restaurada!' };
+      }
+    },
+    {
+      id: 'drone_toggle',
+      category: 'Equipamentos',
+      type: 'drone',
+      icon: '🚁',
+      name: 'Drone Holofote',
+      desc: 'Liga / desliga o drone de vigilância',
+      price: 0, // gratuito — apenas toggle
+      stat: null,
+      statGain: 0,
+      action(_info) {
+        const pc = window.PlayerController?.instance
+          ?? (window).__playerController;
+        if (!pc) return { ok: false, msg: 'PlayerController não encontrado.' };
+        const pm = pc.playerModel;
+        if (!pm) return { ok: false, msg: 'PlayerModel não encontrado.' };
+        const next = !pm.IsDroneActive;
+        pm.toggleDrone(next);
+        // Força emissão de posição com novo estado do drone
+        pc.lastEmitTime = 0;
+        return { ok: true, msg: next ? '🚁 Drone ativado!' : '🚁 Drone desativado.' };
+      }
+    },
+  ];
+
+  // ── helpers de acesso ao infoPlayer ───────────────────────────────────────
+  function getInfo() {
+    return window.infoPlayer ?? window.__infoPlayer ?? null;
+  }
+  function getMoney() {
+    const info = getInfo();
+    return info ? (info.money ?? 0) : 0;
+  }
+  function getStat(key) {
+    const info = getInfo();
+    return info ? Math.round(info[key] ?? 0) : 0;
+  }
+
+  // ── Renderiza a loja ───────────────────────────────────────────────────────
+  function renderShop() {
+    const list = document.getElementById('ctos-shop-list');
+    const balEl = document.getElementById('ctos-shop-balance-val');
+    if (!list) return;
+
+    const money = getMoney();
+    if (balEl) balEl.textContent = money.toLocaleString('pt-BR');
+
+    // Agrupa por categoria
+    const cats = {};
+    SHOP_ITEMS.forEach(item => {
+      if (!cats[item.category]) cats[item.category] = [];
+      cats[item.category].push(item);
+    });
+
+    list.innerHTML = '';
+
+    Object.entries(cats).forEach(([cat, items]) => {
+      const sec = document.createElement('div');
+      sec.className = 'ctos-shop-section';
+      sec.textContent = cat;
+      list.appendChild(sec);
+
+      items.forEach(item => {
+        const card = buildShopCard(item, money);
+        list.appendChild(card);
+      });
+    });
+  }
+
+  function buildShopCard(item, money) {
+    const canAfford = item.price === 0 || money >= item.price;
+    const isDrone   = item.id === 'drone_toggle';
+
+    const card = document.createElement('div');
+    card.className = 'ctos-shop-card ' + item.type + (canAfford ? '' : ' disabled');
+
+    // Ícone
+    const iconEl = document.createElement('div');
+    iconEl.className = 'ctos-shop-icon';
+    iconEl.textContent = item.icon;
+    card.appendChild(iconEl);
+
+    // Info
+    const info = document.createElement('div');
+    info.className = 'ctos-shop-info';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'ctos-shop-name';
+    nameEl.textContent = item.name;
+    info.appendChild(nameEl);
+
+    const descEl = document.createElement('div');
+    descEl.className = 'ctos-shop-desc';
+    descEl.textContent = item.desc;
+    info.appendChild(descEl);
+
+    // Barra de stat (só para itens com stat)
+    if (item.stat) {
+      const statRow = document.createElement('div');
+      statRow.className = 'ctos-shop-stat';
+
+      const bar = document.createElement('div');
+      bar.className = 'ctos-shop-stat-bar';
+      const fill = document.createElement('div');
+      fill.className = 'ctos-shop-stat-fill';
+      const cur = getStat(item.stat);
+      fill.style.width = cur + '%';
+      bar.appendChild(fill);
+
+      const lbl = document.createElement('span');
+      lbl.className = 'ctos-shop-stat-label';
+      lbl.textContent = cur + '%';
+
+      statRow.appendChild(bar);
+      statRow.appendChild(lbl);
+      info.appendChild(statRow);
+    }
+
+    // Stat do drone: mostra ON/OFF
+    if (isDrone) {
+      const pc = window.PlayerController?.instance ?? window.__playerController;
+      const isOn = pc?.playerModel?.IsDroneActive ?? false;
+      const lbl = document.createElement('div');
+      lbl.className = 'ctos-shop-desc';
+      lbl.textContent = 'Status: ' + (isOn ? '🟢 ATIVO' : '⚫ INATIVO');
+      lbl.style.marginTop = '3px';
+      info.appendChild(lbl);
+    }
+
+    card.appendChild(info);
+
+    // Botão + preço
+    const buyCol = document.createElement('div');
+    buyCol.className = 'ctos-shop-buy';
+
+    const priceEl = document.createElement('div');
+    priceEl.className = 'ctos-shop-price';
+    if (item.price === 0) {
+      priceEl.textContent = 'GRÁTIS';
+      priceEl.style.color = 'rgba(255,255,255,0.3)';
+      priceEl.style.fontSize = '8px';
+    } else {
+      priceEl.innerHTML = '<span>₢</span>' + item.price.toLocaleString('pt-BR');
+    }
+    buyCol.appendChild(priceEl);
+
+    const btn = document.createElement('button');
+    btn.className = 'ctos-shop-btn' + (isDrone && (window.PlayerController?.instance ?? window.__playerController)?.playerModel?.IsDroneActive ? ' drone-on' : '');
+    btn.disabled  = !canAfford;
+    btn.textContent = isDrone
+      ? ((window.PlayerController?.instance ?? window.__playerController)?.playerModel?.IsDroneActive ? 'Desligar' : 'Ligar')
+      : (item.price === 0 ? 'Usar' : 'Comprar');
+
+    btn.addEventListener('click', () => {
+      if (!canAfford || btn.disabled) return;
+      executePurchase(item, card, btn);
+    });
+
+    buyCol.appendChild(btn);
+    card.appendChild(buyCol);
+
+    return card;
+  }
+
+  function executePurchase(item, card, btn) {
+    const info = getInfo();
+    if (!info) {
+      window.Phone?.chat.receive('ctOS', '⚠ Sistema de vitais não disponível.');
+      return;
+    }
+
+    const money = getMoney();
+    if (item.price > 0 && money < item.price) {
+      window.Phone?.chat.receive('ctOS', '⚠ Créditos insuficientes!');
+      return;
+    }
+
+    const result = item.action(info);
+
+    if (result.ok) {
+      // Debita o dinheiro
+      if (item.price > 0) {
+        info.money = money - item.price;
+      }
+
+      // Feedback visual na card
+      card.classList.remove('bought');
+      void card.offsetWidth; // reflow para reiniciar animation
+      card.classList.add('bought');
+
+      // Notifica via chat do Phone
+      window.Phone?.chat.receive('ctOS', result.msg);
+
+      // Re-renderiza para atualizar barras, balanço e status do drone
+      setTimeout(renderShop, 150);
+
+    } else {
+      // Falha (ex: já está cheio)
+      window.Phone?.chat.receive('ctOS', '⚠ ' + result.msg);
+      btn.style.borderColor = 'rgba(255,60,0,0.5)';
+      btn.style.color = '#ff3c00';
+      setTimeout(() => {
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }, 800);
+    }
+  }
+
+
   // ── API pública ───────────────────────────────────────────────────────────
   window.Phone = {
 
-    onSend: null, // hook: fn(text) → integrar ao SocketManager
+    onSend: null, // hook legado
+
+    // Conecta o Phone ao Socket.IO para chat em rede.
+    // Deve ser chamado após Phone carregar:  Phone.setSocket(SocketManager.io)
+    setSocket(socket) {
+      _socket = socket;
+
+      // Recebe mensagem de outro jogador
+      socket.on('chat:message', ({ from, text }) => {
+        window.Phone.chat.receive(from, text);
+      });
+
+      // Sincroniza contagem de online com os players da sala
+      socket.on('players:loaded', (players) => {
+        // +1 para incluir o próprio jogador local
+        window.Phone.setOnline(Object.keys(players).length + 1);
+      });
+      socket.on('joinInRoom', () => {
+        _onlineCount++;
+        updateOnlineDots();
+      });
+      socket.on('exitTheRoom', () => {
+        _onlineCount = Math.max(1, _onlineCount - 1);
+        updateOnlineDots();
+      });
+    },
 
     toggle() { _open ? closePhone() : openPhone(); },
+    refreshShop() { renderShop(); }, // atualiza manualmente (ex: após money mudar)
     open()   { openPhone(); },
     close()  { closePhone(); },
 

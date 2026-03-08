@@ -42,9 +42,16 @@ export const infoPlayer = new Proxy(_raw, {
         if (prop === 'money' || prop === 'energy' || prop === 'health') {
             syncHUD(prop as string, value as number);
         }
+        // Atualiza o balanço e barras da loja sempre que vitais ou money mudam
+        if (prop === 'money' || prop === 'energy' || prop === 'health') {
+            (window as any).Phone?.refreshShop?.();
+        }
         return true;
     }
 });
+
+// Expõe globalmente para o Phone.js acessar sem import circular
+(window as any).infoPlayer = infoPlayer;
 
 export const Auditorio = {
     chairs: [""]
