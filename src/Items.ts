@@ -49,7 +49,7 @@ export default class Items {
     items = [
         {
             name: "auditorio",
-            path: "models/stage.glb",
+            path: "models/stage_1.glb",
             scales: [1],
             rotations: [{ x: 0, y: 0, z: 0 }],
             positions: [{ x: 0, y: 0, z: 0 }],
@@ -112,11 +112,11 @@ export default class Items {
                 baseChair.scale.setScalar(item.scales[0]);
                 await this.createChairsGrid(
                     baseChair,
-                    6,    // fileiras
-                    12,   // cadeiras por fileira
+                    1,    // fileiras
+                    8,   // cadeiras por fileira
                     2.0,  // espaço X
                     2.5,  // espaço Z
-                    8,    // corredor a cada N
+                    4,    // corredor a cada N
                     3.5,  // largura do corredor
                     -15,  // startX
                     10    // startZ

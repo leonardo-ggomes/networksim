@@ -132,6 +132,8 @@ export default class PlayerController {
     document.addEventListener("keyup",   this.onKeydown);
     this.actions["terminal"] = false;
     PlayerController.instance = this;
+    // Expõe para phone.js (puro JS) acessar o drone sem import circular
+    (window as any).__pcInstance = this;
   }
 
   private async initBVH() {
