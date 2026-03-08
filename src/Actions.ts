@@ -46,50 +46,69 @@ const _netState: _NetNode = {
 (window as any).__netPeers = {};
 (window as any).__netState = _netState;
 
-// ── Inicializa quando o socket conectar ──────────────────────────────────────
-// SocketManager.io.on("connect", () => {
-//     _netState.socketId = SocketManager.io.id ?? "";
-//     _netState.playerName = (window as any).__playerName ?? "player";
-//     _netState.hostname = `${_netState.playerName.toLowerCase().replace(/\s+/g,"-")}-pc`;
-//     _netBroadcast();
-// });
+// ── Registra listeners de rede virtual ───────────────────────────────────────
+// Deve ser chamado de Experience.ts APÓS todos os módulos estarem inicializados,
+// evitando o problema de importação circular com SocketManager.
+// Exemplo em Experience.ts:
+//   import { initNetSocket } from './Actions';
+//   // ...após setup completo:
+//   initNetSocket();
+let _netSocketInited = false;
+export function initNetSocket() {
+    if (_netSocketInited) return;
+    _netSocketInited = true;
 
-// ── Recebe estado de rede de outros players ───────────────────────────────────
-// SocketManager.io.on("net:state", (node: _NetNode) => {
-//     (window as any).__netPeers[node.socketId] = node;
-// });
+    // Atribui o singleton já resolvido — a esta altura o módulo circular
+    // já terminou de avaliar, então SocketManager é válido.
+    _SM = SocketManager;
 
-// // ── Recebe bug injetado pelo professor ────────────────────────────────────────
-// SocketManager.io.on("net:bug", (data:{type:string}) => {
-//     _netInjectBug(data.type);
-//     const msgs: Record<string,string> = {
-//         "link-down":     "⚠ eth0 caiu! Use: ip link set eth0 up",
-//         "ip-conflict":   "⚠ Conflito de IP! Reconfigure: ip addr add ...",
-//         "service-crash": "⚠ apache2 crashou! Use: apache2 start",
-//         "route-lost":    "⚠ Rotas perdidas! Use: ip route add default via ...",
-//     };
-//     const msg = msgs[data.type] ?? "⚠ Falha de rede detectada.";
-//     (window as any).HUD?.notify(msg, "error");
-//     (window as any).Phone?.chat?.receive("ctOS", msg);
-// });
+    SocketManager.io.on("connect", () => {
+        _netState.socketId   = SocketManager.io.id ?? "";
+        _netState.playerName = SocketManager.playerName || (window as any).__playerName || "player";
+        _netState.hostname   = `${_netState.playerName.toLowerCase().replace(/\s+/g, "-")}-pc`;
+        _netBroadcast();
+    });
 
-// // ── Responde a requisição HTTP virtual de outro player ────────────────────────
-// SocketManager.io.on("net:http-req", (data:{fromId:string;targetIp:string}) => {
-//     const eth0 = _netState.interfaces.find(i=>i.name==="eth0");
-//     if (eth0?.ip === data.targetIp) {
-//         const resp = _httpServe(data.targetIp);
-//         SocketManager.io.emit("net:http-res", { toId:data.fromId, ...resp });
-//     }
-// });
+    SocketManager.io.on("net:state", (node: _NetNode) => {
+        (window as any).__netPeers[node.socketId] = node;
+    });
 
-// // ── Recebe resposta HTTP (curl para outro player) ─────────────────────────────
-// SocketManager.io.on("net:http-res", (data:{status:number;body:string;from:string}) => {
-//     (window as any).__netHttpRes = data;
-//     (window as any).Phone?.browser?.load?.(data.body, data.status, data.from);
-// });
+    SocketManager.io.on("net:bug", (data: { type: string }) => {
+        _netInjectBug(data.type);
+        const msgs: Record<string, string> = {
+            "link-down":     "⚠ eth0 caiu! Use: ip link set eth0 up",
+            "ip-conflict":   "⚠ Conflito de IP! Reconfigure: ip addr add ...",
+            "service-crash": "⚠ apache2 crashou! Use: apache2 start",
+            "route-lost":    "⚠ Rotas perdidas! Use: ip route add default via ...",
+        };
+        const msg = msgs[data.type] ?? "⚠ Falha de rede detectada.";
+        (window as any).HUD?.notify(msg, "error");
+        (window as any).Phone?.chat?.receive("ctOS", msg);
+    });
 
-function _netBroadcast(){
-    SocketManager.io.emit("net:state", _netState);
+    SocketManager.io.on("net:http-req", (data: { fromId: string; targetIp: string }) => {
+        const eth0 = _netState.interfaces.find(i => i.name === "eth0");
+        if (eth0?.ip === data.targetIp) {
+            const resp = _httpServe(data.targetIp);
+            SocketManager.io.emit("net:http-res", { toId: data.fromId, ...resp });
+        }
+    });
+
+    SocketManager.io.on("net:http-res", (data: { status: number; body: string; from: string }) => {
+        (window as any).__netHttpRes = data;
+        (window as any).Phone?.browser?.load?.(data.body, data.status, data.from);
+    });
+}
+
+// SM resolvido após initNetSocket() — usado por _netBroadcast nas funções sync
+let _SM: typeof SocketManager | null = null;
+
+function _netBroadcast() {
+    // Usa _SM se já inicializado, senão cai no import estático diretamente.
+    // Isso garante que ip addr add / apache2 start emitem mesmo antes de
+    // initNetSocket() ser chamado — sem perder estado de rede.
+    const sm = _SM ?? SocketManager;
+    if (sm?.io?.connected) sm.io.emit("net:state", _netState);
 }
 
 // ── Ping virtual ──────────────────────────────────────────────────────────────
@@ -99,9 +118,11 @@ function _netPing(host:string):{ok:boolean;msg:string;ms?:number;hops?:string[]}
     if (!upIface) return {ok:false,msg:"Network unreachable — configure IP: ip addr add <IP>/24 dev eth0"};
     const route = _netFindRoute(host);
     if (!route) return {ok:false,msg:`No route to host — adicione: ip route add default via <gateway>`};
-    const peer = _netFindPeerByIP(host);
-    if (!peer) return {ok:false,msg:`Request timeout — ${host} não está na rede virtual (ninguém com esse IP)`};
-    const ms = parseFloat((1+Math.random()*6).toFixed(2));
+    // Verifica próprio IP antes de buscar peers
+    const isSelf = _netState.interfaces.some(i=>i.ip===host&&i.up);
+    const peer = isSelf ? null : _netFindPeerByIP(host);
+    if (!isSelf && !peer) return {ok:false,msg:`Request timeout — ${host} não está na rede virtual (ninguém com esse IP)`};
+    const ms = isSelf ? parseFloat((0.05+Math.random()*0.1).toFixed(3)) : parseFloat((1+Math.random()*6).toFixed(2));
     const hops = route.via ? [route.via, host] : [host];
     return {ok:true,msg:"",ms,hops};
 }
@@ -150,21 +171,21 @@ function _netSetIP(ifaceName:string, ip:string, prefix=24):string{
     const net = _netAddr(ip,prefix);
     _netRouteAdd(`${net}/${prefix}`, undefined, ifaceName, 0);
     _netBroadcast();
-    return ` ${ifaceName}: inet ${ip}/\${prefix}  mac ${iface.mac}\n  Link: UP`;
+    return ` ${ifaceName}: inet ${ip}/${prefix}  mac ${iface.mac}\n  Link: UP`;
 }
 
 function _netDelIP(ifaceName:string):string{
     const iface = _netState.interfaces.find(i=>i.name===ifaceName);
     if (!iface) return `interface ${ifaceName} não encontrada`;
     iface.ip=undefined; iface.up=false; _netBroadcast();
-    return `IP removido de \${ifaceName}`;
+    return `IP removido de ${ifaceName}`;
 }
 
 function _netLinkSet(ifaceName:string, up:boolean):string{
     const iface = _netState.interfaces.find(i=>i.name===ifaceName);
-    if (!iface) return `interface \${ifaceName} não encontrada`;
+    if (!iface) return `interface ${ifaceName} não encontrada`;
     iface.up=up; _netBroadcast();
-    return `  ${ifaceName}: link ${up} \"UP\":\"DOWN \"}`;
+    return `  ${ifaceName}: link ${up ? "UP" : "DOWN"}`;
 }
 
 // ── rotas ─────────────────────────────────────────────────────────────────────
@@ -176,13 +197,13 @@ function _netRouteAdd(dest:string, via?:string, dev="eth0", metric=100):string{
         return bb!==ba?bb-ba:a.metric-b.metric;
     });
     _netBroadcast();
-    return `Rota adicionada: \${dest} \${via?"via "+via:"direta"} dev \${dev}`;
+    return `Rota adicionada: ${dest} ${via?"via "+via:"direta"} dev ${dev}`;
 }
 
 function _netRouteDel(dest:string):string{
     const before=_netState.routes.length;
     _netState.routes=_netState.routes.filter(r=>r.dest!==dest);
-    if (_netState.routes.length===before) return `Erro: rota \${dest} não encontrada`;
+    if (_netState.routes.length===before) return `Erro: rota ${dest} não encontrada`;
     _netBroadcast();
     return `Rota ${dest} removida.`;
 }
@@ -190,19 +211,19 @@ function _netRouteDel(dest:string):string{
 function _netRouteShow():string{
     if (!_netState.routes.length)
         return "  Tabela vazia — use: ip route add default via <gateway>";
-    const hdr=`Kernel IP routing table\n\${"Destino".padEnd(20)}\${"Gateway".padEnd(16)}\${"Máscara".padEnd(16)}Iface`;
+    const hdr=`Kernel IP routing table\n${"Destino".padEnd(20)}${"Gateway".padEnd(16)}${"Máscara".padEnd(16)}Iface`;
     const rows=_netState.routes.map(r=>{
         const [net,bits]=r.dest.split("/");
-        return `\${net.padEnd(20)}\${(r.via??"0.0.0.0").padEnd(16)}\${_prefixMask(parseInt(bits??"32")).padEnd(16)}\${r.dev}`;
+        return `${net.padEnd(20)}${(r.via??"0.0.0.0").padEnd(16)}${_prefixMask(parseInt(bits??"32")).padEnd(16)}${r.dev}`;
     });
     return [hdr,...rows].join("\n");
 }
 
 // ── netstat / arp / nmap ──────────────────────────────────────────────────────
 function _netNetstat():string{
-    const hdr=`Active Internet connections\n\${"Proto".padEnd(8)}\${"Local Address".padEnd(22)}\${"State".padEnd(12)}Service`;
+    const hdr=`Active Internet connections\n${"Proto".padEnd(8)}${"Local Address".padEnd(22)}${"State".padEnd(12)}Service`;
     const rows=_netState.services.filter(s=>s.running&&s.port>0)
-        .map(s=>`\${"tcp".padEnd(8)}\${("0.0.0.0:"+s.port).padEnd(22)}\${"LISTEN".padEnd(12)}\${s.name}`);
+        .map(s=>`${"tcp".padEnd(8)}${("0.0.0.0:"+s.port).padEnd(22)}${"LISTEN".padEnd(12)}${s.name}`);
     return rows.length?[hdr,...rows].join("\n"):"Nenhuma porta aberta.";
 }
 
@@ -212,7 +233,7 @@ function _netArp():string{
     for (const n of Object.values(peers)){
         const e=n.interfaces.find(i=>i.name==="eth0");
         if (e?.ip&&e.up)
-            lines.push(`\${e.ip.padEnd(17)}ether   \${e.mac.padEnd(20)}\${("eth0").padEnd(12)}\${n.playerName}`);
+            lines.push(`${e.ip.padEnd(17)}ether   ${e.mac.padEnd(20)}${("eth0").padEnd(12)}${n.playerName}`);
     }
     return lines.length>1?lines.join("\n"):"Tabela ARP vazia — faça ping para popular.";
 }
@@ -220,14 +241,14 @@ function _netArp():string{
 function _netNmap(ip:string):string{
     if (ip==="127.0.0.1"||ip===((_netState.interfaces.find(i=>i.name==="eth0"))?.ip)){
         const ports=_netState.services.filter(s=>s.running&&s.port>0)
-            .map(s=>`\${String(s.port).padEnd(8)}tcp  open  \${s.name}`);
-        return [`Nmap scan: \${ip} (\${_netState.hostname})`,`Host is up.`,"PORT     STATE SERVICE",...ports,`Done: 1 host`].join("\n");
+            .map(s=>`${String(s.port).padEnd(8)}tcp  open  ${s.name}`);
+        return [`Nmap scan: ${ip} (${_netState.hostname})`,`Host is up.`,"PORT     STATE SERVICE",...ports,`Done: 1 host`].join("\n");
     }
     const peer=_netFindPeerByIP(ip);
-    if (!peer) return `Nmap scan: \${ip}\nHost seems down.`;
+    if (!peer) return `Nmap scan: ${ip}\nHost seems down.`;
     const ports=peer.services.filter(s=>s.running&&s.port>0)
-        .map(s=>`\${String(s.port).padEnd(8)}tcp  open  \${s.name}`);
-    return [`Nmap scan: \${ip} (\${peer.hostname})`,`Host is up.`,"PORT     STATE SERVICE",...ports,`Done: 1 host`].join("\n");
+        .map(s=>`${String(s.port).padEnd(8)}tcp  open  ${s.name}`);
+    return [`Nmap scan: ${ip} (${peer.hostname})`,`Host is up.`,"PORT     STATE SERVICE",...ports,`Done: 1 host`].join("\n");
 }
 
 // ── Serviços ──────────────────────────────────────────────────────────────────
@@ -245,7 +266,7 @@ function _svcStart(name:string):string{
     }
     let svc=_netState.services.find(s=>s.name===name);
     if (svc){
-        if (svc.running) return `\${name} já está rodando (PID \${svc.pid}).`;
+        if (svc.running) return `${name} já está rodando (PID ${svc.pid}).`;
         svc.running=true; svc.pid=Math.floor(Math.random()*20000)+10000; svc.crashMsg=undefined;
     } else {
         const portMap:Record<string,number>={apache2:80,nginx:80,sshd:22,ftpd:21,dhcpd:67,nodejs:3000};
@@ -254,24 +275,24 @@ function _svcStart(name:string):string{
     }
     processes.push({pid:svc.pid,user:"www-data",cpu:0.3,mem:1.2,command:name,state:"S"});
     _netBroadcast();
-    return `Starting \${name}...\n  * Starting web server apache2  [ OK ]\n  PID: \${svc.pid}  porta: \${svc.port}`;
+    return `Starting ${name}...\n  * Starting web server apache2  [ OK ]\n  PID: ${svc.pid}  porta: ${svc.port}`;
 }
 
 function _svcStop(name:string):string{
     const svc=_netState.services.find(s=>s.name===name);
-    if (!svc||!svc.running) return `\${name} não está rodando.`;
+    if (!svc||!svc.running) return `${name} não está rodando.`;
     svc.running=false;
     const idx=processes.findIndex(p=>p.pid===svc.pid);
     if (idx!==-1) processes.splice(idx,1);
     _netBroadcast();
-    return `Stopping \${name}...  [ OK ]`;
+    return `Stopping ${name}...  [ OK ]`;
 }
 
 function _svcStatus(name:string):string{
     const svc=_netState.services.find(s=>s.name===name);
-    if (!svc) return `\${name}: serviço não encontrado.`;
-    if (svc.running) return `● \${name} - ativo (running)\n  PID: \${svc.pid}  porta: \${svc.port}\n  Ativo desde o início da sessão.`;
-    return `○ \${name} - inativo\${svc.crashMsg?"\n  Erro: "+svc.crashMsg:""}`;
+    if (!svc) return `${name}: serviço não encontrado.`;
+    if (svc.running) return `● ${name} - ativo (running)\n  PID: ${svc.pid}  porta: ${svc.port}\n  Ativo desde o início da sessão.`;
+    return `○ ${name} - inativo${svc.crashMsg?"\n  Erro: "+svc.crashMsg:""}`;
 }
 
 // ── Injeção de bugs ───────────────────────────────────────────────────────────
@@ -317,8 +338,8 @@ function _openBrowserPhone(url:string, targetIp:string){
         const resp=_httpServe(targetIp);
         (window as any).Phone?.browser?.load?.(resp.body, resp.status, resp.from);
     } else {
-        SocketManager.io.emit("net:http-req",{targetIp});
-        // Resposta chegará via "net:http-res" listener acima
+        _SM?.io.emit("net:http-req",{targetIp});
+        // Resposta chegará via "net:http-res" listener registrado em initNetSocket()
     }
 }
 
@@ -1812,7 +1833,14 @@ const commands: Record<string, (args: string[]) => string> = {
         }
 
         const fileName = args[0];
-        const contentMatch = args.join(" ").match(/\"(.*?)\"/);
+
+        // Reconstrói a linha completa e extrai tudo após o primeiro argumento (filename)
+        // Suporta aspas normais "..." e aspas tipográficas "..." que o browser pode inserir
+        const fullLine = args.join(" ");
+        const contentMatch = fullLine.match(/[""\u201C]([\s\S]*?)[""\u201D]$/) ||
+                             fullLine.match(/["]([\s\S]*)["]/) ||
+                             fullLine.match(/[""\u201C]([\s\S]*)/);
+
         const allowedExtensions = [".txt", ".js", ".py", ".html", ".css"];
 
         if (!contentMatch) {
@@ -2188,14 +2216,24 @@ const commands: Record<string, (args: string[]) => string> = {
         const bug = args[0]; const target = args[1];
         const valid = ["link-down","ip-conflict","service-crash","route-lost"];
         if (!valid.includes(bug)) return `Bugs: ${valid.join(", ")}\nUso: net:bug <tipo> [socketId]`;
-        SocketManager.io.emit("net:bug:inject", { type: bug, targetId: target ?? null });
+        _SM?.io.emit("net:bug:inject", { type: bug, targetId: target ?? null });
         return `Bug "${bug}" injetado${target ? ` em ${target}` : " em todos"}.`;
     },
 }
 
 // Executar um comando digitado
 function executeCommand(command: string, terminal: HTMLDivElement) {
-    const parts = command.trim().split(/\s+/);
+    // Split inteligente: preserva conteúdo entre aspas como um único token.
+    // Suporta " normais e " " tipográficas que o contentEditable pode inserir.
+    const raw = command.trim();
+    const parts: string[] = [];
+    // Regex: token fora de aspas OU conteúdo entre qualquer variante de aspas
+    const tokenRe = /[""\u201C]([\s\S]*?)[""\u201D]|(\S+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = tokenRe.exec(raw)) !== null) {
+        // grupo 1 = conteúdo dentro das aspas, grupo 2 = token sem aspas
+        parts.push(m[1] !== undefined ? `"${m[1]}"` : m[2]);
+    }
     const cmd   = parts.shift()?.toLowerCase() ?? "";
     const args  = parts;
     if (!cmd) return;

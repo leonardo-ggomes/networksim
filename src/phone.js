@@ -237,9 +237,11 @@
     #ctos-browser-status.err { color: #ff4444; }
     #ctos-browser-frame {
       flex: 1;
+      min-height: 0;
+      width: 100%;
       background: #fff;
       border: none;
-      min-height: 0;
+      display: block;
     }
     #ctos-browser-splash {
       flex: 1;
@@ -1022,7 +1024,7 @@
                 4. curl http://192.168.1.10
               </div>
             </div>
-            <iframe id="ctos-browser-frame" style="display:none" sandbox="allow-scripts allow-same-origin"></iframe>
+            <iframe id="ctos-browser-frame" style="visibility:hidden;flex:0" sandbox="allow-scripts"></iframe>
           </div>
         </div>
 
@@ -1580,12 +1582,14 @@
 
     function loadContent(html, statusCode, from) {
       splash.style.display = 'none';
-      frame.style.display  = 'block';
+      frame.style.visibility = 'visible';
+      frame.style.flex = '1';
       statusEl.style.display = 'block';
       statusEl.className = statusCode === 200 ? 'ok' : 'err';
       statusEl.textContent = `HTTP ${statusCode}  ·  ${from || ''}`;
-      // Escreve HTML no iframe via srcdoc para máxima compatibilidade
-      frame.srcdoc = html;
+      // Força reset do srcdoc para garantir re-render mesmo com mesmo conteúdo
+      frame.removeAttribute('srcdoc');
+      requestAnimationFrame(() => { frame.srcdoc = html; });
     }
 
     function goToUrl() {
@@ -1607,11 +1611,14 @@
     window.Phone = window.Phone || {};
     window.Phone.browser = {
       load(html, statusCode, from) {
-        loadContent(html, statusCode, from);
-        // Muda para aba browser automaticamente
+        // Abre o Phone e muda para aba browser ANTES de escrever o srcdoc.
+        // Se o iframe estiver em display:none quando srcdoc é atribuído,
+        // alguns navegadores não renderizam o conteúdo.
+        if (!_open) openPhone();
         const tab = document.querySelector('.ctos-tab[data-tab="browser"]');
         if (tab) tab.click();
-        if (!_open) openPhone();
+        // Pequeno tick para garantir que o frame já está visível no DOM
+        setTimeout(() => loadContent(html, statusCode, from), 30);
       },
       setUrl(url) {
         urlInput.value = url;
