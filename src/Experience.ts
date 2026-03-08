@@ -48,7 +48,7 @@ export default class Experience {
     socket       = SocketManager
     loading:     Loading
     audioLoader: AudioLoader
-    ambientLight = new AmbientLight(0xFFCC88, 2)
+    ambientLight = new AmbientLight(0x8899bb, 1.4) // azul-frio: adequado para data center
     entityManager:    EntityManager
     voiceChatManager: VoiceChatManager
     urlAvatar:    string
@@ -173,7 +173,7 @@ export default class Experience {
     }
   
     setScene() {      
-        this.scene.background = new Color(0x000);
+        this.scene.background = new Color(0x05080d); // azul muito escuro — atmosfera DC
         this.scene.fog = new Fog(0x34495E, 30, 65); // near=30: inicia fade antes do CULL_DISTANCE=60
     }
     
@@ -196,7 +196,7 @@ export default class Experience {
     }
 
     setAmbientLight() {
-        this.ambientLight.intensity = 1
+        // intensity definida na declaração acima — não sobrescrever aqui
         this.scene.add(this.ambientLight)
     }
 
@@ -299,7 +299,7 @@ export default class Experience {
     }
   
     setLight() {
-        const directionalLight = new DirectionalLight(0x000000, .1);
+        const directionalLight = new DirectionalLight(0xc8d8ff, 0.6); // branca fria — ilumina a cena
         directionalLight.position.set(-5, 25, -1);
         directionalLight.castShadow = true;
         directionalLight.shadow.camera.near   = 0.01;

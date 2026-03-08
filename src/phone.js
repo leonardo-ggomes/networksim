@@ -1608,8 +1608,14 @@
     urlInput.addEventListener('click', (e) => e.stopPropagation());
 
     // API pública para receber conteúdo (chamada por Actions.ts / socket)
-    window.Phone = window.Phone || {};
-    window.Phone.browser = {
+  })();
+
+  window.Phone = {
+
+    onSend: null, // hook legado
+
+    // ── Browser — abre site no iframe do Phone ────────────────────────────
+    browser: {
       load(html, statusCode, from) {
         // Abre o Phone e muda para aba browser ANTES de escrever o srcdoc.
         // Se o iframe estiver em display:none quando srcdoc é atribuído,
@@ -1617,18 +1623,27 @@
         if (!_open) openPhone();
         const tab = document.querySelector('.ctos-tab[data-tab="browser"]');
         if (tab) tab.click();
-        // Pequeno tick para garantir que o frame já está visível no DOM
-        setTimeout(() => loadContent(html, statusCode, from), 30);
+        // Tick para garantir que o frame está visível antes do srcdoc
+        const frame   = document.getElementById('ctos-browser-frame');
+        const splash  = document.getElementById('ctos-browser-splash');
+        const statusEl = document.getElementById('ctos-browser-status');
+        setTimeout(() => {
+          if (!frame) return;
+          splash.style.display = 'none';
+          frame.style.visibility = 'visible';
+          frame.style.flex = '1';
+          statusEl.style.display = 'block';
+          statusEl.className = statusCode === 200 ? 'ok' : 'err';
+          statusEl.textContent = `HTTP ${statusCode}  ·  ${from || ''}`;
+          frame.removeAttribute('srcdoc');
+          requestAnimationFrame(() => { frame.srcdoc = html; });
+        }, 30);
       },
       setUrl(url) {
-        urlInput.value = url;
+        const urlInput = document.getElementById('ctos-browser-url');
+        if (urlInput) urlInput.value = url;
       }
-    };
-  })();
-
-  window.Phone = {
-
-    onSend: null, // hook legado
+    },
 
     // Conecta o Phone ao Socket.IO para chat em rede.
     // Deve ser chamado após Phone carregar:  Phone.setSocket(SocketManager.io)
