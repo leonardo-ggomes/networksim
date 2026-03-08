@@ -107,19 +107,19 @@ export const pathDefs: Record<string, PathDef> = {
         ], 3),
     },
 
-    // ── Prof. Chico: espera → palco ───────────────────────────────────────────
+    // ── Professor: espera → palco ───────────────────────────────────────────
     // Edite STAGE_WAYPOINTS acima para ajustar o trajeto.
     // "teacher-to-idle" é gerado automaticamente como o reverso deste caminho.
     "teacher-to-stage": {
-        description: "Prof. Chico: espera (-5,0,25) → palco (0,0,0)",
+        description: "Professor: espera (-5,0,25) → palco (0,0,0)",
         color: "#f0b90b",
         points: interpolatePath(STAGE_WAYPOINTS, 4),
     },
 
-    // ── Prof. Chico: palco → espera (reverso automático) ─────────────────────
+    // ── Professor: palco → espera (reverso automático) ─────────────────────
     // NÃO edite este — edite STAGE_WAYPOINTS acima.
     "teacher-to-idle": {
-        description: "Prof. Chico: palco (0,0,0) → espera (-5,0,25)",
+        description: "Professor: palco (0,0,0) → espera (-5,0,25)",
         color: "#00cfff",
         points: interpolatePath(reversePath(STAGE_WAYPOINTS), 4),
     },
@@ -128,7 +128,7 @@ export const pathDefs: Record<string, PathDef> = {
     // Ajuste X/Y/Z conforme a geometria real da escada no seu mapa.
     // Use __pathDebug.show("teacher-upstairs") para ver onde os pontos caem.
     "teacher-upstairs": {
-        description: "Prof. Chico sobe escada até andar superior",
+        description: "Professor sobe escada até andar superior",
         color: "#b06aff",
         points: interpolatePath([
             new YUKA.Vector3( 0, 0.0,  0),  // base da escada

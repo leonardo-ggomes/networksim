@@ -21,7 +21,7 @@ import PlayerController from "./PlayerController";
 import Items from "./Items";
 
 import SocketManager from "./SocketManager";
-import elementos, { eventEmitter, showInstruction } from "./Actions";
+import elementos, { eventEmitter, showInstruction, initNetSocket } from "./Actions";
 import { gui } from "./GuiControl";
 import Loading from "./Loading";
 import { infoPlayer } from "./InfoPlayer";
@@ -48,7 +48,7 @@ export default class Experience {
     socket       = SocketManager
     loading:     Loading
     audioLoader: AudioLoader
-    ambientLight = new AmbientLight(0x8899bb, 1.4) // azul-frio: adequado para data center
+    ambientLight = new AmbientLight(0xFFCC88, 2)
     entityManager:    EntityManager
     voiceChatManager: VoiceChatManager
     urlAvatar:    string
@@ -97,6 +97,11 @@ export default class Experience {
         })
 
         SocketManager.connectPhone()
+
+        // Registra listeners de rede virtual (net:state, net:http-req/res, net:bug)
+        // Deve ser chamado APÓS connectPhone — garante que o socket está pronto
+        // e resolve o import circular entre Actions ↔ SocketManager
+        initNetSocket()
 
         // Gerenciador de Voz
         this.voiceChatManager = new VoiceChatManager(this.listener);
@@ -173,7 +178,7 @@ export default class Experience {
     }
   
     setScene() {      
-        this.scene.background = new Color(0x05080d); // azul muito escuro — atmosfera DC
+        this.scene.background = new Color(0x000);
         this.scene.fog = new Fog(0x34495E, 30, 65); // near=30: inicia fade antes do CULL_DISTANCE=60
     }
     
@@ -196,7 +201,7 @@ export default class Experience {
     }
 
     setAmbientLight() {
-        // intensity definida na declaração acima — não sobrescrever aqui
+        this.ambientLight.intensity = 1
         this.scene.add(this.ambientLight)
     }
 
@@ -299,7 +304,7 @@ export default class Experience {
     }
   
     setLight() {
-        const directionalLight = new DirectionalLight(0xc8d8ff, 0.6); // branca fria — ilumina a cena
+        const directionalLight = new DirectionalLight(0x000000, .1);
         directionalLight.position.set(-5, 25, -1);
         directionalLight.castShadow = true;
         directionalLight.shadow.camera.near   = 0.01;

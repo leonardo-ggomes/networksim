@@ -293,7 +293,7 @@ export class TeacherNPC extends YUKA.Vehicle {
             // Só libera o controle aqui, depois que o NPC chegou e o estado
             // final Idle já foi emitido com a posição correta ao servidor.
             this.isControlledLocally = false;
-            window.HUD?.notify("🎓 Prof. Chico voltou ao ponto de espera.", "info");
+            window.HUD?.notify("🎓 Professor voltou ao ponto de espera.", "info");
         }
     }
 
@@ -645,7 +645,7 @@ export class TeacherNPC extends YUKA.Vehicle {
             return;
         }
         if (this.tState !== "IDLE") {
-            window.HUD?.notify("Prof. Chico já está ocupado.", "warn");
+            window.HUD?.notify("Professor já está ocupado.", "warn");
             return;
         }
 
@@ -657,8 +657,8 @@ export class TeacherNPC extends YUKA.Vehicle {
         this.buildNamedPath("teacher-to-stage");
         this.setAnimation(this.animationsAction["Walk"]);
 
-        window.HUD?.notify(`🎓 Prof. Chico indo ao palco: ${lesson.title}`, "info");
-        showInstruction("📚 Aula", `Prof. Chico vai ensinar: ${lesson.title}`);
+        window.HUD?.notify(`🎓 Professor indo ao palco: ${lesson.title}`, "info");
+        showInstruction("📚 Aula", `Professor vai ensinar: ${lesson.title}`);
     }
 
     nextSlide() {
@@ -713,7 +713,7 @@ export class TeacherNPC extends YUKA.Vehicle {
         if (this.npcMesh.position.distanceTo(this.playerModel.position) < this.NOTEBOOK_RADIUS) {
             this.notebookGiven     = true;
             infoPlayer.hasTerminal = true;
-            showInstruction("🎓 Prof. Chico", "Aqui está seu notebook! Pressione T para abrir.");
+            showInstruction("🎓 Professor", "Aqui está seu notebook! Pressione T para abrir.");
             window.HUD?.notify("💻 Notebook recebido!", "success");
             eventEmitter.dispatchEvent(new CustomEvent("notebook:received", {
                 detail: { playerId: infoPlayer.id }
@@ -742,7 +742,7 @@ export class TeacherNPC extends YUKA.Vehicle {
             borderRadius: "3px",
             display:    "none",
         });
-        el.textContent = "🎓 Prof. Chico";
+        el.textContent = "🎓 Professor";
         document.body.appendChild(el);
     }
 

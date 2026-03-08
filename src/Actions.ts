@@ -2067,7 +2067,7 @@ const commands: Record<string, (args: string[]) => string> = {
             ].join("\n");
 
             teacher.startLesson(arg2);
-            return `Prof. Chico indo ao palco — aula: ${arg2}`;
+            return `Professor indo ao palco — aula: ${arg2}`;
         }
 
         // ── teach next / prev / stop ──────────────────────────────────────
@@ -2084,7 +2084,7 @@ const commands: Record<string, (args: string[]) => string> = {
         if (sub === "stop") {
             if (!teacher.isTeaching) return "Nenhuma aula em andamento.";
             teacher.endLessonNow?.();
-            return "Aula encerrada. Prof. Chico retornando ao ponto de espera.";
+            return "Aula encerrada. Professor retornando ao ponto de espera.";
         }
 
         return `Subcomando desconhecido: '${sub}'. Digite: teach list`;
