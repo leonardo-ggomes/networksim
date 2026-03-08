@@ -141,8 +141,8 @@
     mission.appendChild(mInner);
     document.body.appendChild(mission);
 
-    // ── Canto superior direito: toasts ───────────────────────────────────────
-    const toasts = el('div', 'hud-toasts');
+    // ── Canto superior direito: log de sistema ──────────────────────────────
+    const toasts = el('div', 'hud-log');
     document.body.appendChild(toasts);
 
     return { root, avatar, name, role, bars, canvas, coords, mission, mTitle, mText, toasts, moneyVal };
@@ -434,25 +434,64 @@
       });
     },
 
-    // ── Toast rápido ─────────────────────────────────────────────────────────
+    // ── Log de sistema (substituição dos toasts) ──────────────────────────────
     notify(text, type = 'info') {
-      const iconMap = {
-        warn:    `<i class='bx bxs-error'         style="color:#f0b90b;font-size:16px"></i>`,
-        success: `<i class='bx bxs-check-circle'  style="color:#00ff9d;font-size:16px"></i>`,
-        error:   `<i class='bx bxs-x-circle'      style="color:#ff3c3c;font-size:16px"></i>`,
-        info:    `<i class='bx bx-info-circle'     style="color:#00cfff;font-size:16px"></i>`,
-      };
+      const MAX_LINES  = 8;   // máximo de linhas visíveis ao mesmo tempo
+      const TTL        = 9500; // ms até a linha começar a sair
 
-      const toast = document.createElement('div');
-      toast.className = `hud-toast ${type}`;
-      toast.innerHTML = `${iconMap[type] || iconMap.info}<span>${text}</span>`;
-      DOM.toasts.appendChild(toast);
+      // Prefixes por tipo — estilo terminal de vigilância
+      const PREFIX = { info: 'SYS', success: 'OK ', warn: 'WRN', error: 'ERR' };
 
-      // Remove após 3.5s com animação
-      setTimeout(() => {
-        toast.classList.add('removing');
-        toast.addEventListener('animationend', () => toast.remove());
-      }, 70000);
+      // Timestamp compacto: segundos desde meia-noite em hex (ex: 0x2A4F)
+      const now = new Date();
+      const secs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      const ts   = '0x' + secs.toString(16).toUpperCase().padStart(4, '0');
+
+      // Cria a linha de log
+      const line = document.createElement('div');
+      line.className = `hud-log-line ${type}`;
+      line.style.setProperty('--exit-opacity', '1');
+
+      const tsEl = document.createElement('span');
+      tsEl.className   = 'hud-log-ts';
+      tsEl.textContent = ts;
+
+      const prefEl = document.createElement('span');
+      prefEl.className   = 'hud-log-prefix';
+      prefEl.textContent = `[${PREFIX[type] || 'SYS'}]`;
+
+      const msgEl = document.createElement('span');
+      msgEl.className   = 'hud-log-msg';
+      msgEl.textContent = text;
+
+      line.append(tsEl, prefEl, msgEl);
+
+      // Insere no topo (mais recente primeiro)
+      DOM.toasts.insertBefore(line, DOM.toasts.firstChild);
+
+      // Recalcula opacidade de saída para as linhas mais antigas
+      // (para que o log-exit parta da opacidade correta delas)
+      const allLines = DOM.toasts.querySelectorAll('.hud-log-line');
+      allLines.forEach((l, i) => {
+        const op = i === 0 ? 1 : i < 3 ? 0.7 : i < 5 ? 0.4 : 0.2;
+        l.style.setProperty('--exit-opacity', op);
+      });
+
+      // Remove linhas em excesso (além de MAX_LINES) imediatamente
+      while (DOM.toasts.children.length > MAX_LINES) {
+        const last = DOM.toasts.lastChild;
+        if (last) last.remove();
+      }
+
+      // Agenda saída com fade-up
+      const exitTimer = setTimeout(() => {
+        if (!line.isConnected) return;
+        line.classList.add('log-exit');
+        line.addEventListener('animationend', () => line.remove(), { once: true });
+      }, TTL);
+
+      // Clique remove imediatamente (pointer-events none no container, mas
+      // pode ser ativado via pointer-events: all na linha se quiser)
     },
 
     // ── Minimapa ─────────────────────────────────────────────────────────────
