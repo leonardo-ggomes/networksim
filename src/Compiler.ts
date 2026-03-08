@@ -105,6 +105,7 @@ function tokenize(src: string): Token[] {
             '==': TK.EQ, '!=': TK.NEQ, '<=': TK.LTE, '>=': TK.GTE,
             '&&': TK.AND, '||': TK.OR, '+=': TK.PLUSEQ, '-=': TK.MINUSEQ,
             '*=': TK.STAREQ, '/=': TK.SLASHEQ,
+            '++': 'INC', '--': 'DEC',
         };
         if (twoMap[two]) { tokens.push({ type: twoMap[two], value: two, line }); i += 2; continue; }
 
@@ -234,9 +235,46 @@ class Interpreter {
         this.expect(TK.LBRACE);
         while (!this.check(TK.RBRACE) && !this.check(TK.EOF)) {
             this.parseStatement();
-            if (this.breakFlag || this.continueFlag || this.returnFlag) break;
+            if (this.breakFlag || this.continueFlag || this.returnFlag) {
+                // Saída antecipada: pula os tokens restantes até o } fechando
+                // deste bloco (respeitando blocos aninhados)
+                let depth = 1;
+                while (depth > 0 && !this.check(TK.EOF)) {
+                    const tk = this.advance();
+                    if (tk.type === TK.LBRACE) depth++;
+                    else if (tk.type === TK.RBRACE) depth--;
+                }
+                return; // } já consumido pelo loop acima
+            }
         }
         this.expect(TK.RBRACE);
+    }
+
+    // Aceita tanto { bloco } quanto statement único sem chaves (if/while/for)
+    private parseBody() {
+        if (this.check(TK.LBRACE)) {
+            this.parseBlock();
+        } else {
+            this.parseStatement();
+        }
+    }
+
+    // Pula { bloco } ou statement único sem executar
+    private skipBody() {
+        if (this.check(TK.LBRACE)) {
+            this.skipBlock();
+        } else {
+            // Pula um statement: avança até ';' respeitando parênteses aninhados
+            let depth = 0;
+            while (!this.check(TK.EOF)) {
+                const t = this.peek();
+                if (t.type === TK.LPAREN) { depth++; this.advance(); }
+                else if (t.type === TK.RPAREN) { depth--; this.advance(); }
+                else if (t.type === TK.SEMI && depth === 0) { this.advance(); break; }
+                else if (t.type === TK.LBRACE && depth === 0) { this.skipBlock(); break; }
+                else { this.advance(); }
+            }
+        }
     }
 
     // ── Statement dispatcher ──────────────────────────────────────────────────
@@ -300,10 +338,10 @@ class Interpreter {
         this.expect(TK.RPAREN);
 
         if (this.isTruthy(cond)) {
-            this.parseBlock();
+            this.parseBody();
             this.skipElseChain();
         } else {
-            this.skipBlock();
+            this.skipBody();
             // else if / else
             while (this.check(TK.KW, 'else')) {
                 this.advance();
@@ -313,12 +351,12 @@ class Interpreter {
                     const c2 = this.parseExpr();
                     this.expect(TK.RPAREN);
                     if (this.isTruthy(c2)) {
-                        this.parseBlock();
+                        this.parseBody();
                         this.skipElseChain();
                         return;
-                    } else { this.skipBlock(); }
+                    } else { this.skipBody(); }
                 } else {
-                    this.parseBlock();
+                    this.parseBody();
                     return;
                 }
             }
@@ -329,7 +367,7 @@ class Interpreter {
         while (this.check(TK.KW, 'else')) {
             this.advance();
             if (this.check(TK.KW, 'if')) { this.advance(); this.expect(TK.LPAREN); this.skipExpr(); this.expect(TK.RPAREN); }
-            this.skipBlock();
+            this.skipBody();
         }
     }
 
@@ -365,14 +403,12 @@ class Interpreter {
         let guard = 0;
         while (true) {
             if (++guard > 100_000) this.error('Loop infinito detectado (> 100.000 iterações).');
-            const savedPos = this.pos;
             const cond = this.parseExpr();
             this.expect(TK.RPAREN);
-            const bodyPos = this.pos;
 
-            if (!this.isTruthy(cond)) { this.skipBlock(); break; }
+            if (!this.isTruthy(cond)) { this.skipBody(); break; }
 
-            this.parseBlock();
+            this.parseBody();
 
             if (this.breakFlag)    { this.breakFlag = false; break; }
             if (this.returnFlag)   break;
@@ -410,11 +446,10 @@ class Interpreter {
             // Pula incremento para encontrar o body
             this.skipExpr();
             this.expect(TK.RPAREN);
-            const bodyPos = this.pos;
 
-            if (!this.isTruthy(cond)) { this.skipBlock(); break; }
+            if (!this.isTruthy(cond)) { this.skipBody(); break; }
 
-            this.parseBlock();
+            this.parseBody();
 
             if (this.breakFlag) { this.breakFlag = false; break; }
             if (this.returnFlag) break;
@@ -567,6 +602,16 @@ class Interpreter {
         return left;
     }
     private parseUnary(): CValue {
+        // Prefix ++/--
+        if (this.check('INC') || this.check('DEC')) {
+            const op  = this.advance().type;
+            const name = this.expect(TK.ID).value as string;
+            if (!this.vars.has(name)) this.error(`Variável '${name}' não declarada.`);
+            const cur = this.vars.get(name)!.value as number;
+            const nv  = op === 'INC' ? cur + 1 : cur - 1;
+            this.vars.get(name)!.value = nv;
+            return nv;
+        }
         if (this.check(TK.MINUS)) { this.advance(); return -(this.parseUnary() as number); }
         if (this.check(TK.NOT))   { this.advance(); return this.isTruthy(this.parseUnary()) ? 0 : 1; }
         return this.parsePrimary();
@@ -608,9 +653,16 @@ class Interpreter {
                 if (name === 'rand')  return Math.floor(Math.random() * 32768);
                 return this.callFunction(name, args);
             }
-            // Leitura de variável
+            // Leitura de variável (com postfix ++ / --)
             if (!this.vars.has(name)) this.error(`Variável '${name}' não declarada (linha ${t.line}).`);
-            return this.vars.get(name)!.value;
+            const varVal = this.vars.get(name)!.value;
+            if (this.check('INC') || this.check('DEC')) {
+                const op = this.advance().type;
+                const cur = varVal as number;
+                this.vars.get(name)!.value = op === 'INC' ? cur + 1 : cur - 1;
+                return cur; // retorna valor ANTES do incremento (semântica postfix)
+            }
+            return varVal;
         }
 
         this.advance(); // skip unexpected
