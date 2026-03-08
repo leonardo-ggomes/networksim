@@ -36,8 +36,6 @@ function extractAvatarData(data: any): { url: string; name: string } {
     }
 }
 
-declare global { interface Window { HUD?: any; Phone?: any } }
-
 class SocketManager{
    
     loading?: Loading
@@ -102,7 +100,6 @@ class SocketManager{
         this.io.on("npc:state",   this.updateNpcState);
         this.io.on("slide:npc",   this.receiveNpcSlide);
         this.io.on("slide:npc:end", this.receiveNpcSlideEnd);
-        this.io.on("chat:message",  this.receiveChatMessage);
     }
 
     loadPlayers = (players: any) => {
@@ -117,9 +114,26 @@ class SocketManager{
                 Guest.loadModel(this.loading, urlAvatar, id, playerName).then(() => {
                     this.scene?.add(Guest.models[id].obj);
                     // Drone do guest também vive direto na Scene (evita jitter)
-                    this.scene?.add((Guest.models[id].obj as any).droneGroup);
-                    Guest.models[id].obj.visible = false
+                    this.scene?.add(Guest.models[id].obj.droneGroup);
                     this.players[id] = Guest.models[id].obj;
+
+                    // Aplica posição salva no servidor imediatamente após carregar.
+                    // players:loaded já inclui x/y/z se o player se moveu antes.
+                    const p = players[id];
+                    if (p?.x !== undefined) {
+                        Guest.setPosition(
+                            new Vector3(p.x, p.y, p.z),
+                            id
+                        )
+                        Guest.setQuaternion(
+                            new Quaternion(p.qx ?? 0, p.qy ?? 0, p.qz ?? 0, p.qw ?? 1),
+                            id
+                        )
+                        Guest.models[id].obj.visible = true;
+                    } else {
+                        // Sem posição ainda: mantém invisível até receivePlayerPosition
+                        Guest.models[id].obj.visible = false;
+                    }
                 });
 
             } else {
@@ -163,8 +177,23 @@ class SocketManager{
                     if(this.io.id != undefined){
                         this.scene?.add(Guest.models[player.id].obj)
                         // Drone do guest também vive direto na Scene (evita jitter)
-                        this.scene?.add((Guest.models[player.id].obj as any).droneGroup)
+                        this.scene?.add(Guest.models[player.id].obj.droneGroup)
                         this.players[player.id] = Guest.models[player.id].obj
+
+                        // Se o servidor ja enviou posicao deste player (via receivePlayerPosition
+                        // disparado pelo fix do avatar:set), aplica imediatamente.
+                        // Isso evita que o player fique em 0,0,0 ate se mover.
+                        if (player.x !== undefined) {
+                            Guest.setPosition(
+                                new Vector3(player.x, player.y, player.z),
+                                player.id
+                            )
+                            Guest.setQuaternion(
+                                new Quaternion(player.qx ?? 0, player.qy ?? 0, player.qz ?? 0, player.qw ?? 1),
+                                player.id
+                            )
+                            Guest.models[player.id].obj.visible = true
+                        }
                     }
                 })
             }
@@ -176,7 +205,7 @@ class SocketManager{
         console.log('exit the room')
         this.scene?.remove(this.players[id])
         // Remove também o droneGroup do guest da Scene
-        const droneGroup = (Guest.models[id]?.obj as any)?.droneGroup
+        const droneGroup = Guest.models[id]?.obj?.droneGroup
         if (droneGroup) this.scene?.remove(droneGroup)
         Guest.dispose(id)          // libera geometria, material e collider
         delete this.players[id]
@@ -206,19 +235,14 @@ class SocketManager{
             )
 
             // ── Sincroniza drone do guest ──────────────────────────────────
-            // toggleDrone() apenas liga/desliga — o loop de animação
-            // é feito em Guest.update() que chama playerModel.updateDrone()
-            const guestModel = Guest.models[data.id]?.obj as any
-            if (guestModel?.toggleDrone) {
+            // Guest.update() chama obj.updateDrone() a cada frame via PlayerModel nativo.
+            // Aqui só liga/desliga conforme o estado recebido do servidor.
+            const guestModel = Guest.models[data.id]?.obj
+            if (guestModel) {
                 const shouldBeOn = !!data.isLatern
                 if (guestModel.IsDroneActive !== shouldBeOn) {
                     guestModel.toggleDrone(shouldBeOn)
                 }
-            }
-            // updateDrone com a posição recebida do servidor (sem delta real,
-            // mas a frequência de 20Hz do socket é suficiente para o lerp)
-            if (guestModel?.IsDroneActive && guestModel?.updateDrone) {
-                guestModel.updateDrone(0.05, new Vector3(data.x, data.y, data.z))
             }
         }
 
@@ -311,17 +335,6 @@ class SocketManager{
         })
     }
 
-    // ── Chat em rede ──────────────────────────────────────────────────────────
-    receiveChatMessage = (data: { from: string; text: string }) => {
-        window.Phone?.chat.receive(data.from, data.text);
-    }
-
-    // Conecta o Phone ao socket para chat em rede.
-    // Chamar após phone.js carregar (ex: no Experience.ts após buildHUD).
-    connectPhone() {
-        window.Phone?.setSocket(this.io);
-    }
-
     // Registra avatar e nome, avisa o servidor
     setAvatar(url: string, name: string) {
         this.avatarUrl  = url
@@ -331,6 +344,35 @@ class SocketManager{
 
     promotePlayerTo(targetId: string, role: string) {
         this.io.emit("role:set", { targetId, role });
+    }
+
+    // ── Phone / Chat integration ──────────────────────────────────────────────
+    // Conecta o widget Phone ao socket e registra os listeners de chat.
+    // Deve ser chamado em Experience.ts após o HUD carregar:
+    //   SocketManager.connectPhone()
+    connectPhone() {
+        const phone = (window as any).Phone;
+        if (!phone) {
+            console.warn('SocketManager.connectPhone: window.Phone não encontrado.');
+            return;
+        }
+
+        // Passa a instância do socket para o Phone (usado para enviar chat)
+        phone.setSocket(this.io);
+
+        // Passa o nome do jogador local para o Phone exibir corretamente nas mensagens enviadas
+        if (this.playerName) phone.setPlayerName?.(this.playerName);
+
+        // Os listeners de chat:message, joinInRoom e exitTheRoom
+        // ja sao registrados dentro de phone.js via setSocket().
+        // Nao registrar aqui para evitar duplicidade.
+    }
+}
+
+declare global {
+    interface Window {
+        HUD?: any;
+        Phone?: any;
     }
 }
 

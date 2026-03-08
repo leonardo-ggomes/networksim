@@ -132,8 +132,6 @@ export default class PlayerController {
     document.addEventListener("keyup",   this.onKeydown);
     this.actions["terminal"] = false;
     PlayerController.instance = this;
-    // Expõe para phone.js (puro JS) acessar o drone sem import circular
-    (window as any).__pcInstance = this;
   }
 
   private async initBVH() {
@@ -155,6 +153,9 @@ export default class PlayerController {
   };
 
   callAction(event: KeyboardEvent) {
+    // Bloqueia atalhos do jogo enquanto o Phone está aberto (usuário digitando)
+    if ((window as any).Phone?._open) return;
+
     if (this.keyBoard["KeyT"]) {
       if (!this.actions["terminal"] && infoPlayer.hasTerminal) {
         event.preventDefault();

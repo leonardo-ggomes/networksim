@@ -1,5 +1,6 @@
 /* ── HUD Fonts ── */
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap');
 
 :root {
   --hud-green:   #00ff9d;
@@ -277,7 +278,6 @@
    LOG SYSTEM — canto superior direito
    ════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap');
 
 #hud-log {
   position: fixed;

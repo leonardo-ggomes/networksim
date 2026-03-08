@@ -1,6 +1,10 @@
 /**
  * Guest.ts — Jogadores remotos com nome flutuante estilo GTA V
  *
+ * Usa PlayerModel como instância de cada guest, garantindo que
+ * droneGroup, toggleDrone() e updateDrone() funcionem nativamente —
+ * sem precisar de casts "as any" no SocketManager.
+ *
  * Nome sobre a cabeça:
  *   - Canvas 2D → CanvasTexture → SpriteMaterial → Sprite (Three.js nativo)
  *   - Billboard automático: Sprite sempre vira para a câmera sem código extra
@@ -11,7 +15,6 @@
 
 import {
     AnimationAction,
-    AnimationMixer,
     Camera,
     CanvasTexture,
     Color,
@@ -26,28 +29,15 @@ import {
     SpriteMaterial,
     Vector3,
 } from 'three';
-import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import Loading from './Loading';
 import { colliders } from './Colliders';
 import PlayerController from './PlayerController';
+import PlayerModel from './PlayerModel';
 
 const GUEST_COLORS = [
     '#4fc3f7', '#81c784', '#ffb74d', '#f06292',
     '#ce93d8', '#4db6ac', '#fff176', '#ff8a65',
 ];
-
-// ── Cache GLTFs ───────────────────────────────────────────────────────────────
-const gltfCache  = new Map<string, GLTF>();
-const loadingMap = new Map<string, Promise<GLTF>>();
-
-function loadGLTF(loading: Loading, url: string): Promise<GLTF> {
-    if (gltfCache.has(url))  return Promise.resolve(gltfCache.get(url)!);
-    if (loadingMap.has(url)) return loadingMap.get(url)!;
-    const p = loading.loader.loadAsync(url).then(gltf => { gltfCache.set(url, gltf); return gltf; });
-    loadingMap.set(url, p);
-    return p;
-}
 
 // ── Textura de nome via Canvas 2D ─────────────────────────────────────────────
 function makeNameTexture(name: string, accentColor: string): CanvasTexture {
@@ -107,8 +97,7 @@ function roundRect(
 
 // ── Instância ─────────────────────────────────────────────────────────────────
 interface GuestInstance {
-    obj:              Object3D;
-    mixer:            AnimationMixer;
+    obj:              PlayerModel;          // PlayerModel completo (tem drone nativo)
     animationsAction: { [key: string]: AnimationAction };
     activeClip?:      AnimationAction;
     nameSprite?:      Sprite;
@@ -122,7 +111,13 @@ export default class Guest {
     static animationsAction: { [key: string]: AnimationAction } = {};
 
     private static colorCounter = 0;
-    private static _tmpVec = new Vector3();
+    private static _camPos     = new Vector3(); // reutilizado em update() — zero alloc
+    private static _tmpVec     = new Vector3(); // reutilizado em cálculos de distância
+
+    // Máximo de drones de guests que projetam LUZ simultânea.
+    // Drones além desse limite ficam visíveis mas com luz desligada.
+    // Cada SpotLight ativa = pressão extra no shader de todos os objetos iluminados.
+    static MAX_ACTIVE_DRONE_LIGHTS = 5;
 
     // ── Carrega um guest ───────────────────────────────────────────────────────
     static async loadModel(
@@ -132,56 +127,57 @@ export default class Guest {
         playerName: string = 'Jogador'
     ): Promise<void> {
 
-        const modelUrl = urlAvatar || 'models/teacher_npc.glb';
-        const baseGltf = await loadGLTF(loading, modelUrl);
-        const cloned   = SkeletonUtils.clone(baseGltf.scene) as Object3D;
-
-        const colorIdx = Guest.colorCounter % GUEST_COLORS.length;
+        const colorIdx   = Guest.colorCounter % GUEST_COLORS.length;
         Guest.colorCounter++;
 
-        const mixer: AnimationMixer = new AnimationMixer(cloned);
-        const animationsAction: { [key: string]: AnimationAction } = {};
+        // Instancia um PlayerModel completo (isGuest = true).
+        // Isso garante droneGroup, toggleDrone() e updateDrone() sem casts.
+        const playerModel = new PlayerModel(loading, true, urlAvatar, socketId);
+        await playerModel.isLoadedModel;
 
-        for (const key in loading.globalAnimations) {
-            animationsAction[key] = mixer.clipAction(loading.globalAnimations[key]);
-        }
-        animationsAction['Idle']?.play();
+        const animationsAction = playerModel.animationsAction;
 
-        // Sprite de nome
+        // Sprite de nome flutuante
         const sprite = Guest.createNameSprite(playerName, GUEST_COLORS[colorIdx]);
+        playerModel.add(sprite);
+
+        // Anel colorido por guest (substituindo o anel verde padrão do PlayerModel)
+        Guest.addColoredRing(playerModel, colorIdx);
 
         Guest.models[socketId] = {
-            obj: cloned, mixer, animationsAction,
-            activeClip: animationsAction['Idle'],
-            nameSprite: sprite,
+            obj:              playerModel,
+            animationsAction,
+            activeClip:       animationsAction['Idle'],
+            nameSprite:       sprite,
             playerName,
         };
         Guest.animationsAction = animationsAction;
 
-        cloned.name = `guest.${socketId}`;
-        colliders.push(cloned);
-
         // Reconstrói o BVH para incluir o novo guest na colisão física
         PlayerController.instance?.refreshBVH();
 
-        Guest.addRing(cloned, colorIdx);
-        cloned.add(sprite);
-
-        console.log(`[Guest] "${playerName}" (${socketId}) → ${modelUrl}`);
+        console.log(`[Guest] "${playerName}" (${socketId}) → ${urlAvatar}`);
     }
 
-    // ── Anel indicador ────────────────────────────────────────────────────────
-    private static addRing(scene: Object3D, idx: number) {
-        const ring = new Mesh(
-            new RingGeometry(0.28, 0.38, 32),
-            new MeshBasicMaterial({
-                color: new Color(GUEST_COLORS[idx]),
-                transparent: true, opacity: 0.45, side: DoubleSide,
-            })
-        );
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.y = 0.05;
-        scene.add(ring);
+    // ── Anel colorido por guest ───────────────────────────────────────────────
+    // Substitui o anel verde padrão do PlayerModel por um com a cor do guest.
+    private static addColoredRing(model: PlayerModel, idx: number) {
+        // Remove o anel padrão se existir
+        if (model.ring) {
+            (model.ring.material as MeshBasicMaterial).color.set(GUEST_COLORS[idx]);
+            (model.ring.material as MeshBasicMaterial).opacity = 0.45;
+        } else {
+            const ring = new Mesh(
+                new RingGeometry(0.28, 0.38, 32),
+                new MeshBasicMaterial({
+                    color: new Color(GUEST_COLORS[idx]),
+                    transparent: true, opacity: 0.45, side: DoubleSide,
+                })
+            );
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.y = 0.05;
+            model.add(ring);
+        }
     }
 
     // ── Sprite de nome ────────────────────────────────────────────────────────
@@ -219,7 +215,7 @@ export default class Guest {
         }
     }
 
-    // ── Interface pública — mesma de sempre ───────────────────────────────────
+    // ── Interface pública ─────────────────────────────────────────────────────
 
     static setPosition(pos: Vector3, socketId: string) {
         Guest.models[socketId]?.obj.position.copy(pos);
@@ -244,58 +240,90 @@ export default class Guest {
     // Distância máxima para renderizar guests (além disso: invisible + mixer pausado)
     static CULL_DISTANCE = 60;
 
-    // Aceita camera opcional — sem ela os sprites não ajustam escala
     static update(delta: number, camera?: Camera) {
-        const camPos = new Vector3();
-        if (camera) camera.getWorldPosition(camPos);
+        // Reutiliza o mesmo Vector3 — zero alloc por frame
+        if (camera) camera.getWorldPosition(Guest._camPos);
+
+        // ── Gestão de luzes de drone: só os N mais próximos iluminam ──────
+        // Coleta guests com drone ativo ordenados por distância
+        const activeDrones: { id: string; dist: number }[] = [];
+        for (const id in Guest.models) {
+            const obj = Guest.models[id].obj;
+            if (obj.IsDroneActive) {
+                const dist = camera ? obj.position.distanceTo(Guest._camPos) : 0;
+                activeDrones.push({ id, dist });
+            }
+        }
+        activeDrones.sort((a, b) => a.dist - b.dist);
 
         for (const id in Guest.models) {
-            const { mixer, obj, activeClip, animationsAction } = Guest.models[id];
+            const inst = Guest.models[id];
+            const { obj, activeClip, animationsAction } = inst;
+            const mixer = obj.mixer;
+            if (!mixer) continue;
 
             // ── Culling por distância ──────────────────────────────────────
             if (camera) {
-                const dist = obj.position.distanceTo(camPos);
+                const dist = obj.position.distanceTo(Guest._camPos);
                 const visible = dist < Guest.CULL_DISTANCE;
 
                 if (obj.visible !== visible) obj.visible = visible;
 
-                // Pausa o mixer quando culled — economiza CPU de skinning
                 if (!visible) {
                     mixer.timeScale = 0;
                     continue;
                 }
-                // Retoma e escala o mixer pela distância:
-                // longe → atualiza mais devagar (menos precisão, menos CPU)
-                mixer.timeScale = dist > 30 ? 0.5 : 1;
+
+                // LOD de mixer: 3 níveis de frequência de atualização
+                //   < 15u  → timeScale 1.0 (full)
+                //   15–35u → timeScale 0.5 (metade da CPU de skinning)
+                //   35–60u → timeScale 0.25 (quase parado, só para não congelar)
+                if      (dist < 15) mixer.timeScale = 1.0;
+                else if (dist < 35) mixer.timeScale = 0.5;
+                else                mixer.timeScale = 0.25;
             }
 
             mixer.update(delta);
 
-            const hips = obj.getObjectByName('Hips');
-            if (hips) {
-                hips.position.set(0, hips.position.y, 0);
+            // Drone update: só para os N mais próximos com luz ativa
+            if (obj.IsDroneActive) {
+                obj.updateDrone(delta, obj.position);
+
+                // Liga/desliga a luz do drone conforme o ranking de proximidade
+                const rank = activeDrones.findIndex(d => d.id === id);
+                const shouldLight = rank < Guest.MAX_ACTIVE_DRONE_LIGHTS;
+                if (shouldLight !== (obj.droneLight.intensity > 0)) {
+                    obj.droneLight.intensity = shouldLight ? 3 : 0;
+                }
+            }
+
+            // PlayerModel cacheia hipsNode em loadModel() — acesso direto, zero busca recursiva
+            const hipsNode = (obj as any).hipsNode as Object3D | undefined;
+            if (hipsNode) {
+                hipsNode.position.set(0, hipsNode.position.y, 0);
                 if (activeClip === animationsAction['Sitting']) {
-                    hips.rotation.x = 0;
-                    hips.position.set(0, hips.position.y + 0.5, 0);
+                    hipsNode.rotation.x = 0;
+                    hipsNode.position.set(0, hipsNode.position.y + 0.5, 0);
                 }
             }
         }
 
-        if (camera) Guest.updateSprites(camPos);
+        if (camera) Guest.updateSprites(Guest._camPos);
     }
 
     static dispose(socketId: string) {
         const inst = Guest.models[socketId];
         if (!inst) return;
 
-        inst.mixer.stopAllAction();
+        const { obj } = inst;
+        obj.mixer?.stopAllAction();
 
         if (inst.nameSprite) {
             (inst.nameSprite.material as SpriteMaterial).map?.dispose();
             inst.nameSprite.material.dispose();
         }
 
-        inst.obj.traverse((child) => {
+        obj.traverse((child) => {
             const mesh = child as Mesh;
             if (!mesh.isMesh) return;
             mesh.geometry?.dispose();
@@ -304,11 +332,14 @@ export default class Guest {
             else (mat as MeshStandardMaterial)?.dispose();
         });
 
-        const idx = colliders.indexOf(inst.obj);
-        if (idx !== -1) {
-            colliders.splice(idx, 1);
-            // Reconstrói o BVH para remover o guest da colisão física
-            PlayerController.instance?.refreshBVH();
+        // Remove o model interno do colliders (PlayerModel adiciona model, não o Group)
+        const modelObj = obj.model;
+        if (modelObj) {
+            const idx = colliders.indexOf(modelObj);
+            if (idx !== -1) {
+                colliders.splice(idx, 1);
+                PlayerController.instance?.refreshBVH();
+            }
         }
 
         delete Guest.models[socketId];

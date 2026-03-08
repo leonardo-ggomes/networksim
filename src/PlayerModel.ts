@@ -204,9 +204,13 @@ export default class PlayerModel extends Group {
         this.droneLight.decay                 = 1.2
         this.droneLight.distance              = 12
         this.droneLight.intensity             = 0
-        this.droneLight.castShadow            = true
-        this.droneLight.shadow.mapSize.width  = 512
-        this.droneLight.shadow.mapSize.height = 512
+        // Guests não projetam sombra do drone — cada shadow map = 1 render pass extra.
+        // Com 100 jogadores isso seria 100 passes adicionais por frame.
+        this.droneLight.castShadow = !this.isGuest
+        if (!this.isGuest) {
+            this.droneLight.shadow.mapSize.width  = 512
+            this.droneLight.shadow.mapSize.height = 512
+        }
 
         this.droneGroup.add(this.droneLight)
         this.droneLight.position.set(0, 0, 0)
@@ -222,7 +226,8 @@ export default class PlayerModel extends Group {
     toggleDrone(isOn: boolean) {
         this.IsDroneActive        = isOn
         this.droneGroup.visible   = isOn
-        this.droneLight.intensity = isOn ? 8 : 0
+        // Guests usam intensidade reduzida (sem shadow) — evita overdraw de luz
+        this.droneLight.intensity = isOn ? (this.isGuest ? 3 : 8) : 0
 
         if (isOn) {
             // Inicializa posição acima do player — evita "voo" desde a origem

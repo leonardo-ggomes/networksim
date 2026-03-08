@@ -23,6 +23,7 @@
 
   // ── Socket.IO — referência injetada via Phone.setSocket() ─────────────────
   let _socket = null;
+  let _playerName = 'Você'; // nome local — atualizado via Phone.setPlayerName(name)
 
   // ── Estilos ────────────────────────────────────────────────────────────────
   const CSS = `
@@ -110,8 +111,6 @@
       box-shadow:
         inset 0 0 0 1px rgba(0,207,255,0.06),
         inset 0 40px 60px rgba(0,207,255,0.03);
-      user-select: none;
-      -webkit-user-select: none;
     }
 
     /* Scanlines na moldura */
@@ -1007,8 +1006,14 @@
   document.getElementById('ctos-homebar-pill')?.addEventListener('click', closePhone);
   DOM.btn.addEventListener('click', () => _open ? closePhone() : openPhone());
 
+  // Retorna true se o foco está em input/textarea — bloqueia atalhos do jogo.
+  function isTyping() {
+    const tag = document.activeElement?.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+  }
+
   document.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyP' && !e.repeat) {
+    if (e.code === 'KeyP' && !e.repeat && !isTyping()) {
       e.preventDefault();
       _open ? closePhone() : openPhone();
     }
@@ -1039,7 +1044,7 @@
     const input = document.getElementById('ctos-chat-input');
     const text  = input.value.trim();
     if (!text) return;
-    appendMessage('Você', text, 'sent');
+    appendMessage(_playerName, text, 'sent');
     input.value = '';
     input.style.height = 'auto';
     // Emite via Socket.IO se conectado
@@ -1228,16 +1233,15 @@
       stat: null,
       statGain: 0,
       action(_info) {
-        // Tenta todas as formas de chegar ao PlayerController
-        const pc = window.__pcInstance
-          ?? window.PlayerController?.instance
-          ?? window.__playerController;
-        if (!pc) return { ok: false, msg: 'Conecte o Phone ao PlayerController via Phone.setPC(instance).' };
+        const pc = window.PlayerController?.instance
+          ?? (window).__playerController;
+        if (!pc) return { ok: false, msg: 'PlayerController não encontrado.' };
         const pm = pc.playerModel;
         if (!pm) return { ok: false, msg: 'PlayerModel não encontrado.' };
         const next = !pm.IsDroneActive;
         pm.toggleDrone(next);
-        pc.lastEmitTime = 0; // força re-emit do estado do drone
+        // Força emissão de posição com novo estado do drone
+        pc.lastEmitTime = 0;
         return { ok: true, msg: next ? '🚁 Drone ativado!' : '🚁 Drone desativado.' };
       }
     },
@@ -1255,27 +1259,17 @@
     const info = getInfo();
     return info ? Math.round(info[key] ?? 0) : 0;
   }
-  function getDroneState() {
-    const pc = window.__pcInstance ?? window.PlayerController?.instance ?? window.__playerController;
-    return pc?.playerModel?.IsDroneActive ?? false;
-  }
 
-  // ── Renderiza a loja (primeira vez — cria DOM dos cards) ───────────────────
+  // ── Renderiza a loja ───────────────────────────────────────────────────────
   function renderShop() {
-    const list  = document.getElementById('ctos-shop-list');
+    const list = document.getElementById('ctos-shop-list');
     const balEl = document.getElementById('ctos-shop-balance-val');
     if (!list) return;
 
-    // Se os cards já existem, só atualiza valores (sem recriar DOM = sem piscar)
-    if (list.querySelector('.ctos-shop-card')) {
-      updateShop();
-      return;
-    }
-
-    // Primeira renderização: constrói o DOM
     const money = getMoney();
     if (balEl) balEl.textContent = money.toLocaleString('pt-BR');
 
+    // Agrupa por categoria
     const cats = {};
     SHOP_ITEMS.forEach(item => {
       if (!cats[item.category]) cats[item.category] = [];
@@ -1283,55 +1277,17 @@
     });
 
     list.innerHTML = '';
+
     Object.entries(cats).forEach(([cat, items]) => {
       const sec = document.createElement('div');
       sec.className = 'ctos-shop-section';
       sec.textContent = cat;
       list.appendChild(sec);
-      items.forEach(item => list.appendChild(buildShopCard(item, money)));
-    });
-  }
 
-  // ── Atualiza apenas os valores nas cards existentes — sem piscar ───────────
-  function updateShop() {
-    const balEl = document.getElementById('ctos-shop-balance-val');
-    const money = getMoney();
-    if (balEl) balEl.textContent = money.toLocaleString('pt-BR');
-
-    SHOP_ITEMS.forEach(item => {
-      const card = document.querySelector('[data-shop-id="' + item.id + '"]');
-      if (!card) return;
-
-      const canAfford = item.price === 0 || money >= item.price;
-      const isDrone   = item.id === 'drone_toggle';
-
-      // disabled class
-      card.classList.toggle('disabled', !canAfford);
-
-      // barra de stat
-      if (item.stat) {
-        const fill = card.querySelector('.ctos-shop-stat-fill');
-        const lbl  = card.querySelector('.ctos-shop-stat-label');
-        const cur  = getStat(item.stat);
-        if (fill) fill.style.width = cur + '%';
-        if (lbl)  lbl.textContent  = cur + '%';
-      }
-
-      // drone: status label + botão
-      if (isDrone) {
-        const isOn   = getDroneState();
-        const lbl    = card.querySelector('.ctos-drone-status');
-        const btn    = card.querySelector('.ctos-shop-btn');
-        if (lbl) lbl.textContent = 'Status: ' + (isOn ? '🟢 ATIVO' : '⚫ INATIVO');
-        if (btn) {
-          btn.textContent = isOn ? 'Desligar' : 'Ligar';
-          btn.classList.toggle('drone-on', isOn);
-        }
-      }
-
-      // btn disabled
-      const btn = card.querySelector('.ctos-shop-btn');
-      if (btn) btn.disabled = !canAfford;
+      items.forEach(item => {
+        const card = buildShopCard(item, money);
+        list.appendChild(card);
+      });
     });
   }
 
@@ -1341,7 +1297,6 @@
 
     const card = document.createElement('div');
     card.className = 'ctos-shop-card ' + item.type + (canAfford ? '' : ' disabled');
-    card.dataset.shopId = item.id; // chave para updateShop()
 
     // Ícone
     const iconEl = document.createElement('div');
@@ -1350,48 +1305,53 @@
     card.appendChild(iconEl);
 
     // Info
-    const infoDiv = document.createElement('div');
-    infoDiv.className = 'ctos-shop-info';
+    const info = document.createElement('div');
+    info.className = 'ctos-shop-info';
 
     const nameEl = document.createElement('div');
     nameEl.className = 'ctos-shop-name';
     nameEl.textContent = item.name;
-    infoDiv.appendChild(nameEl);
+    info.appendChild(nameEl);
 
     const descEl = document.createElement('div');
     descEl.className = 'ctos-shop-desc';
     descEl.textContent = item.desc;
-    infoDiv.appendChild(descEl);
+    info.appendChild(descEl);
 
-    // Barra de stat
+    // Barra de stat (só para itens com stat)
     if (item.stat) {
       const statRow = document.createElement('div');
       statRow.className = 'ctos-shop-stat';
+
       const bar = document.createElement('div');
       bar.className = 'ctos-shop-stat-bar';
       const fill = document.createElement('div');
       fill.className = 'ctos-shop-stat-fill';
-      fill.style.width = getStat(item.stat) + '%';
+      const cur = getStat(item.stat);
+      fill.style.width = cur + '%';
       bar.appendChild(fill);
+
       const lbl = document.createElement('span');
       lbl.className = 'ctos-shop-stat-label';
-      lbl.textContent = getStat(item.stat) + '%';
+      lbl.textContent = cur + '%';
+
       statRow.appendChild(bar);
       statRow.appendChild(lbl);
-      infoDiv.appendChild(statRow);
+      info.appendChild(statRow);
     }
 
-    // Drone: label de status com classe específica para updateShop()
+    // Stat do drone: mostra ON/OFF
     if (isDrone) {
-      const isOn = getDroneState();
+      const pc = window.PlayerController?.instance ?? window.__playerController;
+      const isOn = pc?.playerModel?.IsDroneActive ?? false;
       const lbl = document.createElement('div');
-      lbl.className = 'ctos-shop-desc ctos-drone-status';
+      lbl.className = 'ctos-shop-desc';
       lbl.textContent = 'Status: ' + (isOn ? '🟢 ATIVO' : '⚫ INATIVO');
       lbl.style.marginTop = '3px';
-      infoDiv.appendChild(lbl);
+      info.appendChild(lbl);
     }
 
-    card.appendChild(infoDiv);
+    card.appendChild(info);
 
     // Botão + preço
     const buyCol = document.createElement('div');
@@ -1408,17 +1368,15 @@
     }
     buyCol.appendChild(priceEl);
 
-    const isOn = isDrone && getDroneState();
     const btn = document.createElement('button');
-    btn.className = 'ctos-shop-btn' + (isOn ? ' drone-on' : '');
+    btn.className = 'ctos-shop-btn' + (isDrone && (window.PlayerController?.instance ?? window.__playerController)?.playerModel?.IsDroneActive ? ' drone-on' : '');
     btn.disabled  = !canAfford;
     btn.textContent = isDrone
-      ? (isOn ? 'Desligar' : 'Ligar')
+      ? ((window.PlayerController?.instance ?? window.__playerController)?.playerModel?.IsDroneActive ? 'Desligar' : 'Ligar')
       : (item.price === 0 ? 'Usar' : 'Comprar');
 
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (btn.disabled) return;
+    btn.addEventListener('click', () => {
+      if (!canAfford || btn.disabled) return;
       executePurchase(item, card, btn);
     });
 
@@ -1444,22 +1402,24 @@
     const result = item.action(info);
 
     if (result.ok) {
+      // Debita o dinheiro
       if (item.price > 0) {
         info.money = money - item.price;
-        // updateShop() já vai ser chamado pelo Proxy do infoPlayer
-      } else {
-        // Item gratuito (drone) — atualiza manualmente pois o Proxy não dispara
-        updateShop();
       }
 
-      // Feedback visual sem recriar o card
+      // Feedback visual na card
       card.classList.remove('bought');
-      void card.offsetWidth;
+      void card.offsetWidth; // reflow para reiniciar animation
       card.classList.add('bought');
 
+      // Notifica via chat do Phone
       window.Phone?.chat.receive('ctOS', result.msg);
 
+      // Re-renderiza para atualizar barras, balanço e status do drone
+      setTimeout(renderShop, 150);
+
     } else {
+      // Falha (ex: já está cheio)
       window.Phone?.chat.receive('ctOS', '⚠ ' + result.msg);
       btn.style.borderColor = 'rgba(255,60,0,0.5)';
       btn.style.color = '#ff3c00';
@@ -1470,19 +1430,17 @@
     }
   }
 
+
   // ── API pública ───────────────────────────────────────────────────────────
   window.Phone = {
 
     onSend: null, // hook legado
 
-    // Registra o PlayerController para o drone funcionar.
-    // Chamar em Experience.ts: Phone.setPC(playerControllerInstance)
-    setPC(pc) {
-      window.__pcInstance = pc;
-    },
-
     // Conecta o Phone ao Socket.IO para chat em rede.
     // Deve ser chamado após Phone carregar:  Phone.setSocket(SocketManager.io)
+    setPlayerName(name) {
+      _playerName = name || 'Você';
+    },
     setSocket(socket) {
       _socket = socket;
 
@@ -1507,7 +1465,7 @@
     },
 
     toggle() { _open ? closePhone() : openPhone(); },
-    refreshShop() { updateShop(); }, // atualiza valores sem recriar DOM
+    refreshShop() { renderShop(); }, // atualiza manualmente (ex: após money mudar)
     open()   { openPhone(); },
     close()  { closePhone(); },
 

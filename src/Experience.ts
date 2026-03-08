@@ -174,12 +174,15 @@ export default class Experience {
   
     setScene() {      
         this.scene.background = new Color(0x000);
-        this.scene.fog = new Fog(0x34495E, 0, 80);
+        this.scene.fog = new Fog(0x34495E, 30, 65); // near=30: inicia fade antes do CULL_DISTANCE=60
     }
     
     setRenderer() {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // cap 2x: evita 9× pixels em telas 3x
+        // PCFSoft é bonito mas pesado — Basic é 2-3× mais rápido para muitas luzes
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type    = (window as any).THREE?.BasicShadowMap ?? 0; // BasicShadowMap = 0
         document.body.appendChild(this.renderer.domElement)
     }
 
@@ -367,5 +370,11 @@ export default class Experience {
         this.pathDebugger.update(this.camera)
 
         this.renderer.render(this.scene, this.camera)
+
+        // Debug: descomente para monitorar drawcalls no console
+        // if (import.meta.env.DEV) {
+        //     const { render } = this.renderer.info;
+        //     console.log(`calls:${render.calls} tris:${render.triangles} tex:${this.renderer.info.memory.textures}`);
+        // }
     }
 }
