@@ -1282,7 +1282,11 @@ const commands: Record<string, (args: string[]) => string> = {
         eventEmitter.dispatchEvent(new CustomEvent("terminal:pwd", { detail: { dir: currentDir } }));
         return currentDir;
     },
-    "ifconfig": () => `  eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n gateway 192.168.1.1`,
+    "ifconfig": (_) => {
+        const _h = "127.0.0.1";
+        eventEmitter.dispatchEvent(new CustomEvent("terminal:ifconfig", { detail: { host: _h } }));
+        return `  eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n gateway 192.168.1.1`;
+    },
     "help": () => [
         "╔══════════════════════════════════════════════════════╗",
         "║         HACKOS v2.4  —  COMANDOS DISPONÍVEIS        ║",
