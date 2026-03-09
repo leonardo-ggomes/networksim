@@ -143,11 +143,13 @@ export class BVHCollision {
       return { onGround: true, groundY: null, wallBlocked: false };
     }
 
-    // ── Ray para baixo ────────────────────────────────────────────────────────
-    const rayOrigin = playerPos.clone();
-    rayOrigin.y += this.stepHeight;
+    // ── Ray para baixo — detecta chão, rampas e topo de plataformas ──────────
+    // Partimos de playerPos.y + stepHeight para que degraus pequenos
+    // não bloqueiem o ray antes de atingir o chão.
+    const downOrigin = playerPos.clone();
+    downOrigin.y += this.stepHeight;
 
-    this.downRay.set(rayOrigin, new Vector3(0, -1, 0));
+    this.downRay.set(downOrigin, new Vector3(0, -1, 0));
     this.downRay.far = this.stepHeight + this.groundSnapDist;
 
     const downHits = this.downRay.intersectObject(this.colliderMesh, false);
@@ -160,22 +162,68 @@ export class BVHCollision {
       onGround = true;
     }
 
-    // ── Ray frontal (paredes) ─────────────────────────────────────────────────
-    let wallBlocked = false;
+    // ── Ray de plataforma — detecta topo de palco/plataforma acima do player ──
+    // Problema: quando o player está na LATERAL de um palco suspenso (ex: Y=0,
+    // palco em Y=1.0), o ray para baixo acerta o chão real (Y=0) embaixo do palco
+    // e não o topo do palco. O player fica em Y=0 e atravessa a lateral.
+    //
+    // Solução: ray adicional partindo de mais alto (playerPos.y + PLATFORM_PROBE_H)
+    // que varre para baixo uma distância maior. Se achar uma superfície acima
+    // do groundY já encontrado, prefere ela — é o topo do palco.
+    const PLATFORM_PROBE_H = 2.5; // altura máxima de plataforma detectável
+    const probeOrigin = playerPos.clone();
+    probeOrigin.y += PLATFORM_PROBE_H;
+
+    const probeRay = new Raycaster();
+    probeRay.set(probeOrigin, new Vector3(0, -1, 0));
+    probeRay.far = PLATFORM_PROBE_H + this.groundSnapDist;
+
+    const probeHits = probeRay.intersectObject(this.colliderMesh, false);
+
+    if (probeHits.length > 0) {
+      const probeY = probeHits[0].point.y;
+      // Só usa o resultado da probe se encontrou algo ACIMA do chão já detectado
+      // E o player está abaixo desse nível (está na lateral, não em cima)
+      // E a superfície está dentro de alcance de snap (não é o teto)
+      const playerIsBelow  = probeY > playerPos.y + this.skinWidth;
+      const isReachableSnap = probeY - playerPos.y <= PLATFORM_PROBE_H;
+      const isBetterGround  = groundY === null || probeY > groundY;
+
+      if (playerIsBelow && isReachableSnap && isBetterGround) {
+        groundY  = probeY;
+        onGround = true;
+      }
+    }
+
+    // ── Ray frontal — detecta paredes em múltiplas alturas ───────────────────
+    // Checamos em 3 alturas: tornozelo, cintura e peito.
+    // Isso garante que paredes baixas (rodapés) e altas (palcos) sejam detectadas.
+    let wallBlocked  = false;
+    let wallHitY     = -Infinity; // altura mais alta de colisão frontal
 
     if (moveDir.lengthSq() > 0.001) {
-      const frontOrigin = playerPos.clone();
-      frontOrigin.y += 0.9; // altura do peito
+      const dir      = moveDir.clone().normalize();
+      const heights  = [0.15, 0.6, 0.95]; // tornozelo, cintura, peito
 
-      this.frontRay.set(frontOrigin, moveDir.clone().normalize());
-      this.frontRay.far = this.wallCheckDist;
+      for (const h of heights) {
+        const frontOrigin = playerPos.clone();
+        frontOrigin.y += h;
 
-      const frontHits = this.frontRay.intersectObject(this.colliderMesh, false);
+        this.frontRay.set(frontOrigin, dir);
+        this.frontRay.far = this.wallCheckDist;
 
-      if (frontHits.length > 0) {
-        const hitY = frontHits[0].point.y;
-        const isStep = hitY - playerPos.y <= this.stepHeight;
-        wallBlocked = !isStep;
+        const frontHits = this.frontRay.intersectObject(this.colliderMesh, false);
+
+        if (frontHits.length > 0) {
+          const hitY = frontHits[0].point.y;
+          if (hitY > wallHitY) wallHitY = hitY;
+        }
+      }
+
+      if (wallHitY > -Infinity) {
+        // É degrau se o topo da colisão está dentro do stepHeight do player
+        const isStep = wallHitY - playerPos.y <= this.stepHeight;
+        wallBlocked  = !isStep;
       }
     }
 

@@ -132,9 +132,6 @@ export default class PlayerController {
     document.addEventListener("keyup",   this.onKeydown);
     this.actions["terminal"] = false;
     PlayerController.instance = this;
-    // Expõe em window para phone.js e outros módulos não-TypeScript acederem.
-    // phone.js busca: window.PlayerController?.instance ?? window.__playerController
-    (window as any).PlayerController = PlayerController;
   }
 
   private async initBVH() {
@@ -156,9 +153,6 @@ export default class PlayerController {
   };
 
   callAction(event: KeyboardEvent) {
-    // Bloqueia atalhos do jogo enquanto o Phone está aberto (usuário digitando)
-    if ((window as any).Phone?._open) return;
-
     if (this.keyBoard["KeyT"]) {
       if (!this.actions["terminal"] && infoPlayer.hasTerminal) {
         event.preventDefault();
@@ -444,20 +438,37 @@ export default class PlayerController {
       this.playerModel.position.x = candidatePos.x;
       this.playerModel.position.z = candidatePos.z;
     } else {
-      // Slide: reutiliza _slideX e _slideZ sem alloc
-      this._slideX.copy(this.playerModel.position);
-      this._slideX.x += this.playerImpulse.x;
-      this._slideZ.copy(this.playerModel.position);
-      this._slideZ.z += this.playerImpulse.z;
+      // Slide: testa X e Z separadamente para deslizar ao longo de paredes.
+      //
+      // CORREÇÃO lateral de palco:
+      // Se wallBlocked=true E o groundY está ACIMA do player (lateral de plataforma),
+      // bloqueamos o slide inteiro — o player não deve atravessar a lateral.
+      // Só permitimos o slide quando a parede é vertical real (sem superfície
+      // acima acessível), não a borda de uma plataforma.
+      const platformTop  = result.groundY ?? 0;
+      const playerY      = this.playerModel.position.y;
+      const platformAbove = result.groundY !== null && platformTop > playerY + this.bvh.skinWidth * 2;
 
-      this._slideXDir.set(Math.sign(this.playerImpulse.x), 0, 0);
-      this._slideZDir.set(0, 0, Math.sign(this.playerImpulse.z));
+      if (platformAbove) {
+        // Player está na lateral de uma plataforma/palco — não desliza
+        // O snap de Y vai subindo o player gradualmente pelo groundY
+        // conforme ele se aproxima pela escada ou rampa lateral
+      } else {
+        // Parede vertical normal — permite slide em X ou Z
+        this._slideX.copy(this.playerModel.position);
+        this._slideX.x += this.playerImpulse.x;
+        this._slideZ.copy(this.playerModel.position);
+        this._slideZ.z += this.playerImpulse.z;
 
-      const rx = this.bvh.check(this._slideX, this._slideXDir);
-      const rz = this.bvh.check(this._slideZ, this._slideZDir);
+        this._slideXDir.set(Math.sign(this.playerImpulse.x), 0, 0);
+        this._slideZDir.set(0, 0, Math.sign(this.playerImpulse.z));
 
-      if (!rx.wallBlocked) this.playerModel.position.x = this._slideX.x;
-      if (!rz.wallBlocked) this.playerModel.position.z = this._slideZ.z;
+        const rx = this.bvh.check(this._slideX, this._slideXDir);
+        const rz = this.bvh.check(this._slideZ, this._slideZDir);
+
+        if (!rx.wallBlocked) this.playerModel.position.x = this._slideX.x;
+        if (!rz.wallBlocked) this.playerModel.position.z = this._slideZ.z;
+      }
     }
 
     this.playerImpulse.set(0, 0, 0);

@@ -178,8 +178,8 @@ export default class Experience {
     }
   
     setScene() {      
-        this.scene.background = new Color(0x000);
-        this.scene.fog = new Fog(0x34495E, 30, 65); // near=30: inicia fade antes do CULL_DISTANCE=60
+        // this.scene.background = new Color(0x000);
+        // this.scene.fog = new Fog(0x34495E, 30, 65); // near=30: inicia fade antes do CULL_DISTANCE=60
     }
     
     setRenderer() {
@@ -304,7 +304,7 @@ export default class Experience {
     }
   
     setLight() {
-        const directionalLight = new DirectionalLight(0x000000, .1);
+        const directionalLight = new DirectionalLight(0xFFCC88, 1.5);
         directionalLight.position.set(-5, 25, -1);
         directionalLight.castShadow = true;
         directionalLight.shadow.camera.near   = 0.01;
