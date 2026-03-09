@@ -370,7 +370,8 @@ export default class Experience {
         this.teacherNPC.tick(this.camera)
 
         // Verifica zona da missão ativa
-        this.missionManager.checkZone(this.playerController.playerModel.position)
+        
+        this.missionManager.checkZone(this.playerController.playerModel.position, this.camera)
 
         // Yuka — atualiza todos os veículos (NPC + TeacherNPC)
         this.entityManager.update(delta)

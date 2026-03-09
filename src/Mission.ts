@@ -1,292 +1,232 @@
 import {
-    AdditiveBlending,
-    ArrowHelper,
-    BufferGeometry,
-    CylinderGeometry,
-    DoubleSide,
-    Float32BufferAttribute,
+    CanvasTexture,
     Group,
-    Mesh,
-    MeshBasicMaterial,
     Object3D,
-    Points,
-    PointsMaterial,
-    RingGeometry,
+    PerspectiveCamera,
     Scene,
-    TorusGeometry,
+    Sprite,
+    SpriteMaterial,
     Vector3,
 } from "three";
-import Items from "./Items";
 import elementos, { eventEmitter } from "./Actions";
 import { infoPlayer } from "./InfoPlayer";
-import { gui } from "./GuiControl";
 import Loading from "./Loading";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Marcador de missão — sprite flutuante com distância
+//
+//   • Canvas 2D renderiza ícone ◆ + título + "Xm"
+//   • Sprite sempre virado para a câmera (sizeAttenuation)
+//   • Sem geometria no chão — 1 draw call
+//   • tickMarker(delta, playerPos, camera) atualiza a distância
+// ─────────────────────────────────────────────────────────────────────────────
+
+const W = 320   // largura do canvas (px)
+const H = 112   // altura do canvas (px)
 
 export default class Mission {
 
-    local: Vector3
-    missionPoint: Group
-    title: string
-    isCollided = false
-    listeners: [string, EventListener][] = [];
-    eventEmitter: EventTarget;
-    reward: number
-    isComplete: boolean
-    helper: boolean
-    missionHelper?: ArrowHelper
-    private _markerTime = 0  // acumulador de tempo para animação
-    loading: Loading
+    local:         Vector3
+    missionPoint:  Group
+    title:         string
+    isCollided     = false
+    listeners:     [string, EventListener][] = []
+    eventEmitter:  EventTarget
+    reward:        number
+    isComplete:    boolean
+    helper:        boolean
+    loading:       Loading
 
-    constructor(title: string, position: Vector3, scene: Scene, event: EventTarget, reward: number, helper: boolean, loading: Loading) {
-        
-        this.loading = loading
-        this.isComplete = false
-        this.eventEmitter = event     
-        this.reward = reward   
-        this.title = title
-        this.local = position
-        this.helper = helper
-        
+    private _sprite:    Sprite | null = null
+    private _canvas:    HTMLCanvasElement | null = null
+    private _ctx:       CanvasRenderingContext2D | null = null
+    private _tex:       CanvasTexture | null = null
+    private _markerTime = 0
 
-        this.missionPoint = this.createMissionPoint(this.local, 0xff0000, this.helper)      
+    constructor(
+        title: string,
+        position: Vector3,
+        scene: Scene,
+        event: EventTarget,
+        reward: number,
+        helper: boolean,
+        loading: Loading
+    ) {
+        this.loading      = loading
+        this.isComplete   = false
+        this.eventEmitter = event
+        this.reward       = reward
+        this.title        = title
+        this.local        = position
+        this.helper       = helper
+
+        this.missionPoint = this._buildMarker(position)
         scene.add(this.missionPoint)
-      
-        // const playerFolder = gui.addFolder("Mission Point 1")
-
-        // playerFolder.add(this.missionPoint.position,"x", -100, 100)
-        // playerFolder.add(this.missionPoint.position,"y", 0, 10)
-        // playerFolder.add(this.missionPoint.position,"z", -100, 100)
-        // playerFolder.add(this.missionPoint.scale,"x", -100, 100)
-        // playerFolder.add(this.missionPoint.scale,"y", -100, 100)
-        // playerFolder.add(this.missionPoint.scale,"z", -100, 100)
     }
 
-    /**
-     * 
-     * @param scene 
-     * @param position 
-     * @param color 
-     * @description O parâmetro {color} é do tipo hexadecimal. Ex: 0xff0000
-     */
-    private createMissionPoint(position: Vector3, color: any, hasHelper: boolean): Group {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Constrói o sprite — canvas reutilizável, redesenhado a cada frame
+    // ─────────────────────────────────────────────────────────────────────────
+    private _buildMarker(position: Vector3): Group {
+        const group = new Group()
+        group.position.copy(position)
 
-        // ══════════════════════════════════════════════════════════════════
-        // MARCADOR CYBER — estilo GTA V / ctOS
-        // ══════════════════════════════════════════════════════════════════
-        // Estrutura (todos procedurais, zero PNGs externos):
-        //
-        //  ┌── group (raiz, posicionado no mundo)
-        //  │   ├── groundPlane  — disco flat no chão (fill transparente)
-        //  │   ├── outerRing    — anel externo giratório (chunky, GTA-style)
-        //  │   ├── innerRing    — anel interno contra-giratório
-        //  │   ├── cornerTicks  — 4 segmentos nos cantos (▐ estilo HUD)
-        //  │   ├── pillar       — cilindro vertical fino (destaca a zona)
-        //  │   ├── topRing      — anel no topo do pillar
-        //  │   └── particles    — pontos flutuantes ao redor (ambient)
-        // ══════════════════════════════════════════════════════════════════
+        const cv  = document.createElement('canvas')
+        cv.width  = W
+        cv.height = H
+        const ctx = cv.getContext('2d')!
+        const tex = new CanvasTexture(cv)
 
-        const group = new Group();
-        group.position.set(position.x, position.y, position.z);
+        this._canvas = cv
+        this._ctx    = ctx
+        this._tex    = tex
 
-        const C   = color;        // cor principal
-        const R   = 1.6;          // raio base
-        const mat = (c: number, op = 1.0) => new MeshBasicMaterial({
-            color: c, transparent: op < 1, opacity: op,
-            side: DoubleSide, depthWrite: false,
-            blending: AdditiveBlending,
-        });
+        this._drawSprite('--')
 
-        // ── Disco de chão (fill) ──────────────────────────────────────────
-        const discGeo = new RingGeometry(0, R * 0.95, 64);
-        const disc    = new Mesh(discGeo, mat(C, 0.08));
-        disc.rotation.x = -Math.PI / 2;
-        disc.name = "disc";
-        group.add(disc);
+        const mat    = new SpriteMaterial({ map: tex, transparent: true, depthWrite: false })
+        const sprite = new Sprite(mat)
 
-        // ── Anel externo — grosso, 8 segmentos, GTA-style ─────────────────
-        const outerGeo = new TorusGeometry(R, 0.07, 4, 8);
-        const outer    = new Mesh(outerGeo, mat(C, 0.95));
-        outer.rotation.x = Math.PI / 2;
-        outer.name = "outerRing";
-        group.add(outer);
+        // Escala world-space: W/H mantém proporção do canvas
+        sprite.scale.set(1.1, 1.1 * (H / W), 1)
+        sprite.position.y = 1.8   // flutua ~1.6m acima do chão
+        sprite.name = "waypoint"
+        group.add(sprite)
 
-        // ── Anel intermediário ────────────────────────────────────────────
-        const midGeo = new TorusGeometry(R * 0.72, 0.035, 4, 32);
-        const mid    = new Mesh(midGeo, mat(C, 0.55));
-        mid.rotation.x = Math.PI / 2;
-        mid.name = "midRing";
-        group.add(mid);
-
-        // ── Anel interno fino ─────────────────────────────────────────────
-        const innerGeo = new TorusGeometry(R * 0.45, 0.025, 4, 32);
-        const inner    = new Mesh(innerGeo, mat(C, 0.70));
-        inner.rotation.x = Math.PI / 2;
-        inner.name = "innerRing";
-        group.add(inner);
-
-        // ── Corner ticks — 4 arcos curtos nos eixos cardinais ─────────────
-        // Simula o ícone ◎ / waypoint dos jogos de ação
-        for (let i = 0; i < 4; i++) {
-            const tickGeo = new TorusGeometry(R, 0.055, 4, 3, Math.PI * 0.22);
-            const tick    = new Mesh(tickGeo, mat(C, 1.0));
-            tick.rotation.x = Math.PI / 2;
-            tick.rotation.z = (Math.PI / 2) * i + Math.PI * 0.11;
-            group.add(tick);
-        }
-
-        // ── Pillar — cilindro vertical fino (beacon) ──────────────────────
-        const PILLAR_H = 4.5;
-        const pillarGeo = new CylinderGeometry(0.022, 0.022, PILLAR_H, 6);
-        const pillar    = new Mesh(pillarGeo, mat(C, 0.35));
-        pillar.position.y = PILLAR_H / 2;
-        pillar.name = "pillar";
-        group.add(pillar);
-
-        // ── Top ring — anel no topo do beacon ────────────────────────────
-        const topRingGeo = new TorusGeometry(0.28, 0.04, 4, 16);
-        const topRing    = new Mesh(topRingGeo, mat(C, 0.9));
-        topRing.position.y = PILLAR_H;
-        topRing.name = "topRing";
-        group.add(topRing);
-
-        // ── Diamond — losango achatado no topo (ícone GTA) ────────────────
-        const diamondGeo = new RingGeometry(0.0, 0.22, 4); // quad = 4 segmentos → losango
-        const diamond    = new Mesh(diamondGeo, mat(C, 0.95));
-        diamond.position.y = PILLAR_H + 0.32;
-        diamond.rotation.z = Math.PI / 4; // rotaciona 45° → ◆
-        diamond.name = "diamond";
-        group.add(diamond);
-
-        // ── Particles — pontos flutuantes ao redor (ambiente) ─────────────
-        const NPTS = 28;
-        const ptPositions = new Float32Array(NPTS * 3);
-        for (let i = 0; i < NPTS; i++) {
-            const angle  = (i / NPTS) * Math.PI * 2;
-            const radius = R * (0.55 + Math.random() * 0.65);
-            const height = Math.random() * PILLAR_H * 0.7;
-            ptPositions[i * 3]     = Math.cos(angle) * radius;
-            ptPositions[i * 3 + 1] = height;
-            ptPositions[i * 3 + 2] = Math.sin(angle) * radius;
-        }
-        const ptGeo = new BufferGeometry();
-        ptGeo.setAttribute('position', new Float32BufferAttribute(ptPositions, 3));
-        const pts = new Points(ptGeo, new PointsMaterial({
-            color: C, size: 0.045, transparent: true, opacity: 0.7,
-            blending: AdditiveBlending, depthWrite: false,
-        }));
-        pts.name = "particles";
-        group.add(pts);
-
-        return group;
+        this._sprite = sprite
+        return group
     }
 
-    removeMissionPoint(object: Object3D, scene: Scene) {      
-        scene.remove(object);
+    // ─────────────────────────────────────────────────────────────────────────
+    // Desenha o canvas: ◆ + título + distância
+    // ─────────────────────────────────────────────────────────────────────────
+    private _drawSprite(dist: string, pulse = 1.0) {
+        const ctx = this._ctx!
+        ctx.clearRect(0, 0, W, H)
+
+        // ── ◆ losango central ─────────────────────────────────────────────
+        const cx = W / 2
+        const cy = 28
+        const S  = 14 * pulse   // tamanho pulsa com a animação
+
+        ctx.save()
+        ctx.translate(cx, cy)
+        ctx.rotate(Math.PI / 4)
+        ctx.shadowColor = '#00cfff'
+        ctx.shadowBlur  = 16 * pulse
+        ctx.strokeStyle = `rgba(0,207,255,${0.6 + pulse * 0.4})`
+        ctx.fillStyle   = `rgba(0,207,255,${0.12 * pulse})`
+        ctx.lineWidth   = 2
+        ctx.beginPath()
+        ctx.rect(-S / 2, -S / 2, S, S)
+        ctx.fill()
+        ctx.stroke()
+        ctx.restore()
+
+        // ── Título ────────────────────────────────────────────────────────
+        ctx.font         = '13px "Share Tech Mono", monospace'
+        ctx.textAlign    = 'center'
+        ctx.fillStyle    = `rgba(0,207,255,0.65)`
+        ctx.shadowColor  = '#00cfff'
+        ctx.shadowBlur   = 6
+        ctx.fillText(this.title.toUpperCase(), cx, 58)
+
+        // ── Distância ─────────────────────────────────────────────────────
+        ctx.font        = 'bold 18px "Share Tech Mono", monospace'
+        ctx.fillStyle   = `rgba(255,255,255,${0.7 + pulse * 0.3})`
+        ctx.shadowBlur  = 10 * pulse
+        ctx.fillText(dist, cx, 82)
+
+        this._tex!.needsUpdate = true
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // tickMarker — chame no game loop:
+    //   mission.tickMarker(delta, player.position, camera)
+    // ─────────────────────────────────────────────────────────────────────────
+    tickMarker(delta: number, playerPos?: Vector3, camera?: PerspectiveCamera) {
+        if (this.isComplete || !this._sprite) return
+
+        this._markerTime += delta
+        const t = this._markerTime
+
+        // Flutuação vertical suave
+        this._sprite.position.y = 1.8 + Math.sin(t * 1.8) * 0.07
+
+        // Pulso de escala (0.92 → 1.08)
+        const pulse = 0.92 + Math.abs(Math.sin(t * 1.4)) * 0.16
+        const BASE  = 2
+        this._sprite.scale.set(BASE * pulse, BASE * pulse * (H / W), 1)
+
+        // Distância formatada
+        let distStr = '--'
+        if (playerPos) {
+            const d = playerPos.distanceTo(this.local)
+            distStr = d < 1000 ? `${Math.round(d)}m` : `${(d / 1000).toFixed(1)}km`
+        }
+
+        // Redesenha canvas com nova distância e pulso
+        this._drawSprite(distStr, pulse)
+
+        // Fade quando o player entra na zona
+        const mat = this._sprite.material as SpriteMaterial
+        mat.opacity = this.isCollided ? 0.3 : 1.0
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
+    removeMissionPoint(object: Object3D, scene: Scene) {
+        scene.remove(object)
+        this._cleanup()
+    }
+
+    private _cleanup() {
+        this._tex?.dispose()
+        this._tex    = null
+        this._canvas = null
+        this._ctx    = null
+        this._sprite = null
     }
 
     checkMissionZone(player: Vector3, ring: Vector3, radius: number) {
-    
-        if(!this.isComplete){
-            const playerPos = player;
-            const ringPos = ring;
-        
-            // Calcula a distância entre o jogador e o centro do anel
-            const distance = playerPos.distanceTo(ringPos);
-        
-            // Verifica se o jogador está dentro do raio do anel
-            this.isCollided = distance < radius;
+        if (!this.isComplete) {
+            this.isCollided = player.distanceTo(ring) < radius
             elementos.setIsCollided(this.isCollided)
-
-            if(this.isCollided){
+            if (this.isCollided) {
                 eventEmitter.dispatchEvent(new CustomEvent("collided", {
-                    detail: {
-                        collided: this.isCollided
-                    }
+                    detail: { collided: true }
                 }))
-            }            
-
-        }
-        else{
+            }
+        } else {
             elementos.setIsCollided(false)
         }
     }
 
     addGameListener(event: string, callback: EventListener, isOnce: boolean) {
-        this.eventEmitter.addEventListener(event, callback, {once: isOnce});
-        this.listeners.push([event, callback]);
+        this.eventEmitter.addEventListener(event, callback, { once: isOnce })
+        this.listeners.push([event, callback])
     }
 
     removeEvent(eventName: string, callback: EventListener) {
-        this.eventEmitter.removeEventListener(eventName, callback);
+        this.eventEmitter.removeEventListener(eventName, callback)
     }
-    
+
     clearAllListeners() {
-        this.listeners.forEach(([event, callback]) => this.eventEmitter.removeEventListener(event, callback));
-        this.listeners.length = 0;
+        this.listeners.forEach(([e, cb]) => this.eventEmitter.removeEventListener(e, cb))
+        this.listeners.length = 0
     }
 
-    rewardPlayer(){
-        infoPlayer.energy += this.reward
-    }
+    rewardPlayer() { infoPlayer.energy += this.reward }
 
-    finished(){
+    finished() {
         this.isComplete = true
+        // Esconde o sprite imediatamente ao completar
+        if (this._sprite) (this._sprite.material as SpriteMaterial).opacity = 0
     }
 
-    // ── Animação do marcador — chame no update() do game loop ──────────────
-    // delta: tempo desde último frame (segundos)
-    // Anima rotação dos anéis, pulso do disco e flutuação do beacon.
-    tickMarker(delta: number) {
-        this._markerTime += delta;
-        const t = this._markerTime;
-
-        const outer   = this.missionPoint.getObjectByName("outerRing");
-        const mid     = this.missionPoint.getObjectByName("midRing");
-        const inner   = this.missionPoint.getObjectByName("innerRing");
-        const disc    = this.missionPoint.getObjectByName("disc");
-        const pillar  = this.missionPoint.getObjectByName("pillar");
-        const topRing = this.missionPoint.getObjectByName("topRing");
-        const diamond = this.missionPoint.getObjectByName("diamond");
-
-        // Anéis giratórios — velocidades e direções diferentes
-        if (outer)   (outer as Mesh).rotation.z   =  t * 0.6;
-        if (mid)     (mid   as Mesh).rotation.z   = -t * 1.1;
-        if (inner)   (inner as Mesh).rotation.z   =  t * 1.8;
-        if (topRing) (topRing as Mesh).rotation.z =  t * 2.2;
-
-        // Diamond — pulsa escala (◆ pisca suavemente)
-        if (diamond) {
-            const pulse = 0.85 + Math.sin(t * 3.5) * 0.15;
-            diamond.scale.setScalar(pulse);
-        }
-
-        // Disco de chão — pulsa opacidade (respiração)
-        if (disc) {
-            const discMat = (disc as Mesh).material as MeshBasicMaterial;
-            discMat.opacity = 0.04 + Math.abs(Math.sin(t * 1.2)) * 0.10;
-        }
-
-        // Pillar — pulsa opacidade (beacon piscando)
-        if (pillar) {
-            const pillarMat = (pillar as Mesh).material as MeshBasicMaterial;
-            pillarMat.opacity = 0.15 + Math.abs(Math.sin(t * 2.0)) * 0.25;
-        }
-
-        // Grupo inteiro — leve flutuação vertical (Y ±0.06)
-        this.missionPoint.position.y = this.local.y + Math.sin(t * 1.5) * 0.06;
-    }
-
-    async addObject(position: Vector3, scale: number, name: string, scene: Scene){
-        const [obj] = await Promise.all(
-            [
-                this.loading.loader.loadAsync(`models/${name}.glb`)
-            ]
-        )
-
+    async addObject(position: Vector3, scale: number, name: string, scene: Scene) {
+        const obj = await this.loading.loader.loadAsync(`models/${name}.glb`)
         obj.scene.position.copy(position)
         obj.scene.scale.set(scale, scale, scale)
         scene.add(obj.scene)
     }
-    
 }

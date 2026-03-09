@@ -14,7 +14,8 @@
 import {
     Object3D, Scene, AnimationMixer, AnimationAction,
     Mesh, PlaneGeometry, MeshBasicMaterial,
-    CanvasTexture, Vector3
+    CanvasTexture, Vector3,
+    Quaternion
 } from "three";
 import * as YUKA from "yuka";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
@@ -278,6 +279,38 @@ export class TeacherNPC extends YUKA.Vehicle {
         this.paused = false;
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // ROTAÇÃO FINAL — vira o NPC para uma direção específica ao chegar.
+    // angleY em radianos. Usa slerp suave via _faceTarget (update chama isso).
+    //
+    // Exemplos:
+    //   0          → olha para +Z (frente padrão do modelo)
+    //   Math.PI    → olha para -Z (de costas para +Z)
+    //   Math.PI/2  → olha para -X (esquerda)
+    //  -Math.PI/2  → olha para +X (direita)
+    //
+    // Dica: no palco o público está em +Z, então o professor deve olhar
+    // para +Z → angleY = 0 (ou Math.PI dependendo do eixo do modelo GLB)
+    // ─────────────────────────────────────────────────────────────────────────
+    private _faceAngle: number | null = null;
+
+    faceDirection(angleY: number) {
+        this._faceAngle = angleY;
+    }
+
+    private _applyFaceDirection(delta: number) {
+        if (this._faceAngle === null || !this.npcMesh) return;
+        const target = new Quaternion().setFromAxisAngle(
+            new Vector3(0, 1, 0), this._faceAngle
+        );
+        this.npcMesh.quaternion.slerp(target, delta * 5.0);
+        // Para quando estiver próximo o suficiente
+        if (this.npcMesh.quaternion.angleTo(target) < 0.01) {
+            this.npcMesh.quaternion.copy(target);
+            this._faceAngle = null;
+        }
+    }
+
     private onArrived() {
         this.paused = true;
         this.setAnimation(this.animationsAction["Idle"]);
@@ -288,12 +321,26 @@ export class TeacherNPC extends YUKA.Vehicle {
             this.showSlide(0);
             window.HUD?.notify(`📖 ${this.lesson?.title} — começando`, "success");
 
+            // ── Rotação final no palco ────────────────────────────────────────
+            // Vira o professor de frente para a plateia ao chegar no palco.
+            // Ajuste o ângulo conforme a orientação do seu palco:
+            //   Math.PI    → olha para -Z (plateia em -Z)
+            //   0          → olha para +Z (plateia em +Z)
+            //   Math.PI/2  → olha para -X
+            // __teacherNPC.faceDirection(0)          // olha para +Z
+            // __teacherNPC.faceDirection(Math.PI)    // olha para -Z  
+            // __teacherNPC.faceDirection(Math.PI/2)  // olha para -X
+            // __teacherNPC.faceDirection(-Math.PI/2) // olha para +X
+            this.faceDirection(0); // ← ajuste aqui se necessário
+
         } else if (this.tState === "RETURNING") {
             this.tState = "IDLE";
-            // Só libera o controle aqui, depois que o NPC chegou e o estado
-            // final Idle já foi emitido com a posição correta ao servidor.
             this.isControlledLocally = false;
             window.HUD?.notify("🎓 Professor voltou ao ponto de espera.", "info");
+
+            // ── Rotação final no ponto de espera ──────────────────────────────
+            // Vira o professor de frente para o corredor/palco enquanto espera.
+            this.faceDirection(-Math.PI / 2); // ← ajuste aqui se necessário
         }
     }
 
@@ -773,6 +820,9 @@ export class TeacherNPC extends YUKA.Vehicle {
         // Corrige root motion (igual PlayerModel.update)
         const hips = this.npcMesh?.getObjectByName("Hips");
         if (hips) hips.position.set(0, hips.position.y, 0);
+
+        // Rotação suave para direção final (ativa após onArrived)
+        this._applyFaceDirection(delta);
 
         switch (this.tState) {
             case "IDLE":

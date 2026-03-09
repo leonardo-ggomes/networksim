@@ -58,7 +58,7 @@
  *   collided          — detail: { collided }                (já existia)
  */
 
-import { Scene, Vector3 }                  from "three";
+import { PerspectiveCamera, Scene, Vector3 }                  from "three";
 import Mission                             from "./Mission";
 import Loading                             from "./Loading";
 import { infoPlayer }                      from "./InfoPlayer";
@@ -493,7 +493,7 @@ Use top para confirmar que sumiu.`,
             radius:   30,
             reward:   { money: 300, energy: 10 },
             helper:   false,
-            listenTo: 'terminal:ifconfig',
+            listenTo: 'terminal:ping',
             onStart: () => {
                 window.Phone?.inbox.push({
                     id:    '__si_17',
@@ -966,7 +966,7 @@ A forma curta retorna automaticamente!`,
 frutas.forEach(f => {
 `,
                     type:  'info',
-                })
+                });
             },
             check: (e) => {
                 const { output, source } = e.detail as any;
@@ -1307,13 +1307,16 @@ Habilidades conquistadas:
     get missionPosition() { return this.active?.missionPoint.position; }
     get missionRadius()   { return this.currentDef?.radius ?? 2; }
 
-    checkZone(playerPos: Vector3) {
+    checkZone(playerPos: Vector3, camera?: PerspectiveCamera) {
         if (!this.active) return;
         this.active.checkMissionZone(
             playerPos,
             this.active.missionPoint.position,
             this.missionRadius
         );
+        // Atualiza sprite do marcador (distância + animação)
+        // delta não disponível aqui — tick usa clock interno baseado em Date
+        this.active.tickMarker(0.016, playerPos, camera);
     }
 
     /** Pula para uma missão específica por id — útil para debug */
