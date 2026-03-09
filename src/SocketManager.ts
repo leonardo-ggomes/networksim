@@ -100,6 +100,56 @@ class SocketManager{
         this.io.on("npc:state",   this.updateNpcState);
         this.io.on("slide:npc",   this.receiveNpcSlide);
         this.io.on("slide:npc:end", this.receiveNpcSlideEnd);
+
+        // ── Telão ─────────────────────────────────────────────────────────────
+        // Registrado aqui (não no initNetSocket) para garantir que o listener
+        // existe desde o início da conexão — antes do Experience/Items carregarem.
+        //
+        // Se __boardManager ainda não estiver pronto quando o evento chegar
+        // (race condition: mesh screen1 ainda carregando), guardamos o texto
+        // e tentamos novamente a cada 200ms até o manager estar disponível.
+        this.io.on("board:display", (data: { text: string }) => {
+            this._applyBoard(data.text);
+        });
+        this.io.on("board:clear", () => {
+            (window as any).__boardManager?.clear();
+            this._pendingBoardText = null;
+            if (this._boardRetryTimer) {
+                clearInterval(this._boardRetryTimer);
+                this._boardRetryTimer = null;
+            }
+        });
+    }
+
+    // Texto a exibir assim que __boardManager estiver disponível
+    private _pendingBoardText: string | null = null;
+    private _boardRetryTimer: ReturnType<typeof setInterval> | null = null;
+
+    private _applyBoard(text: string) {
+        const mgr = (window as any).__boardManager;
+        if (mgr) {
+            // Manager pronto — aplica imediatamente e cancela qualquer retry pendente
+            mgr.display(text);
+            this._pendingBoardText = null;
+            if (this._boardRetryTimer) {
+                clearInterval(this._boardRetryTimer);
+                this._boardRetryTimer = null;
+            }
+            return;
+        }
+
+        // Manager ainda não disponível (Items ainda carregando) — enfileira e espera
+        this._pendingBoardText = text;
+        if (this._boardRetryTimer) return; // já aguardando
+        this._boardRetryTimer = setInterval(() => {
+            const m = (window as any).__boardManager;
+            if (m && this._pendingBoardText !== null) {
+                m.display(this._pendingBoardText);
+                this._pendingBoardText = null;
+                clearInterval(this._boardRetryTimer!);
+                this._boardRetryTimer = null;
+            }
+        }, 200);
     }
 
     loadPlayers = (players: any) => {

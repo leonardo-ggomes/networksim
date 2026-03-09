@@ -605,6 +605,7 @@ Todo programa C comeca em main().
 return 0 indica sucesso.`,
                     type:  'info',
                 });
+                window.Phone?.chat.receive('ctOS', 'Primeiro código executado!');
             },
         },
 
@@ -644,6 +645,8 @@ basicos de C.
 %c → char    %s → string`,
                     type:  'info',
                 });
+
+                window.Phone?.chat.receive('ctOS', 'Está se tornando um dev!');
             },
         },
 
@@ -684,6 +687,7 @@ Toda logica de negocio depende
 de condicionais.`,
                     type:  'info',
                 });
+                window.Phone?.chat.receive('ctOS', 'Conquista desbloqueada!');
             },
         },
 
@@ -722,6 +726,7 @@ C tem tres tipos de loop:
   do/while → executa ao menos 1 vez`,
                     type:  'info',
                 });
+                window.Phone?.chat.receive('ctOS', 'Consquista desbloqueada!');
             },
         },
 
@@ -766,6 +771,7 @@ Sao o pilar da programacao estruturada
 e base para orientacao a objetos.`,
                     type:  'info',
                 });
+                window.Phone?.chat.receive('ctOS', 'Consquista desbloqueada!');
             },
         },
 
@@ -1260,6 +1266,23 @@ export class MissionManager {
         }, false);
     }
 
+    // ── Mapa: missão concluída → badge desbloqueado ──────────────────────────
+    // Cada badge é concedido ao completar a missão que representa o marco da fase.
+    private static readonly BADGE_MAP: Record<string, string> = {
+        'first-boot':    'boot',        // Fase 1 — ligou o terminal
+        'navigate-fs':   'navigator',   // Fase 1 — navegou no FS
+        'read-briefing': 'archivist',   // Fase 1 — leu o briefing
+        'create-diary':  'scribe',      // Fase 2 — criou arquivo
+        'organize-dirs': 'organizer',   // Fase 2 — organizou dirs
+        'kill-malware':  'cleaner',     // Fase 2 — eliminou malware
+        'network-recon': 'recon',       // Fase 3 — reconheceu rede
+        'c-fibonacci':   'recursion',   // Fase 3 — fibonacci em C
+        'c-function':    'coder',       // Fase 3 — funções em C
+        'js-hello':      'js-master',   // Fase 4 — inicio JS → ativa skin GTA V
+        'js-recursion':  'hacker',      // Fase 4 — recursão JS
+        'finale':        'elite',       // Fase 4 — todas as missões
+    };
+
     private completeCurrent(mission: Mission, def: MissionDef) {
         mission.clearAllListeners();
         mission.finished();
@@ -1270,8 +1293,6 @@ export class MissionManager {
         if (def.reward.energy) infoPlayer.energy  = Math.min(100, infoPlayer.energy + def.reward.energy);
 
         // Atualiza o saldo e recarrega os cards da loja imediatamente.
-        // Sem isso a aba Loja continua mostrando o saldo antigo até o player
-        // fechar e reabrir o Phone manualmente.
         window.Phone?.refreshShop?.();
 
         const parts: string[] = [];
@@ -1283,6 +1304,15 @@ export class MissionManager {
         window.HUD?.completeMission(def.id);
         window.Phone?.inbox.complete(def.id);
         def.onComplete?.();
+
+        // ── Badge: concede selo se esta missão tem um badge associado ─────────
+        const badgeId = MissionManager.BADGE_MAP[def.id];
+        if (badgeId) {
+            // Pequeno delay para o toast aparecer após a notificação da missão
+            setTimeout(() => {
+                window.Phone?.badges?.unlock(badgeId);
+            }, 800);
+        }
 
         this.index++;
         setTimeout(() => this.launchCurrent(), 6000);

@@ -1,6 +1,7 @@
 import {
     AxesHelper,
     BufferGeometry,
+    CanvasTexture,
     Euler,
     InstancedMesh,
     Matrix4,
@@ -142,6 +143,132 @@ export default class Items {
                         const slide = new SlideShow(mesh, this.loading);
                         //slide.loadSlidesFromUrls(["img/Slide1.jpg"]);
                         new SlideController(slide);
+
+                        // ── BoardManager: controle do telão via terminal ──────
+                        // Expõe globalmente para Actions.ts/SocketManager usarem.
+                        const boardMesh     = mesh;
+                        const originalSlide = slide;
+                        let   boardCanvas:  HTMLCanvasElement | null = null;
+                        let   boardTexture: CanvasTexture | null = null;
+                        let   boardActive   = false;
+
+                        function renderBoardCanvas(text: string): void {
+                            if (!boardCanvas) {
+                                boardCanvas        = document.createElement("canvas");
+                                boardCanvas.width  = 4096;
+                                boardCanvas.height = 2048;
+                            }
+                            const W = boardCanvas.width;
+                            const H = boardCanvas.height;
+                            const ctx = boardCanvas.getContext("2d")!;
+
+                            // Fundo
+                            ctx.clearRect(0, 0, W, H);
+                            ctx.fillStyle = "#04080f";
+                            ctx.fillRect(0, 0, W, H);
+
+                            // Grade sutil estilo ctOS
+                            ctx.strokeStyle = "rgba(0,207,255,0.04)";
+                            ctx.lineWidth = 2;
+                            const GRID = 128;
+                            for (let x = 0; x < W; x += GRID) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+                            for (let y = 0; y < H; y += GRID) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+                            // Borda interna ciano
+                            ctx.strokeStyle = "rgba(0,207,255,0.25)";
+                            ctx.lineWidth = 8;
+                            ctx.strokeRect(40, 40, W - 80, H - 80);
+
+                            // Corner brackets
+                            const BL = 80;
+                            ctx.strokeStyle = "rgba(0,207,255,0.7)";
+                            ctx.lineWidth = 12;
+                            const drawBracket = (x: number, y: number, sx: number, sy: number) => {
+                                ctx.beginPath(); ctx.moveTo(x, y + sy * BL); ctx.lineTo(x, y); ctx.lineTo(x + sx * BL, y); ctx.stroke();
+                            };
+                            drawBracket(40,     40,      1,  1);
+                            drawBracket(W - 40, 40,     -1,  1);
+                            drawBracket(40,     H - 40,  1, -1);
+                            drawBracket(W - 40, H - 40, -1, -1);
+
+                            // Label ctOS
+                            ctx.font = "bold 52px 'Courier New', monospace";
+                            ctx.fillStyle = "rgba(0,207,255,0.35)";
+                            ctx.fillText("ctOS · BROADCAST", 80, 110);
+
+                            // Linha separadora
+                            ctx.strokeStyle = "rgba(0,207,255,0.15)";
+                            ctx.lineWidth = 3;
+                            ctx.beginPath(); ctx.moveTo(80, 130); ctx.lineTo(W - 80, 130); ctx.stroke();
+
+                            // Texto principal com word-wrap e font-fit automático
+                            const maxW    = W - 200;
+                            const areaH   = H - 280;
+                            const words   = text.split(" ");
+                            const MAX_FONT = 220;
+                            const MIN_FONT = 40;
+                            let   fontSize = MAX_FONT;
+                            let   lines: string[] = [];
+
+                            while (fontSize >= MIN_FONT) {
+                                ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
+                                lines = [];
+                                let line = "";
+                                for (const word of words) {
+                                    const test = line ? line + " " + word : word;
+                                    if (ctx.measureText(test).width > maxW && line) {
+                                        lines.push(line);
+                                        line = word;
+                                    } else {
+                                        line = test;
+                                    }
+                                }
+                                if (line) lines.push(line);
+                                if (lines.length * fontSize * 1.25 <= areaH) break;
+                                fontSize -= 8;
+                            }
+
+                            const lineH  = fontSize * 1.25;
+                            const totalH = lines.length * lineH;
+                            let   startY = 160 + (areaH - totalH) / 2 + fontSize * 0.8;
+
+                            ctx.font      = `bold ${fontSize}px 'Courier New', monospace`;
+                            ctx.textAlign = "center";
+                            ctx.shadowColor = "#00cfff";
+                            ctx.shadowBlur  = fontSize * 0.4;
+                            ctx.fillStyle   = "#ffffff";
+
+                            for (const line of lines) {
+                                ctx.fillText(line, W / 2, startY);
+                                startY += lineH;
+                            }
+                            ctx.shadowBlur = 0;
+                            ctx.textAlign  = "left";
+                        }
+
+                        (window as any).__boardManager = {
+                            display(text: string): void {
+                                boardActive = true;
+                                renderBoardCanvas(text);
+                                if (boardTexture) boardTexture.dispose();
+                                boardTexture = new CanvasTexture(boardCanvas!);
+                                boardTexture.needsUpdate = true;
+                                (boardMesh.material as MeshBasicMaterial).map         = boardTexture;
+                                (boardMesh.material as MeshBasicMaterial).color.setHex(0xffffff);
+                                (boardMesh.material as MeshBasicMaterial).needsUpdate = true;
+                            },
+                            clear(): void {
+                                if (!boardActive) return;
+                                boardActive = false;
+                                (boardMesh.material as MeshBasicMaterial).map         = null;
+                                (boardMesh.material as MeshBasicMaterial).color.setHex(0xffffff);
+                                (boardMesh.material as MeshBasicMaterial).needsUpdate = true;
+                                if (boardTexture) { boardTexture.dispose(); boardTexture = null; }
+                                // Restaura o SlideShow — loadSlidesFromUrls só se estiver ativo
+                                // originalSlide.loadSlidesFromUrls(["img/Slide1.jpg"]);
+                            },
+                            get isActive(): boolean { return boardActive; },
+                        };
                     }
                 });
 

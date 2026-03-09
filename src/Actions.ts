@@ -94,6 +94,9 @@ export function initNetSocket() {
         }
     });
 
+    // NOTA: board:display e board:clear são ouvidos diretamente no SocketManager
+    // (construtor), não aqui — evita race condition com o carregamento dos Items.
+
     SocketManager.io.on("net:http-res", (data: { status: number; body: string; from: string }) => {
         (window as any).__netHttpRes = data;
         (window as any).Phone?.browser?.load?.(data.body, data.status, data.from);
@@ -2221,6 +2224,47 @@ const commands: Record<string, (args: string[]) => string> = {
         if (!valid.includes(bug)) return `Bugs: ${valid.join(", ")}\nUso: net:bug <tipo> [socketId]`;
         _SM?.io.emit("net:bug:inject", { type: bug, targetId: target ?? null });
         return `Bug "${bug}" injetado${target ? ` em ${target}` : " em todos"}.`;
+    },
+
+    // ── Telão / Board ─────────────────────────────────────────────────────────
+    // Uso:  board "Seu texto aqui"   → exibe no telão para todos
+    //       board clear              → apaga o telão
+    //       board status             → informa se o telão está ativo
+    "board": (args: string[]) => {
+        const isAdmin = infoPlayer.role === "admin" || infoPlayer.role === "moderator";
+        if (!isAdmin) return "Permissão negada. Apenas admin ou moderador.";
+
+        const sub = (args[0] ?? "").replace(/^"|"$/g, "").trim();
+
+        // board status
+        if (sub === "status") {
+            const active = (window as any).__boardManager?.isActive ?? false;
+            return active ? "Telão: ATIVO" : "Telão: inativo";
+        }
+
+        // board clear
+        if (sub === "clear" || sub === "off") {
+            _SM?.io.emit("board:clear");
+            // Aplica localmente também (admin vê imediatamente)
+            (window as any).__boardManager?.clear();
+            return "Telão limpo.";
+        }
+
+        // board "texto" — aceita com ou sem aspas (o executeCommand já extrai)
+        // args pode ser ["\"texto com aspas\""] ou ["palavra1", "palavra2", ...]
+        // Reconstrói o texto unindo todos os args e removendo aspas residuais
+        const rawText = args.join(" ").replace(/^"|"$/g, "").trim();
+        if (!rawText) return [
+            "Uso do comando board:",
+            "  board \"Texto a exibir\"   → envia texto ao telão para todos",
+            "  board clear              → apaga o telão",
+            "  board status             → verifica se o telão está ativo",
+        ].join("\n");
+
+        _SM?.io.emit("board:set", { text: rawText });
+        // Aplica localmente também (admin vê imediatamente, sem round-trip)
+        (window as any).__boardManager?.display(rawText);
+        return `Telão atualizado: "${rawText.length > 40 ? rawText.slice(0, 40) + "…" : rawText}"`;
     },
 }
 

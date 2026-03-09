@@ -871,6 +871,309 @@
       from { opacity:0; }
       to   { opacity:1; }
     }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       CONQUISTAS — design minimalista ctOS
+    ══════════════════════════════════════════════════════════════════════ */
+
+    #ctos-page-badges {
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 0;
+      gap: 0;
+      background: #04080f;
+    }
+
+    /* Cabeçalho da página */
+    .bdg-header {
+      padding: 16px 16px 10px;
+      border-bottom: 1px solid rgba(0,207,255,0.07);
+      flex-shrink: 0;
+    }
+    .bdg-header-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: rgba(0,207,255,0.9);
+      text-transform: uppercase;
+    }
+    .bdg-header-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: rgba(255,255,255,0.25);
+      margin-top: 3px;
+      letter-spacing: 0.05em;
+    }
+    /* Barra de progresso geral */
+    .bdg-progress-bar {
+      margin-top: 10px;
+      height: 2px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .bdg-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00cfff, #a78bfa);
+      border-radius: 2px;
+      transition: width .6s cubic-bezier(.4,0,.2,1);
+    }
+    .bdg-progress-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: rgba(255,255,255,0.3);
+      margin-top: 4px;
+      letter-spacing: 0.08em;
+    }
+
+    /* Seção de fase */
+    .bdg-phase {
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .bdg-phase-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px 8px;
+    }
+    .bdg-phase-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+    }
+    .bdg-phase-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 7.5px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--phase-color, rgba(255,255,255,0.25));
+    }
+    .bdg-phase-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--phase-color, rgba(255,255,255,0.2));
+      flex-shrink: 0;
+    }
+
+    /* Grid de badges */
+    .bdg-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: rgba(255,255,255,0.04);
+      margin: 0 0 1px;
+    }
+
+    /* Card de badge individual */
+    .bdg-card {
+      background: #04080f;
+      padding: 14px 8px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      position: relative;
+      overflow: hidden;
+      transition: background .2s;
+    }
+    .bdg-card.locked {
+      opacity: 1; /* não esmaece o card, só o conteúdo */
+    }
+    .bdg-card.unlocked {
+      background: rgba(255,255,255,0.015);
+    }
+    .bdg-card.unlocked::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--badge-glow, #00cfff), transparent);
+      opacity: 0.6;
+    }
+    .bdg-card.new-unlock {
+      animation: bdg-pop .55s cubic-bezier(.17,.89,.32,1.27) both;
+    }
+    @keyframes bdg-pop {
+      0%   { transform: scale(0.5); opacity: 0; }
+      65%  { transform: scale(1.08); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Ícone hexagonal */
+    .bdg-hex {
+      width: 42px;
+      height: 42px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .bdg-hex-bg {
+      position: absolute;
+      inset: 0;
+      clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+      background: var(--badge-bg, rgba(255,255,255,0.04));
+      transition: background .3s;
+    }
+    .bdg-card.unlocked .bdg-hex-bg {
+      background: var(--badge-bg, rgba(0,207,255,0.08));
+      box-shadow: 0 0 12px var(--badge-glow, #00cfff);
+    }
+    .bdg-hex-border {
+      position: absolute;
+      inset: 0;
+      clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+      background: transparent;
+      outline: 1px solid var(--badge-border, rgba(255,255,255,0.08));
+    }
+    .bdg-icon {
+      font-size: 18px;
+      position: relative;
+      z-index: 1;
+      filter: var(--badge-filter, grayscale(1) opacity(0.3));
+      transition: filter .3s;
+    }
+    .bdg-card.unlocked .bdg-icon {
+      filter: none;
+      text-shadow: 0 0 10px var(--badge-glow, #00cfff);
+    }
+
+    /* Texto */
+    .bdg-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5px;
+      font-weight: 500;
+      text-align: center;
+      line-height: 1.3;
+      letter-spacing: 0.04em;
+      color: rgba(255,255,255,0.2);
+      transition: color .3s;
+    }
+    .bdg-card.unlocked .bdg-name {
+      color: rgba(255,255,255,0.7);
+    }
+    .bdg-locked-bar {
+      width: 20px;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 1px;
+    }
+    .bdg-card.unlocked .bdg-locked-bar { display: none; }
+
+    /* ── Toast de conquista ───────────────────────────────────────────────── */
+    #ctos-badge-toast {
+      position: fixed;
+      bottom: 88px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: rgba(4,8,15,0.97);
+      border: 1px solid var(--toast-color, #00cfff);
+      box-shadow: 0 0 24px var(--toast-glow, rgba(0,207,255,0.25));
+      border-radius: 10px;
+      padding: 9px 14px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s, transform .25s;
+      min-width: 200px;
+      max-width: 260px;
+    }
+    #ctos-badge-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    #ctos-badge-toast-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+      filter: drop-shadow(0 0 6px var(--toast-color, #00cfff));
+    }
+    #ctos-badge-toast-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 7.5px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: var(--toast-color, #00cfff);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    #ctos-badge-toast-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: rgba(255,255,255,0.85);
+      font-weight: 500;
+    }
+    #ctos-badge-toast-desc {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: rgba(255,255,255,0.35);
+      margin-top: 1px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       SKIN GTA V — classe .gtav no #ctos-phone-shell
+    ══════════════════════════════════════════════════════════════════════ */
+    #ctos-phone-shell.gtav {
+      background: #0a0a0a;
+      border: 1.5px solid #f0b90b;
+      box-shadow:
+        0 0 0 1px rgba(240,185,11,0.15),
+        0 0 30px rgba(240,185,11,0.20),
+        0 0 60px rgba(240,185,11,0.08),
+        inset 0 0 40px rgba(240,185,11,0.03);
+    }
+    #ctos-phone-shell.gtav #ctos-statusbar {
+      background: #0a0a0a;
+      border-bottom: 1px solid rgba(240,185,11,0.2);
+    }
+    #ctos-phone-shell.gtav #ctos-statusbar .ctos-time,
+    #ctos-phone-shell.gtav #ctos-statusbar .ctos-sys {
+      color: #f0b90b;
+    }
+    #ctos-phone-shell.gtav #ctos-appbar {
+      background: #0d0d0d;
+      border-top: 1px solid rgba(240,185,11,0.2);
+    }
+    #ctos-phone-shell.gtav .ctos-tab.active {
+      background: rgba(240,185,11,0.08);
+    }
+    #ctos-phone-shell.gtav .ctos-tab.active::after {
+      background: #f0b90b;
+    }
+    #ctos-phone-shell.gtav .ctos-tab.active .ctos-tab-label {
+      color: #f0b90b;
+    }
+    #ctos-phone-shell.gtav .ctos-tab svg { stroke: rgba(240,185,11,0.5); }
+    #ctos-phone-shell.gtav .ctos-tab.active svg { stroke: #f0b90b; opacity:1; }
+    #ctos-phone-shell.gtav #ctos-notch-dot {
+      background: #f0b90b;
+      box-shadow: 0 0 6px #f0b90b;
+    }
+    #ctos-phone-shell.gtav #ctos-notch-cam { border-color: rgba(240,185,11,0.3); }
+    #ctos-phone-shell.gtav::before {
+      background: linear-gradient(to bottom, transparent 0%, rgba(240,185,11,0.03) 50%, transparent 100%);
+    }
+    #ctos-phone-shell.gtav::after {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: 18px;
+      pointer-events: none;
+      border: 1px solid rgba(240,185,11,0.08);
+    }
+    body.phone-gtav #ctos-phone-btn {
+      border-color: rgba(240,185,11,0.5);
+      box-shadow: 0 0 14px rgba(240,185,11,0.3);
+    }
+    body.phone-gtav #ctos-phone-btn svg { stroke: #f0b90b; }
+
   `;
 
   // ── SVG icons ──────────────────────────────────────────────────────────────
@@ -888,6 +1191,7 @@
     empty: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12H16L14 15H10L8 12H2"/><path d="M5.45 5.11L2 12V18A2 2 0 004 20H20A2 2 0 0022 18V12L18.55 5.11A2 2 0 0016.76 4H7.24A2 2 0 005.45 5.11Z"/></svg>`,
     shop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`,
     coin: `<svg viewBox="0 0 24 24" fill="none" stroke="#f0b90b" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v2m0 8v2M9.5 9.5C9.5 8.1 10.6 7 12 7s2.5 1.1 2.5 2.5c0 3-5 3-5 6.5 0 1.4 1.1 2 2.5 2s2.5-.6 2.5-2"/></svg>`,
+    badges: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
   };
 
   // ── Injetar CSS ────────────────────────────────────────────────────────────
@@ -954,6 +1258,10 @@
               ${SVG.shop}
               <span class="ctos-tab-label">Loja</span>
             </button>
+            <button class="ctos-tab" data-tab="badges">
+              ${SVG.badges}
+              <span class="ctos-tab-label">Conquistas</span>
+            </button>
             <button class="ctos-tab" data-tab="browser">
               ${SVG.browser}
               <span class="ctos-tab-label">Browser</span>
@@ -1008,6 +1316,8 @@
           </div>
 
           <!-- Browser page -->
+          <div class="ctos-page" id="ctos-page-badges"></div>
+
           <div class="ctos-page" id="ctos-page-browser">
             <div id="ctos-browser-bar">
               <input id="ctos-browser-url" type="text" placeholder="http://192.168.1.10" spellcheck="false"/>
@@ -1050,6 +1360,184 @@
   let _open = false;
   let _unreadChat  = 0;
   let _unreadInbox = 0;
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SISTEMA DE BADGES / CONQUISTAS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  const BADGE_DEFS = [
+    // fase 1 — Fundamentos do Sistema
+    { id:'boot',      phase:1, icon:'🟢', label:'Boot',       glow:'#00ff9d', desc:'Primeiro terminal ligado'        },
+    { id:'navigator', phase:1, icon:'📂', label:'Navigator',  glow:'#00ff9d', desc:'Navegou pelo sistema de arquivos' },
+    { id:'archivist', phase:1, icon:'📄', label:'Archivist',  glow:'#00ff9d', desc:'Leu o briefing secreto'           },
+
+    // fase 2 — Controle do Sistema
+    { id:'scribe',    phase:2, icon:'✏️', label:'Scribe',     glow:'#00cfff', desc:'Criou o diário de bordo'          },
+    { id:'organizer', phase:2, icon:'📁', label:'Organizer',  glow:'#00cfff', desc:'Organizou diretórios'             },
+    { id:'cleaner',   phase:2, icon:'🛡️', label:'Cleaner',   glow:'#00cfff', desc:'Eliminou o malware'               },
+
+    // fase 3 — Redes & Código C
+    { id:'recon',     phase:3, icon:'🌐', label:'Recon',      glow:'#a78bfa', desc:'Reconheceu a rede'                },
+    { id:'coder',     phase:3, icon:'⚡', label:'Coder',      glow:'#a78bfa', desc:'Dominou C básico'                 },
+    { id:'recursion', phase:3, icon:'🔁', label:'Recursion',  glow:'#a78bfa', desc:'Implementou Fibonacci em C'       },
+
+    // fase 4 — Elite (desbloqueia skin GTA V)
+    { id:'js-master', phase:4, icon:'🟡', label:'JS Master',  glow:'#f0b90b', desc:'Dominou JavaScript'               },
+    { id:'hacker',    phase:4, icon:'💀', label:'Hacker',     glow:'#f0b90b', desc:'Completou todas as missões JS'    },
+    { id:'elite',     phase:4, icon:'🏆', label:'Elite',      glow:'#f0b90b', desc:'Hacker Full-Stack — todas missões'},
+  ];
+
+  const PHASE_LABELS = {
+    1: 'FASE 1 — FUNDAMENTOS',
+    2: 'FASE 2 — CONTROLE',
+    3: 'FASE 3 — REDE & C',
+    4: 'FASE 4 — ELITE',
+  };
+
+  // Set de badges desbloqueados (persiste apenas em memória — reset ao recarregar)
+  const _unlockedBadges = new Set();
+
+  function renderBadges() {
+    const page = document.getElementById('ctos-page-badges');
+    if (!page) return;
+    page.innerHTML = '';
+
+    const total    = BADGE_DEFS.length;
+    const unlocked = BADGE_DEFS.filter(b => _unlockedBadges.has(b.id)).length;
+    const pct      = total > 0 ? Math.round((unlocked / total) * 100) : 0;
+
+    // ── Cabeçalho com progresso geral ──────────────────────────────────────
+    const header = document.createElement('div');
+    header.className = 'bdg-header';
+    header.innerHTML = `
+      <div class="bdg-header-title">Conquistas</div>
+      <div class="bdg-header-sub">${unlocked} / ${total} desbloqueadas</div>
+      <div class="bdg-progress-bar">
+        <div class="bdg-progress-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="bdg-progress-label">${pct}% completo</div>
+    `;
+    page.appendChild(header);
+
+    // ── Agrupa por fase ────────────────────────────────────────────────────
+    const phases = {};
+    BADGE_DEFS.forEach(b => {
+      if (!phases[b.phase]) phases[b.phase] = [];
+      phases[b.phase].push(b);
+    });
+
+    // Cor por fase
+    const phaseColors = { 1:'#00ff9d', 2:'#00cfff', 3:'#a78bfa', 4:'#f0b90b' };
+
+    Object.entries(phases).forEach(([phase, badges]) => {
+      const color = phaseColors[phase] || '#00cfff';
+
+      const section = document.createElement('div');
+      section.className = 'bdg-phase';
+
+      // Separador de fase com label
+      const phaseHeader = document.createElement('div');
+      phaseHeader.className = 'bdg-phase-header';
+      phaseHeader.style.setProperty('--phase-color', color);
+      phaseHeader.innerHTML = `
+        <div class="bdg-phase-dot"></div>
+        <div class="bdg-phase-label">${PHASE_LABELS[phase] || 'FASE ' + phase}</div>
+        <div class="bdg-phase-line"></div>
+      `;
+      section.appendChild(phaseHeader);
+
+      // Grid 3 colunas
+      const grid = document.createElement('div');
+      grid.className = 'bdg-grid';
+
+      badges.forEach(b => {
+        const isUnlocked = _unlockedBadges.has(b.id);
+        const card = document.createElement('div');
+        card.className = 'bdg-card' + (isUnlocked ? ' unlocked' : ' locked');
+        card.title = isUnlocked ? b.desc : 'Bloqueado';
+        if (isUnlocked) {
+          card.style.setProperty('--badge-glow',   b.glow);
+          card.style.setProperty('--badge-bg',     b.glow + '14');
+          card.style.setProperty('--badge-border', b.glow + '40');
+          card.style.setProperty('--badge-filter', 'none');
+        }
+
+        card.innerHTML = `
+          <div class="bdg-hex">
+            <div class="bdg-hex-bg"></div>
+            <div class="bdg-icon">${isUnlocked ? b.icon : '○'}</div>
+          </div>
+          <div class="bdg-name">${isUnlocked ? b.label : '—'}</div>
+          <div class="bdg-locked-bar"></div>
+        `;
+        grid.appendChild(card);
+      });
+
+      section.appendChild(grid);
+      page.appendChild(section);
+    });
+  }
+
+  function unlockBadge(id) {
+    if (_unlockedBadges.has(id)) return; // já desbloqueado
+    _unlockedBadges.add(id);
+
+    const def = BADGE_DEFS.find(b => b.id === id);
+    if (!def) return;
+
+    // Re-renderiza a aba se estiver aberta
+    if (_activeTab === 'badges') renderBadges();
+
+    // Aplica animação pop no card recém-desbloqueado
+    setTimeout(() => {
+      const page = document.getElementById('ctos-page-badges');
+      if (!page) return;
+      page.querySelectorAll('.bdg-card.unlocked').forEach(el => {
+        if (el.querySelector('.bdg-name')?.textContent === def.label) {
+          el.classList.add('new-unlock');
+          setTimeout(() => el.classList.remove('new-unlock'), 600);
+        }
+      });
+    }, 50);
+
+    // Skin GTA V — ativa quando fase 4 começa (badge js-master)
+    if (def.phase === 4) {
+      const shell = document.getElementById('ctos-phone-shell');
+      if (shell && !shell.classList.contains('gtav')) {
+        shell.classList.add('gtav');
+        document.body.classList.add('phone-gtav');
+      }
+    }
+
+    // Toast de notificação
+    showBadgeToast(def);
+  }
+
+  let _toastTimer = null;
+  function showBadgeToast(def) {
+    let toast = document.getElementById('ctos-badge-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'ctos-badge-toast';
+      toast.innerHTML = `
+        <div id="ctos-badge-toast-icon"></div>
+        <div>
+          <div id="ctos-badge-toast-label">CONQUISTA DESBLOQUEADA</div>
+          <div id="ctos-badge-toast-name"></div>
+          <div id="ctos-badge-toast-desc"></div>
+        </div>`;
+      document.body.appendChild(toast);
+    }
+    toast.style.setProperty('--toast-color', def.glow);
+    toast.style.setProperty('--toast-glow',  def.glow + '40');
+    document.getElementById('ctos-badge-toast-icon').textContent = def.icon;
+    document.getElementById('ctos-badge-toast-name').textContent = def.label;
+    document.getElementById('ctos-badge-toast-desc').textContent = def.desc;
+    toast.classList.add('show');
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+  }
+
   let _activeTab   = 'chat';
   const _inboxItems = new Map(); // id → { el, data }
 
@@ -1094,6 +1582,7 @@
     if (_activeTab === 'browser') {
       // nada a limpar
     }
+    if (_activeTab === 'badges') { renderBadges(); }
   }
   function closePhone() {
     _open = false;
@@ -1118,6 +1607,7 @@
     if (id === 'inbox') { _unreadInbox = 0; markAllInboxRead(); }
     if (id === 'shop')  { renderShop(); }
     if (id === 'browser') { /* browser já gerencia estado interno */ }
+    if (id === 'badges')  { renderBadges(); }
     updateBadges();
   });
 
@@ -1727,6 +2217,27 @@
         updateBadges();
         renderInboxEmpty();
       },
+    },
+
+    // ── Badges / Conquistas ────────────────────────────────────────────────
+    badges: {
+      /**
+       * Desbloqueia um badge pelo id.
+       * Chamado pelo MissionManager ao completar missões de fase.
+       *
+       * IDs disponíveis:
+       *   fase 1: 'boot' | 'navigator' | 'archivist'
+       *   fase 2: 'scribe' | 'organizer' | 'cleaner'
+       *   fase 3: 'recon' | 'coder' | 'recursion'
+       *   fase 4: 'js-master' | 'hacker' | 'elite'  ← ativa skin GTA V
+       */
+      unlock(id) { unlockBadge(id); },
+
+      /** Verifica se um badge está desbloqueado */
+      has(id) { return _unlockedBadges.has(id); },
+
+      /** Lista todos os ids desbloqueados */
+      list() { return [..._unlockedBadges]; },
     },
   };
 
