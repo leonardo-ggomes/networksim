@@ -32,7 +32,7 @@ import { SceneObjectUpdate } from "./types/EditorTypes";
 //   Caso C — de cabeça para baixo + virada (mais comum em GLTFs exportados do Blender):
 //             rotX=Math.PI,  rotY=Math.PI   ← começa por este
 const CHAIR_ROT_X = 0 //Math.PI; // corrige cabeça para baixo
-const CHAIR_ROT_Y = Math.PI; // vira para o palco
+const CHAIR_ROT_Y = Math.PI * 2; // vira para o palco
 
 
 export interface ChairInstance {
@@ -58,7 +58,7 @@ export default class Items {
         },
         {
             name: "poltrona",
-            path: "models/theater_chair.glb",
+            path: "models/control_console_chair.glb",
             scales: [2],
             rotations: [{ x: 0, y: 0, z: 0 }],
             positions: [{ x: 0, y: 0, z: 0 }],
