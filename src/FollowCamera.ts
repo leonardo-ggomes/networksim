@@ -56,8 +56,8 @@ export default class FollowCamera {
             this.offset.set(0, 4, -5.74);
             this.lookAtOffset.set(0, 2, 0);
         } else {
-            this.offset.set(0, 2, 1.16);
-            this.lookAtOffset.set(0, 2, 0);
+            this.offset.set(0, 1.8, -1.2);
+            this.lookAtOffset.set(0, 1.6, 0);
         }
     }
 

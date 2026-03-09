@@ -1659,7 +1659,8 @@ const commands: Record<string, (args: string[]) => string> = {
         return currentDir;
     },
     "ifconfig": (args) => {
-        eventEmitter.dispatchEvent(new CustomEvent("terminal:ifconfig", {}));
+        const _ifHost = args[0] ?? _netState.interfaces.find(i => i.name === "eth0")?.ip ?? "";
+        eventEmitter.dispatchEvent(new CustomEvent("terminal:ifconfig", { detail: { host: _ifHost } }));
         return _netIfconfig(args[0]);
     },
     "help": () => [

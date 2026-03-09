@@ -1307,7 +1307,8 @@ Habilidades conquistadas:
     get missionPosition() { return this.active?.missionPoint.position; }
     get missionRadius()   { return this.currentDef?.radius ?? 2; }
 
-    checkZone(playerPos: Vector3, camera?: PerspectiveCamera) {
+    checkZone(playerPos: Vector3, _camera?: PerspectiveCamera) {
+        
         if (!this.active) return;
         this.active.checkMissionZone(
             playerPos,

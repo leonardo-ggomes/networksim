@@ -224,10 +224,21 @@ export default class PlayerController {
       this.isSitting = true;
       this.followCamera.mouseMoveActived = true;
 
-      this.playerModel.quaternion.copy(chair.quaternion);
+      // Rotação: copia o quaternion da cadeira + 180° no Y
+      // O modelo do player tem eixo frontal oposto ao da cadeira —
+      // sem o Math.PI o player fica de costas para o palco.
+      // Se ainda ficar errado, troque Math.PI por 0 (ou -Math.PI/2, Math.PI/2).
+      const PLAYER_FACING_OFFSET = Math.PI; // ← ajuste aqui se necessário
+      const chairFacing = new Quaternion().setFromAxisAngle(
+        new Vector3(0, 1, 0), PLAYER_FACING_OFFSET
+      );
+      this.playerModel.quaternion.copy(chair.quaternion).multiply(chairFacing);
       this.followCamera.setFollowMode(false);
 
-      const seatOffset = new Vector3(0, 0.17, 0.2)
+      // seatOffset.y = altura do assento acima do pivot da cadeira.
+      // Aumente SEAT_HEIGHT se o player aparecer afundado na cadeira.
+      const SEAT_HEIGHT = 0.65; // ← ajuste aqui (era 0.17)
+      const seatOffset = new Vector3(0, SEAT_HEIGHT, -0.13)
         .applyQuaternion(chair.quaternion);
 
       this.playerModel.position.copy(chair.position.clone().add(seatOffset));
