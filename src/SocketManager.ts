@@ -50,13 +50,13 @@ class SocketManager{
 
     constructor(){
        
-        this.io = io('http://localhost:3000')
-        // this.io = io("https://onleo.online", {
-        //     path: "/socket.io/", 
-        //     transports: ["websocket", "polling"], // O servidor aceita ambos
-        //     reconnection: true,
-        //     reconnectionAttempts: 5
-        // });
+        //this.io = io('http://localhost:3000')
+        this.io = io("https://onleo.online", {
+            path: "/socket.io/", 
+            transports: ["websocket", "polling"], // O servidor aceita ambos
+            reconnection: true,
+            reconnectionAttempts: 5
+        });
 
         this.io.on('connect', () => {
             console.log('Conectado')

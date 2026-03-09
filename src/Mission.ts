@@ -143,7 +143,7 @@ export default class Mission {
     // tickMarker — chame no game loop:
     //   mission.tickMarker(delta, player.position, camera)
     // ─────────────────────────────────────────────────────────────────────────
-    tickMarker(delta: number, playerPos?: Vector3, camera?: PerspectiveCamera) {
+    tickMarker(delta: number, playerPos?: Vector3) {
         if (this.isComplete || !this._sprite) return
 
         this._markerTime += delta

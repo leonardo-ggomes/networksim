@@ -319,6 +319,7 @@ function _netInjectBug(type:string){
 
 // ── HTTP virtual — serve index.html do FS para curl/Phone ─────────────────────
 function _httpServe(targetIp:string):{status:number;body:string;from:string}{
+    console.log(targetIp)
     const apache=_netState.services.find(s=>s.name==="apache2"&&s.running);
     if (!apache) return {status:503,from:_netState.hostname,
         body:`<h1>503 — apache2 offline</h1><p>Use: <code>apache2 start</code></p>`};
@@ -332,6 +333,7 @@ function _httpServe(targetIp:string):{status:number;body:string;from:string}{
 }
 
 function _openBrowserPhone(url:string, targetIp:string){
+    console.log(url)
     // Tenta servir localmente primeiro; senão pede ao peer via socket
     const myIp=_netState.interfaces.find(i=>i.name==="eth0")?.ip;
     if (myIp===targetIp){

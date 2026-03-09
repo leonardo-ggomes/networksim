@@ -109,10 +109,10 @@ function hasLines(output: string, expected: string[]): boolean {
 // Ajuste os vetores para o layout real do mapa.
 
 const POS = {
-    professor: new Vector3(-5, 0, 25),   // NPC professor
-    sala:      new Vector3(   0,    0,  10),   // zona de trabalho (terminal / C / JS)
-    servidor:  new Vector3(  -8,    1,  22),   // sala do servidor remoto
-    auditorio: new Vector3(   0,    0,  -5),   // palco de encerramento
+    professor: new Vector3(-8, 0, 25),   // NPC professor
+    sala:      new Vector3(   -25,    0,  10),   // zona de trabalho (terminal / C / JS)
+    servidor:  new Vector3(  -25,    0,  22),   // sala do servidor remoto
+    auditorio: new Vector3(   0,    1,  0),   // palco de encerramento
 };
 
 // ── Textos de arquivos injetados pelas missões ────────────────────────────────
@@ -493,7 +493,7 @@ Use top para confirmar que sumiu.`,
             radius:   30,
             reward:   { money: 300, energy: 10 },
             helper:   false,
-            listenTo: 'terminal:ping',
+            listenTo: 'terminal:ifconfig',
             onStart: () => {
                 window.Phone?.inbox.push({
                     id:    '__si_17',
@@ -1316,7 +1316,7 @@ Habilidades conquistadas:
         );
         // Atualiza sprite do marcador (distância + animação)
         // delta não disponível aqui — tick usa clock interno baseado em Date
-        this.active.tickMarker(0.016, playerPos, camera);
+        this.active.tickMarker(0.016, playerPos);
     }
 
     /** Pula para uma missão específica por id — útil para debug */
