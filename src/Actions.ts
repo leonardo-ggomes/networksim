@@ -1680,6 +1680,7 @@ const commands: Record<string, (args: string[]) => string> = {
         "  cat [arquivo]       Exibe conteúdo do arquivo",
         "  nano [arq] \"texto\"  Cria ou edita arquivo",
         "  rm [arquivo]        Remove arquivo",
+        "  rmdir [pasta]       Remove diretório vazio",
         "  mkdir [pasta]       Cria novo diretório",
         "",
         "── REDE ────────────────────────────────────────────────",
@@ -1689,7 +1690,7 @@ const commands: Record<string, (args: string[]) => string> = {
         "  exit                Encerra sessão remota",
         "",
         "── REDE VIRTUAL ────────────────────────────────────────",
-        "  ip addr show                    Interfaces de rede",
+        "  ip addr show                     Interfaces de rede",
         "  ip addr add <IP>/<pfx> dev eth0  Configura IP",
         "  ip link set eth0 up|down         Liga/desliga interface",
         "  ip route show                    Tabela de rotas",
@@ -1699,15 +1700,39 @@ const commands: Record<string, (args: string[]) => string> = {
         "  arp -a                           Tabela ARP",
         "  nmap <IP>                        Scan de portas",
         "  traceroute <IP>                  Rastreia rota",
+        "  hostname [nome]                  Exibe ou define o hostname",
         "  apache2 start|stop|status        Servidor HTTP virtual",
-        "  service <nome> start|stop        Serviços",
-        "  curl http://<IP>                 Abre site no Phone",
-        "  net:status                       Visão geral da rede",
+        "  service <nome> start|stop        Gerencia serviços",
+        "  systemctl start|stop <svc>       Gerencia serviços (systemd)",
+        "  curl http://<IP>                 Requisição HTTP — abre no Phone",
+        "  net:status                       Visão geral da rede virtual",
+        "  net:bug <tipo> [socketId]        Injeta bug de rede (admin)",
         "",
         "── PROCESSOS ───────────────────────────────────────────",
-        "  top                 Monitor em tempo real (q para sair)",
-        "  ps aux              Lista todos os processos",
+        "  top                 Monitor de processos em tempo real (q sai)",
         "  kill -9 [PID]       Encerra processo forçadamente",
+        "",
+        "── SISTEMA ─────────────────────────────────────────────",
+        "  whoami              Usuário atual",
+        "  who                 Usuários conectados",
+        "  id [usuário]        UID/GID do usuário",
+        "  su <senha>          Autentica como outro usuário",
+        "  energy              Exibe nível de energia atual",
+        "",
+        "── ADMIN / MODERADOR ───────────────────────────────────",
+        "  players                      Lista os players",
+        "  usermod -aG <grupo> <nome>   Promove jogador a grupo",
+        "  gpasswd -d <nome> <grupo>    Remove jogador de grupo",
+        "  teach list                   Lista aulas disponíveis",
+        "  teach start <lesson-id>      Inicia aula (NPC vai ao palco)",
+        "  teach next|prev|stop         Controla slides da aula",
+        "  board \"texto\"                Exibe texto no telão para todos",
+        "  board clear                  Apaga o telão",
+        "  board status                 Verifica se o telão está ativo",
+        "  net:bug link-down            Derruba interface de rede",
+        "  net:bug ip-conflict          Injeta conflito de IP",
+        "  net:bug service-crash        Derruba serviço",
+        "  net:bug route-lost           Apaga tabela de rotas",
         "",
         "── TERMINAL ────────────────────────────────────────────",
         "  clear               Limpa o terminal",
@@ -2226,6 +2251,58 @@ const commands: Record<string, (args: string[]) => string> = {
         return `Bug "${bug}" injetado${target ? ` em ${target}` : " em todos"}.`;
     },
 
+    // ── Lista players conectados com socketId (útil para net:bug) ─────────────
+    "players": (_args: any) => {
+        const isAdmin = infoPlayer.role === "admin" || infoPlayer.role === "moderator";
+        if (!isAdmin) return "Permissão negada. Apenas admin ou moderador.";
+
+        const peers  = (window as any).__netPeers as Record<string, { socketId: string; playerName: string; hostname: string }> ?? {};
+        const smPlayers = SocketManager.players as Record<string, any>;
+
+        // Linha do próprio jogador (não está em __netPeers nem em SocketManager.players)
+        const lines: string[] = [
+            "PLAYERS CONECTADOS",
+            "─".repeat(62),
+            "  NOME                 HOSTNAME              SOCKET ID",
+            "─".repeat(62),
+        ];
+
+        // Próprio jogador
+        const selfId   = SocketManager.io.id ?? "—";
+        const selfName = (SocketManager.playerName || "Você").padEnd(21);
+        const selfHost = ((window as any).__netPeers?.[selfId]?.hostname ?? "hackos-pc").padEnd(22);
+        lines.push(`  ${selfName}${selfHost}${selfId}  ← você`);
+
+        // Outros players — une SocketManager.players (tem socketId) com __netPeers (tem nome/hostname)
+        const seen = new Set<string>();
+        seen.add(selfId);
+
+        for (const id of Object.keys(smPlayers)) {
+            if (seen.has(id)) continue;
+            seen.add(id);
+            const peer  = peers[id];
+            const name  = (peer?.playerName ?? "Jogador").padEnd(21);
+            const host  = (peer?.hostname   ?? "—").padEnd(22);
+            lines.push(`  \\${name}\\${host}\\${id}`);
+        }
+
+        // Players em __netPeers que por algum motivo não estão em smPlayers
+        for (const id of Object.keys(peers)) {
+            if (seen.has(id)) continue;
+            seen.add(id);
+            const peer = peers[id];
+            const name = (peer.playerName ?? "Jogador").padEnd(21);
+            const host = (peer.hostname   ?? "—").padEnd(22);
+            lines.push(`  \\${name}\\${host}\\${id}`);
+        }
+
+        lines.push("─".repeat(62));
+        lines.push(`  Total: \\${seen.size} player(s) online`);
+        lines.push("");
+        lines.push("  Dica: net:bug <tipo> <socketId>  — injeta bug em player específico");
+        return lines.join("\n");
+    },
+
     // ── Telão / Board ─────────────────────────────────────────────────────────
     // Uso:  board "Seu texto aqui"   → exibe no telão para todos
     //       board clear              → apaga o telão
@@ -2233,6 +2310,9 @@ const commands: Record<string, (args: string[]) => string> = {
     "board": (args: string[]) => {
         const isAdmin = infoPlayer.role === "admin" || infoPlayer.role === "moderator";
         if (!isAdmin) return "Permissão negada. Apenas admin ou moderador.";
+
+        // Usa o import estático como fallback — _SM só existe após initNetSocket()
+        const sm = _SM ?? SocketManager;
 
         const sub = (args[0] ?? "").replace(/^"|"$/g, "").trim();
 
@@ -2244,15 +2324,12 @@ const commands: Record<string, (args: string[]) => string> = {
 
         // board clear
         if (sub === "clear" || sub === "off") {
-            _SM?.io.emit("board:clear");
-            // Aplica localmente também (admin vê imediatamente)
+            sm.io.emit("board:clear");
             (window as any).__boardManager?.clear();
             return "Telão limpo.";
         }
 
-        // board "texto" — aceita com ou sem aspas (o executeCommand já extrai)
-        // args pode ser ["\"texto com aspas\""] ou ["palavra1", "palavra2", ...]
-        // Reconstrói o texto unindo todos os args e removendo aspas residuais
+        // board "texto"
         const rawText = args.join(" ").replace(/^"|"$/g, "").trim();
         if (!rawText) return [
             "Uso do comando board:",
@@ -2261,8 +2338,8 @@ const commands: Record<string, (args: string[]) => string> = {
             "  board status             → verifica se o telão está ativo",
         ].join("\n");
 
-        _SM?.io.emit("board:set", { text: rawText });
-        // Aplica localmente também (admin vê imediatamente, sem round-trip)
+        sm.io.emit("board:set", { text: rawText });
+        // Aplica localmente imediatamente (admin não espera round-trip)
         (window as any).__boardManager?.display(rawText);
         return `Telão atualizado: "${rawText.length > 40 ? rawText.slice(0, 40) + "…" : rawText}"`;
     },
