@@ -139,6 +139,20 @@ export default class Experience {
         this.items.itemsLoaded.then(() => {
             this.playerController.refreshBVH()
             console.log("[Experience] BVH buildado após loading completo.")
+
+            // Telão: se chegou um board:display enquanto o GLB ainda carregava,
+            // o SocketManager guardou o texto em _pendingBoardText.
+            // Agora que __boardManager existe, forçamos a aplicação imediata
+            // sem esperar o próximo tick do setInterval (elimina delay de até 300ms).
+            const pending = this.socket._pendingBoardText;
+            if (pending !== null && (window as any).__boardManager) {
+                (window as any).__boardManager.display(pending);
+                this.socket._pendingBoardText = null;
+                if (this.socket._boardRetryTimer !== null) {
+                    clearInterval(this.socket._boardRetryTimer);
+                    this.socket._boardRetryTimer = null;
+                }
+            }
         })
 
         // Posição inicial aleatória do player

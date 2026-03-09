@@ -102,54 +102,65 @@ class SocketManager{
         this.io.on("slide:npc:end", this.receiveNpcSlideEnd);
 
         // ── Telão ─────────────────────────────────────────────────────────────
-        // Registrado aqui (não no initNetSocket) para garantir que o listener
-        // existe desde o início da conexão — antes do Experience/Items carregarem.
-        //
-        // Se __boardManager ainda não estiver pronto quando o evento chegar
-        // (race condition: mesh screen1 ainda carregando), guardamos o texto
-        // e tentamos novamente a cada 200ms até o manager estar disponível.
+        // Listeners registrados no construtor — existem antes do Experience carregar.
+        // _pendingBoardText inicializado aqui (no construtor) para evitar problemas
+        // de ordem de inicialização de propriedades de classe no Vite/esbuild.
+        this._pendingBoardText = null;
+        this._boardRetryTimer  = null;
+
         this.io.on("board:display", (data: { text: string }) => {
+            if (!data?.text) return;
             this._applyBoard(data.text);
         });
         this.io.on("board:clear", () => {
-            (window as any).__boardManager?.clear();
             this._pendingBoardText = null;
-            if (this._boardRetryTimer) {
+            if (this._boardRetryTimer !== null) {
                 clearInterval(this._boardRetryTimer);
                 this._boardRetryTimer = null;
             }
+            (window as any).__boardManager?.clear();
+        });
+        this.io.on("board:denied", (data: { msg: string }) => {
+            console.warn('[board] Permissão negada pelo servidor:', data?.msg);
+            (window as any).HUD?.notify('Telão: sem permissão — faça su <senha> primeiro', 'error');
         });
     }
 
-    // Texto a exibir assim que __boardManager estiver disponível
-    private _pendingBoardText: string | null = null;
-    private _boardRetryTimer: ReturnType<typeof setInterval> | null = null;
+    // Declaradas sem inicializador — inicializadas no construtor para garantir
+    // ordem correta no Vite (evita undefined em closures do setInterval)
+    _pendingBoardText: string | null;
+    _boardRetryTimer:  ReturnType<typeof setInterval> | null;
 
     private _applyBoard(text: string) {
         const mgr = (window as any).__boardManager;
         if (mgr) {
-            // Manager pronto — aplica imediatamente e cancela qualquer retry pendente
             mgr.display(text);
             this._pendingBoardText = null;
-            if (this._boardRetryTimer) {
+            if (this._boardRetryTimer !== null) {
                 clearInterval(this._boardRetryTimer);
                 this._boardRetryTimer = null;
             }
             return;
         }
 
-        // Manager ainda não disponível (Items ainda carregando) — enfileira e espera
+        // __boardManager ainda não existe — GLB do auditório ainda carregando.
+        // Guarda o texto e polling a cada 300ms.
+        // Usa closure local para não depender de this em condições de corrida.
         this._pendingBoardText = text;
-        if (this._boardRetryTimer) return; // já aguardando
-        this._boardRetryTimer = setInterval(() => {
+        if (this._boardRetryTimer !== null) return; // já há um retry rodando
+
+        const self = this;
+        this._boardRetryTimer = setInterval(function () {
             const m = (window as any).__boardManager;
-            if (m && this._pendingBoardText !== null) {
-                m.display(this._pendingBoardText);
-                this._pendingBoardText = null;
-                clearInterval(this._boardRetryTimer!);
-                this._boardRetryTimer = null;
+            if (!m) return; // ainda não pronto
+            const pending = self._pendingBoardText;
+            if (pending !== null) {
+                m.display(pending);
+                self._pendingBoardText = null;
             }
-        }, 200);
+            clearInterval(self._boardRetryTimer!);
+            self._boardRetryTimer = null;
+        }, 300);
     }
 
     loadPlayers = (players: any) => {

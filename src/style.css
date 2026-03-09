@@ -109,3 +109,18 @@ body {
   border-radius: 5px;
   color: white;
 }
+
+/* ── Cursor customizado ctOS ─────────────────────────────────────────────── */
+/* Esconde o cursor nativo em toda a página */
+*, *::before, *::after {
+  cursor: none !important;
+}
+
+#ctOS-cursor-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999999;
+  width: 100vw;
+  height: 100vh;
+}
