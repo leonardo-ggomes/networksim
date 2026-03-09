@@ -119,8 +119,12 @@ export default class Experience {
             }
         });
         
+        // Objeto 3D que representa o palco — usado para posicionamento 3D do áudio.
+        // Posição (0, 2, 0) = centro do palco em Y=2 (altura da boca do palestrante).
+        // Se quiser seguir o modelo do palestrante, use:
+        //   this.voiceChatManager.setStageObject(presenterPlayerModel)
         const audioSourceObject = new Object3D();
-        audioSourceObject.position.set(0, 3, -5);
+        audioSourceObject.position.set(0, 2, 0); // centro do palco
         this.scene.add(audioSourceObject);
         this.voiceChatManager.handleIncomingAudio(audioSourceObject);
 
